@@ -1,0 +1,6 @@
+# Auto-peel dwell keyframe A (see l200-autopeel.mac).
+# Paired with b.g4view; the two are 0.5 deg apart so /vis/viewer/interpolate
+# always animates (never short-circuits) and thus always honours wait-time.
+# Matches l200-vis.mac's default viewpoint (70 20).
+/vis/viewer/set/viewpointThetaPhi 70 20 deg
+/vis/viewer/set/lightsThetaPhi 70 20 deg

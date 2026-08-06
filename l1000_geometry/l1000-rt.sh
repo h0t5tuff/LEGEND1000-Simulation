@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# l1000-rt.sh — view the reentrant-tube's three sections (EFCu / OFHC / SS) live.
+# view the reentrant-tube's three sections (EFCu / OFHC / SS) live.
 #
 # The OFHC & SS shells share their OUTER surface with the EFCu mother (all r=931),
 # which z-fights in the viewer. This makes a THROWAWAY copy of l1000.gdml with those
 # two shells nudged +2 mm outward (so they win the depth test), opens the interactive
 # viewer isolated + framed on the RT, then deletes the copy on exit. l1000.gdml is
 # never touched, and nothing 18 MB is left in the repo.
-#
-# Usage:  ./l1000-rt.sh        (run from a terminal where `remage --version` works)
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

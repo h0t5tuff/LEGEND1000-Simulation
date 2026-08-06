@@ -1,4 +1,0 @@
-# FADE 6/17 (hide/cull): WLSR TPB coating (1 vols).
-# Hides this component (culled from the render) -> reveals the LAr instrumentation.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility wlsr_tpb 0 false

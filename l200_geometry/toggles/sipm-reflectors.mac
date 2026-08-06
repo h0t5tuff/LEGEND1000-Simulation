@@ -1,0 +1,5 @@
+# show 'SiPM reflectors' (4 vols)
+/vis/geometry/set/visibility sipm_outer_bottom_bend165.00_r284.00_nmod20 0 true
+/vis/geometry/set/visibility sipm_outer_bottom_r126.00_nmod9 0 true
+/vis/geometry/set/visibility sipm_outer_top_r126.00_nmod9 0 true
+/vis/geometry/set/visibility sipm_outer_top_r284.00_nmod20 0 true

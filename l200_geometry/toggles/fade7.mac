@@ -1,4 +1,0 @@
-# FADE 7/17 (hide/cull): calibration tubes (1 vols).
-# Hides this component (culled from the render) -> reveals the fibre barrels.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility minishroud_19.0 0 false

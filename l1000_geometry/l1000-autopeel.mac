@@ -1,14 +1,7 @@
 # ══════════════════════════════════════════════════════════════════════════
-#  L1000 AUTOMATIC PEEL — self-contained (no toggles/fade*, peelstep, fadenext)
-#
-#  Run:  remage -i l1000-vis.mac    then at Idle>:  /control/execute l1000-autopeel.mac
-#
-#  Culls the 15 radial layers outer -> inner, >=3 s dwell each, ending on bare
-#  336 HPGe. Dwell = /vis/viewer/interpolate over interpolation/*.g4view (this
-#  Geant4 has no /control/sleep); wait-time is an enforced minimum, so
-#  10 x 300 ms = 3 s/layer. Transitions are instant visibility culls.
-#  TIMING KNOB = the two numbers on each interpolate line.
-#  RESET afterwards:  /vis/geometry/set/visibility world -1 true
+# remage -i l1000-vis.mac   
+# /control/execute l1000-autopeel.mac
+# RESET afterwards:  /vis/geometry/set/visibility world -1 true
 # ══════════════════════════════════════════════════════════════════════════
 
 # ── FADE 1/15 (hide/cull): outer steel + supports (3 vols).

@@ -1,349 +1,346 @@
-# LEGEND-200 colours with DEPTH-GRADED opacity.
-# Outer shells are lightly see-through; opacity rises layer by layer toward
-# the HPGe detectors at the centre. Every component stays visible.
 # /vis/geometry/set/colour <logical-volume> <depth> R G B alpha
 
 # ═══════════════════════════════════════════════════════════
-# ARGON BATH (MEDIUM)   —   alpha = 0.15
+# ARGON BATH (MEDIUM)   —   peel layers 2-3
 # ═══════════════════════════════════════════════════════════
 # --- liquid argon  (1 vol)  rgb=0.55 0.80 1.00
-/vis/geometry/set/colour liquid_argon 0 0.55 0.8 1 0.15
+/vis/geometry/set/colour liquid_argon 0 0.55 0.8 1 1
 
 # --- gaseous argon  (1 vol)  rgb=0.70 0.88 1.00
-/vis/geometry/set/colour gaseous_argon 0 0.7 0.88 1 0.15
+/vis/geometry/set/colour gaseous_argon 0 0.7 0.88 1 1
 
 # ═══════════════════════════════════════════════════════════
-# CRYOSTAT STEEL (OUTER SHELL)   —   alpha = 0.12
+# CRYOSTAT STEEL (OUTER SHELL)   —   peel layer 1 (outermost)
 # ═══════════════════════════════════════════════════════════
 # --- cryostat steel  (1 vol)  rgb=0.55 0.57 0.60
-/vis/geometry/set/colour cryostat_steel 0 0.55 0.57 0.6 0.12
+/vis/geometry/set/colour cryostat_steel 0 0.55 0.57 0.6 1
 
 # ═══════════════════════════════════════════════════════════
-# WLSR REFLECTOR BARREL   —   alpha = 0.28
+# WLSR REFLECTOR BARREL   —   peel layers 4-6
 # ═══════════════════════════════════════════════════════════
 # --- WLSR copper  (1 vol)  rgb=0.85 0.45 0.12
-/vis/geometry/set/colour wlsr_copper 0 0.85 0.45 0.12 0.28
+/vis/geometry/set/colour wlsr_copper 0 0.85 0.45 0.12 1
 
 # --- WLSR tetratex  (1 vol)  rgb=0.96 0.96 0.96
-/vis/geometry/set/colour wlsr_tetratex 0 0.96 0.96 0.96 0.28
+/vis/geometry/set/colour wlsr_tetratex 0 0.96 0.96 0.96 1
 
 # --- WLSR TPB  (1 vol)  rgb=0.60 0.90 1.00
-/vis/geometry/set/colour wlsr_tpb 0 0.6 0.9 1 0.28
+/vis/geometry/set/colour wlsr_tpb 0 0.6 0.9 1 1
 
 # ═══════════════════════════════════════════════════════════
-# LAR INSTRUMENTATION   —   alpha = 0.42
+# LAR INSTRUMENTATION   —   peel layers 7-11
 # ═══════════════════════════════════════════════════════════
 # --- calibration tubes (red)  (1 vol)  rgb=0.90 0.12 0.12
-/vis/geometry/set/colour minishroud_19.0 0 0.9 0.12 0.12 0.42
+/vis/geometry/set/colour minishroud_19.0 0 0.9 0.12 0.12 1
 
 # --- LAr fibre barrels  (58 vol)  rgb=0.40 0.90 0.45
-/vis/geometry/set/colour fiber_cl1_bend_l1320.82 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_cl1_l1320.82 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_cl1_l1400.00 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_cl2_bend_l1320.82 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_cl2_l1320.82 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_cl2_l1400.00 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_core_bend_l1320.82 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_core_l1320.82 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_core_l1400.00 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB001002_l1400.00_tpb941 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB003004_l1400.00_tpb1041 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB005006_l1400.00_tpb941 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB007008_l1400.00_tpb941 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB009010_l1400.00_tpb933 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB011012_l1400.00_tpb1041 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB013014_l1400.00_tpb933 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB015016_l1400.00_tpb1041 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB017018_l1400.00_tpb933 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB001002_bend_l1320.82_tpb1093 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB001002_l1320.82_tpb1093 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB003004_bend_l1320.82_tpb996 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB003004_l1320.82_tpb996 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB005006_bend_l1320.82_tpb1003 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB005006_l1320.82_tpb1003 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB007008_bend_l1320.82_tpb1280 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB007008_l1320.82_tpb1280 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB009010_bend_l1320.82_tpb1095 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB009010_l1320.82_tpb1095 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB011012_bend_l1320.82_tpb1200 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB011012_l1320.82_tpb1200 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB013014_bend_l1320.82_tpb1093 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB013014_l1320.82_tpb1093 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB015016_bend_l1320.82_tpb958 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB015016_l1320.82_tpb958 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB017018_bend_l1320.82_tpb958 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB017018_l1320.82_tpb958 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB019020_bend_l1320.82_tpb958 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB019020_l1320.82_tpb958 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB021022_bend_l1320.82_tpb996 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB021022_l1320.82_tpb996 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB023024_bend_l1320.82_tpb1280 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB023024_l1320.82_tpb1280 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB025026_bend_l1320.82_tpb1280 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB025026_l1320.82_tpb1280 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB027028_bend_l1320.82_tpb1003 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB027028_l1320.82_tpb1003 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB029030_bend_l1320.82_tpb1095 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB029030_l1320.82_tpb1095 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB031032_bend_l1320.82_tpb1093 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB031032_l1320.82_tpb1093 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB033034_bend_l1320.82_tpb1200 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB033034_l1320.82_tpb1200 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB035036_bend_l1320.82_tpb996 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB035036_l1320.82_tpb996 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB037038_bend_l1320.82_tpb1003 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB037038_l1320.82_tpb1003 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB039040_bend_l1320.82_tpb1095 0 0.4 0.9 0.45 0.42
-/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB039040_l1320.82_tpb1095 0 0.4 0.9 0.45 0.42
+/vis/geometry/set/colour fiber_cl1_bend_l1320.82 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_cl1_l1320.82 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_cl1_l1400.00 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_cl2_bend_l1320.82 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_cl2_l1320.82 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_cl2_l1400.00 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_core_bend_l1320.82 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_core_l1320.82 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_core_l1400.00 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB001002_l1400.00_tpb941 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB003004_l1400.00_tpb1041 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB005006_l1400.00_tpb941 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB007008_l1400.00_tpb941 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB009010_l1400.00_tpb933 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB011012_l1400.00_tpb1041 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB013014_l1400.00_tpb933 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB015016_l1400.00_tpb1041 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_inner_barrel_coating_tpb_IB017018_l1400.00_tpb933 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB001002_bend_l1320.82_tpb1093 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB001002_l1320.82_tpb1093 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB003004_bend_l1320.82_tpb996 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB003004_l1320.82_tpb996 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB005006_bend_l1320.82_tpb1003 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB005006_l1320.82_tpb1003 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB007008_bend_l1320.82_tpb1280 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB007008_l1320.82_tpb1280 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB009010_bend_l1320.82_tpb1095 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB009010_l1320.82_tpb1095 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB011012_bend_l1320.82_tpb1200 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB011012_l1320.82_tpb1200 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB013014_bend_l1320.82_tpb1093 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB013014_l1320.82_tpb1093 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB015016_bend_l1320.82_tpb958 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB015016_l1320.82_tpb958 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB017018_bend_l1320.82_tpb958 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB017018_l1320.82_tpb958 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB019020_bend_l1320.82_tpb958 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB019020_l1320.82_tpb958 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB021022_bend_l1320.82_tpb996 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB021022_l1320.82_tpb996 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB023024_bend_l1320.82_tpb1280 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB023024_l1320.82_tpb1280 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB025026_bend_l1320.82_tpb1280 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB025026_l1320.82_tpb1280 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB027028_bend_l1320.82_tpb1003 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB027028_l1320.82_tpb1003 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB029030_bend_l1320.82_tpb1095 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB029030_l1320.82_tpb1095 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB031032_bend_l1320.82_tpb1093 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB031032_l1320.82_tpb1093 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB033034_bend_l1320.82_tpb1200 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB033034_l1320.82_tpb1200 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB035036_bend_l1320.82_tpb996 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB035036_l1320.82_tpb996 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB037038_bend_l1320.82_tpb1003 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB037038_l1320.82_tpb1003 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB039040_bend_l1320.82_tpb1095 0 0.4 0.9 0.45 1
+/vis/geometry/set/colour fiber_outer_barrel_coating_tpb_OB039040_l1320.82_tpb1095 0 0.4 0.9 0.45 1
 
 # --- SiPMs  (3 vol)  rgb=0.65 0.25 0.65
-/vis/geometry/set/colour sipm_bend165.00_r284.00_nmod20 0 0.65 0.25 0.65 0.42
-/vis/geometry/set/colour sipm_r126.00_nmod9 0 0.65 0.25 0.65 0.42
-/vis/geometry/set/colour sipm_r284.00_nmod20 0 0.65 0.25 0.65 0.42
+/vis/geometry/set/colour sipm_bend165.00_r284.00_nmod20 0 0.65 0.25 0.65 1
+/vis/geometry/set/colour sipm_r126.00_nmod9 0 0.65 0.25 0.65 1
+/vis/geometry/set/colour sipm_r284.00_nmod20 0 0.65 0.25 0.65 1
 
 # --- SiPM reflectors  (4 vol)  rgb=0.96 0.96 0.96
-/vis/geometry/set/colour sipm_outer_bottom_bend165.00_r284.00_nmod20 0 0.96 0.96 0.96 0.42
-/vis/geometry/set/colour sipm_outer_bottom_r126.00_nmod9 0 0.96 0.96 0.96 0.42
-/vis/geometry/set/colour sipm_outer_top_r126.00_nmod9 0 0.96 0.96 0.96 0.42
-/vis/geometry/set/colour sipm_outer_top_r284.00_nmod20 0 0.96 0.96 0.96 0.42
+/vis/geometry/set/colour sipm_outer_bottom_bend165.00_r284.00_nmod20 0 0.96 0.96 0.96 1
+/vis/geometry/set/colour sipm_outer_bottom_r126.00_nmod9 0 0.96 0.96 0.96 1
+/vis/geometry/set/colour sipm_outer_top_r126.00_nmod9 0 0.96 0.96 0.96 1
+/vis/geometry/set/colour sipm_outer_top_r284.00_nmod20 0 0.96 0.96 0.96 1
 
 # --- copper (LAr-instr)  (97 vol)  rgb=0.85 0.45 0.12
-/vis/geometry/set/colour larinstr_support_inner_copper_0 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_1 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_10 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_11 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_12 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_13 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_14 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_15 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_16 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_17 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_18 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_19 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_2 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_20 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_21 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_22 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_23 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_24 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_3 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_4 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_5 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_6 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_7 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_8 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_inner_copper_9 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_0 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_1 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_10 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_11 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_12 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_13 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_14 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_15 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_16 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_17 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_18 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_19 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_2 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_20 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_21 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_22 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_23 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_24 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_25 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_26 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_27 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_28 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_29 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_3 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_30 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_31 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_32 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_33 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_34 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_35 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_36 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_37 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_38 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_39 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_4 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_40 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_41 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_42 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_43 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_44 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_45 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_46 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_47 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_48 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_49 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_5 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_50 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_51 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_52 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_53 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_54 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_55 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_56 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_57 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_58 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_59 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_6 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_60 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_61 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_62 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_63 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_64 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_65 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_66 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_67 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_68 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_69 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_7 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_70 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_71 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_8 0 0.85 0.45 0.12 0.42
-/vis/geometry/set/colour larinstr_support_outer_copper_9 0 0.85 0.45 0.12 0.42
+/vis/geometry/set/colour larinstr_support_inner_copper_0 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_1 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_10 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_11 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_12 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_13 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_14 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_15 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_16 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_17 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_18 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_19 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_2 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_20 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_21 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_22 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_23 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_24 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_3 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_4 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_5 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_6 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_7 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_8 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_inner_copper_9 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_0 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_1 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_10 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_11 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_12 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_13 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_14 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_15 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_16 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_17 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_18 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_19 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_2 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_20 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_21 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_22 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_23 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_24 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_25 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_26 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_27 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_28 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_29 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_3 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_30 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_31 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_32 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_33 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_34 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_35 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_36 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_37 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_38 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_39 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_4 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_40 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_41 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_42 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_43 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_44 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_45 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_46 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_47 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_48 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_49 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_5 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_50 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_51 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_52 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_53 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_54 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_55 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_56 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_57 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_58 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_59 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_6 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_60 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_61 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_62 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_63 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_64 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_65 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_66 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_67 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_68 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_69 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_7 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_70 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_71 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_8 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour larinstr_support_outer_copper_9 0 0.85 0.45 0.12 1
 
 # ═══════════════════════════════════════════════════════════
-# STRING MINI-SHROUDS   —   alpha = 0.58
+# STRING MINI-SHROUDS   —   peel layer 12
 # ═══════════════════════════════════════════════════════════
 # --- string mini-shrouds  (8 vol)  rgb=0.78 0.66 0.96
-/vis/geometry/set/colour minishroud_lid_43.75x20.00 0 0.78 0.66 0.96 0.58
-/vis/geometry/set/colour minishroud_lid_47.75x20.00 0 0.78 0.66 0.96 0.58
-/vis/geometry/set/colour minishroud_lid_50.75x20.00 0 0.78 0.66 0.96 0.58
-/vis/geometry/set/colour minishroud_lid_53.75x20.00 0 0.78 0.66 0.96 0.58
-/vis/geometry/set/colour minishroud_tube_44.0 0 0.78 0.66 0.96 0.58
-/vis/geometry/set/colour minishroud_tube_48.0 0 0.78 0.66 0.96 0.58
-/vis/geometry/set/colour minishroud_tube_51.0 0 0.78 0.66 0.96 0.58
-/vis/geometry/set/colour minishroud_tube_54.0 0 0.78 0.66 0.96 0.58
+/vis/geometry/set/colour minishroud_lid_43.75x20.00 0 0.78 0.66 0.96 1
+/vis/geometry/set/colour minishroud_lid_47.75x20.00 0 0.78 0.66 0.96 1
+/vis/geometry/set/colour minishroud_lid_50.75x20.00 0 0.78 0.66 0.96 1
+/vis/geometry/set/colour minishroud_lid_53.75x20.00 0 0.78 0.66 0.96 1
+/vis/geometry/set/colour minishroud_tube_44.0 0 0.78 0.66 0.96 1
+/vis/geometry/set/colour minishroud_tube_48.0 0 0.78 0.66 0.96 1
+/vis/geometry/set/colour minishroud_tube_51.0 0 0.78 0.66 0.96 1
+/vis/geometry/set/colour minishroud_tube_54.0 0 0.78 0.66 0.96 1
 
 # ═══════════════════════════════════════════════════════════
-# STRING HARDWARE   —   alpha = 0.78
+# STRING HARDWARE   —   peel layers 13-17
 # ═══════════════════════════════════════════════════════════
 # --- PEN holder plates  (6 vol)  rgb=0.95 0.80 0.28
-/vis/geometry/set/colour pen_large 0 0.95 0.8 0.28 0.78
-/vis/geometry/set/colour pen_medium 0 0.95 0.8 0.28 0.78
-/vis/geometry/set/colour pen_medium_ortec 0 0.95 0.8 0.28 0.78
-/vis/geometry/set/colour pen_ppc_small 0 0.95 0.8 0.28 0.78
-/vis/geometry/set/colour pen_small 0 0.95 0.8 0.28 0.78
-/vis/geometry/set/colour pen_xlarge 0 0.95 0.8 0.28 0.78
+/vis/geometry/set/colour pen_large 0 0.95 0.8 0.28 1
+/vis/geometry/set/colour pen_medium 0 0.95 0.8 0.28 1
+/vis/geometry/set/colour pen_medium_ortec 0 0.95 0.8 0.28 1
+/vis/geometry/set/colour pen_ppc_small 0 0.95 0.8 0.28 1
+/vis/geometry/set/colour pen_small 0 0.95 0.8 0.28 1
+/vis/geometry/set/colour pen_xlarge 0 0.95 0.8 0.28 1
 
 # --- copper (string)  (33 vol)  rgb=0.85 0.45 0.12
-/vis/geometry/set/colour birds_nest_plate_copper 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_hv_103.19 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_hv_111.66 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_hv_121.63 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_hv_130.11 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_hv_130.61 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_hv_15.00 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_hv_53.34 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_hv_76.77 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_signal_103.19 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_signal_111.66 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_signal_121.63 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_signal_130.11 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_signal_130.61 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_signal_53.34 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour cable_signal_76.77 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_du_pin_7.80 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_hanger_copper 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string1 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string10 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string11 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string2 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string3 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string4 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string5 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string7 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string8 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_string_support_rod_copper_string9 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_support_copper_tristar_large 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_support_copper_tristar_medium 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_support_copper_tristar_small 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_support_copper_tristar_xlarge 0 0.85 0.45 0.12 0.78
-/vis/geometry/set/colour hpge_support_copper_weldment 0 0.85 0.45 0.12 0.78
+/vis/geometry/set/colour birds_nest_plate_copper 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_hv_103.19 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_hv_111.66 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_hv_121.63 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_hv_130.11 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_hv_130.61 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_hv_15.00 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_hv_53.34 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_hv_76.77 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_signal_103.19 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_signal_111.66 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_signal_121.63 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_signal_130.11 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_signal_130.61 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_signal_53.34 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour cable_signal_76.77 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_du_pin_7.80 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_hanger_copper 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string1 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string10 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string11 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string2 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string3 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string4 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string5 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string7 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string8 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_string_support_rod_copper_string9 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_support_copper_tristar_large 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_support_copper_tristar_medium 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_support_copper_tristar_small 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_support_copper_tristar_xlarge 0 0.85 0.45 0.12 1
+/vis/geometry/set/colour hpge_support_copper_weldment 0 0.85 0.45 0.12 1
 
 # --- ultem insulators  (68 vol)  rgb=0.70 0.62 0.35
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_10.30 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_10.45 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_10.85 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_4.95 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.00 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.05 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.15 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.35 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.49 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.50 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.52 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.55 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.71 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.73 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.75 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.77 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.80 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.84 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.85 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.95 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.00 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.05 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.10 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.25 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.30 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.50 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.55 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.58 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.69 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.70 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.75 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.80 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.84 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.95 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.98 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.00 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.02 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.08 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.10 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.24 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.30 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.50 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.56 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.58 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.60 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.65 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.70 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.72 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.75 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.87 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.90 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.95 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.00 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.02 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.10 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.20 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.23 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.25 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.26 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.28 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.65 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.70 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.85 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.95 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_9.00 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour hpge_assembly_insulator_ultem_9.01 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour ultem_clamp_hv 0 0.7 0.62 0.35 0.78
-/vis/geometry/set/colour ultem_clamp_signal 0 0.7 0.62 0.35 0.78
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_10.30 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_10.45 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_10.85 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_4.95 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.00 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.05 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.15 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.35 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.49 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.50 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.52 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.55 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.71 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.73 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.75 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.77 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.80 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.84 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.85 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_5.95 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.00 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.05 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.10 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.25 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.30 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.50 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.55 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.58 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.69 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.70 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.75 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.80 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.84 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.95 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_6.98 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.00 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.02 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.08 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.10 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.24 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.30 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.50 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.56 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.58 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.60 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.65 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.70 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.72 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.75 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.87 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.90 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_7.95 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.00 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.02 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.10 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.20 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.23 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.25 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.26 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.28 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.65 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.70 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.85 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_8.95 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_9.00 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour hpge_assembly_insulator_ultem_9.01 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour ultem_clamp_hv 0 0.7 0.62 0.35 1
+/vis/geometry/set/colour ultem_clamp_signal 0 0.7 0.62 0.35 1
 
 # --- LMFE  (1 vol)  rgb=0.25 0.78 0.78
-/vis/geometry/set/colour lmfe 0 0.25 0.78 0.78 0.78
+/vis/geometry/set/colour lmfe 0 0.25 0.78 0.78 1
 
 # --- springs/washers  (2 vol)  rgb=0.72 0.53 0.30
-/vis/geometry/set/colour phbr_spring 0 0.72 0.53 0.3 0.78
-/vis/geometry/set/colour phbr_washer 0 0.72 0.53 0.3 0.78
+/vis/geometry/set/colour phbr_spring 0 0.72 0.53 0.3 1
+/vis/geometry/set/colour phbr_washer 0 0.72 0.53 0.3 1
 
 # ═══════════════════════════════════════════════════════════
-# HPGE DETECTORS (INNERMOST)   —   alpha = 1.00
+# HPGE DETECTORS (INNERMOST)   —   bare core, never peeled
 # ═══════════════════════════════════════════════════════════
 # --- HPGe detectors  (101 vol)  rgb=0.40 0.58 0.78
 /vis/geometry/set/colour B00000A 0 0.4 0.58 0.78 1
@@ -449,7 +446,7 @@
 /vis/geometry/set/colour V09724A 0 0.4 0.58 0.78 1
 
 # ═══════════════════════════════════════════════════════════
-# WORLD BOX   —   alpha = 0.00
+# WORLD BOX   —   invisible (alpha 0, not a component)
 # ═══════════════════════════════════════════════════════════
 # --- world  (1 vol)  rgb=0.50 0.50 0.58
 /vis/geometry/set/colour world 0 0.5 0.5 0.5 0

@@ -1,4 +1,0 @@
-# FADE 16/17 (hide/cull): LMFE front-end electronics (1 vols).
-# Hides this component (culled from the render) -> reveals the springs/washers.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility lmfe 0 false

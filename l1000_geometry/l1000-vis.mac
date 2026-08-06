@@ -3,6 +3,7 @@
 /RMG/Geometry/IncludeGDMLFile l1000.gdml
 /control/execute l1000-dets.mac
 /run/initialize
+
 # open Qt viewer
 /vis/open OGL
 /vis/viewer/set/lineSegmentsPerCircle 12
@@ -18,39 +19,81 @@
 #   remage -i l1000-vis.mac
 # PEELING
 #   /control/execute l1000-autopeel.mac
-# HIDE
-#   /vis/geometry/set/visibility world -1 false
-# MATERIAL
-#   /control/execute toggles/show-<material>.mac
-# RESET
-#   /vis/geometry/set/visibility world -1 true
+# Define material & LV, then hide/show
+#   /control/alias MAT <Material> 
+#   /control/execute toggles/MAT.mac
+#   /control/alias LV <LogicalVolumeName> 
+#   /control/execute toggles/XLV.mac
 # ════════════════════════════════════════════════════════════════════
-# order logical-volume name(s)                          material                 LVs  role
-#  –    world                                           G4_Galactic                1  vacuum mother (not a component)
-#  1    outercryostat, skirt, foot                      metal_steel (316L)         3  outer steel cryostat + supports
-#  2    vacuumgap                                       vacuum                     1  gap between the two steel shells
-#  3    innercryostat                                   metal_steel (316L)         1  inner cryostat
-#  4    atmosphericlar                                  LiquidArgon                1  atmospheric LAr (outer passive bath)
-#  5    neutronmoderator                                pmma                       1  PMMA neutron moderator
-#  6    wls_tetratex_outer_atmospheric_lv,              tetratex+tpb_on_tetratex   2  outer WLS shroud (reflector + TPB)
+# Order LogicalVolumeName                                         Material                            #LVs  Note
+#  –    world                                                     G4_Galactic                         1     vacuum (not a component)
+#  1    outercryostat, skirt, foot                                metal_steel                         3     outer steel cryostat + supports
+#  2    vacuumgap                                                 vacuum                              1     gap between the two steel shells
+#  3    innercryostat                                             metal_steel                         1     inner cryostat
+#  4    atmosphericlar                                            LiquidArgon                         1     atmospheric LAr (outer passive bath)
+#  5    neutronmoderator                                          pmma                                1     transparent organic polymer (n moderator, elastic scattering)
+#  6    wls_tetratex_outer_atmospheric_lv,                        tetratex+tpb_on_tetratex            2     outer WLS shroud (reflector + TPB)
 #         wls_tpb_outer_atmospheric_lv
-#  7    reentrancetube (=EFCu), ofhc_cu, ss_316l        metal_copper ×2 +          3  RT wall stack enclosing active LAr;
-#         (ofhc_cu & ss_316l are daughters               metal_steel (316L)            EFCu mother z −1327…852, OFHC
-#          placed inside the reentrancetube mother)                                    852…2857, SS 2857…4919 (seam z's)
-#  8    undergroundlar                                  LiquidArgon                1  underground LAr (ACTIVE bath)
-#  9    wls_tetratex_inner_argon_lv,                    tetratex+tpb_on_tetratex   2  inner WLS shroud (reflector + TPB)
+#  7    reentrancetube, ofhc_cu, ss_316l                          metal_copper+metal_steel            3     RT wall stack enclosing active LAr;
+#                                                                                                           EFCu mother z −1327…852, OFHC
+#                                                                                                           852…2857, SS 2857…4919 (seam z's)
+#  8    undergroundlar                                            LiquidArgon                         1     underground LAr (ACTIVE bath)
+#  9    wls_tetratex_inner_argon_lv,                              tetratex+tpb_on_tetratex            2     inner WLS shroud (reflector + TPB)
 #         wls_tpb_inner_argon_lv
-# 10    fiber_core_l1349_bNone, fiber_cl1_l1349_bNone,  ps_fibers+pmma+            4  double-clad WLS fibre: PS core +
-#         fiber_cl2_l1349_bNone, fiber_coating_l1349_tpb1093  pmma_cl2+tpb_on_fibers   2 PMMA clads + TPB coat (×12,096)
-# 11    hpge_support_copper_{weldment_top,rod_string,   metal_copper            1053  string Cu hardware: weldments 336,
-#         string_support_structure}, cable_{signal,hv}_V*,                           cables 336+336, rods 42, sipm
-#         sipm_outer_{top,bottom}_*                                                  mounts
-# 12    ultem_{insulator_du_holder,clamp_signal,        ultem                   1008  DU holders + signal/HV clamps
-#         clamp_hv}_V*                                                               (336 each; radiopure PEI)
-# 13    pen_xlarge, hpge_support_copper_tristar_xlarge  pen                        2  PEN detector holders (scintillating)
-# 14    signal_asic_V*  (V0101 …)                       silica (SiO₂)            336  front-end signal ASICs, 1/detector
-# 15    sipm_r52.750000001_nmod3                        metal_silicon              1  SiPM photosensor (placed ×252)
-#  –    V*  (V0101 …, the 336 diodes)                   EnrichedGermanium0.900   336  HPGe detectors — 90% ⁷⁶Ge target
+# 10    fiber_core_l1349_bNone, fiber_cl1_l1349_bNone,            ps_fibers+pmma+pmma_cl2             4     double-clad WLS fibre: PS core +
+#         fiber_cl2_l1349_bNone, fiber_coating_l1349_tpb1093      +tpb_on_fibers+metal_copper         2     PMMA clads + TPB coat (×12,096)
+# 11    hpge_support_copper_{weldment_top,rod_string,                                                 1053  string Cu hardware: weldments 336,
+#         string_support_structure}, cable_{signal,hv}_V*,                                                  cables 336+336, rods 42, sipm mounts
+#         sipm_outer_{top,bottom}_*                                                               
+# 12    ultem_{insulator_du_holder,clamp_signal,                  ultem                               1008  DU holders + signal/HV clamps
+#         clamp_hv}_V*                                                                                      (336 each; radiopure PEI)
+# 13    pen_xlarge, hpge_support_copper_tristar_xlarge            pen                                 2     PEN detector holders (scintillating)
+# 14    signal_asic_V*  (V0101 …)                                 silica                              336   front-end signal ASICs, 1/detector
+# 15    sipm_r52.750000001_nmod3                                  metal_silicon                       1     SiPM photosensor (placed ×252)
+#  –    V*  (V0101 …,)                                            EnrichedGermanium0.900              336   HPGe detectors — 90% ⁷⁶Ge target
 # ────────────────────────────────────────────────────────────────────────────────────
 # TOTAL LVs = 2756 ( 1+3+1+1+1+1+2+3+1+2+4+1053+1008+2+336+1+336 );  _V* = per-channel numeric id
 # Readout (l1000-dets.mac, 590): 336 Germanium (V0xxx) + 252 Optical (sipm ×252) + 2 Scintillator (2 LAr baths)
+
+
+
+
+
+
+
+
+
+
+
+
+# ════════════════════════════════════════════════════════════════════
+# INVENTORY — commands extracted from l1000-inventory.sh
+#   whole report:  ./l1000-inventory.sh [GDML] [DETS]
+#                  (defaults: l1000.gdml, l1000-dets.mac)
+#   SHELL commands — run in l1000_geometry/, NOT at the Idle> prompt.
+#
+# ── SCALE ───────────────────────────────────────────────────────────
+#   grep -c '<volume name='  l1000.gdml   #  2,756 LVs component definitions
+#   grep -c '<physvol name=' l1000.gdml   # 17,196 PVs placements (NOT bare '<physvol')
+#   grep -c '<bordersurface' l1000.gdml   # 29,658 optical surfaces (x2 is physvolref)
+#
+# ── MATERIALS  (count = # of component definitions using it) ────────
+#   grep -oE '<materialref ref="[^"]+"' l1000.gdml | sed -E 's/.*"([^"]+)"/\1/' \
+#     | sort | uniq -c | sort -rn | awk '{printf "  %7d  %s\n", $1, $2}'
+#
+# ── MOST-PLACED COMPONENTS  (count = placements referencing that def) ──
+#   grep -oE '<volumeref ref="[^"]+"' l1000.gdml | sed -E 's/.*"([^"]+)"/\1/' \
+#     | sort | uniq -c | sort -rn | head -15 | awk '{printf "  %7d  %s\n", $1, $2}'
+#
+# ── DETECTOR READOUT  (RegisterDetector by type) ────────────────────
+#   awk '/RegisterDetector/{print $2}' l1000-dets.mac | sort | uniq -c \
+#     | awk '{printf "  %7d  %s\n", $1, $2}'
+#   grep -c 'RegisterDetector' l1000-dets.mac                    # TOTAL
+#
+# ── LVs OF A GIVEN MATERIAL  (e.g. LiquidArgon) ─────────────────────
+#   awk '/<volume name=/{v=$0} /materialref ref="LiquidArgon"/{gsub(/.*name="|".*/,"",v);print v}' l1000.gdml
+#
+# ── IN-SESSION EQUIVALENTS  (these DO run at the Idle> prompt) ──────
+#   /RMG/Geometry/PrintListOfLogicalVolumes    #  2,756 LVs definition (colour/material live here)
+#   /RMG/Geometry/PrintListOfPhysicalVolumes   # 17,196 PVs instance (position lives here)
+# ════════════════════════════════════════════════════════════════════

@@ -1,45 +1,126 @@
-#   remage -i l200-vis.mac
-# geometry:
+# geom & dets
 /RMG/Geometry/GDMLDisableOverlapCheck true
 /RMG/Geometry/IncludeGDMLFile l200.gdml
-# detectors: 101 Ge + 58 optical (SiPM) + 1 LAr scintillator
 /control/execute l200-dets.mac
 /run/initialize
-# open the Qt/OpenGL viewe
+
+# open Qt viewer
 /vis/open OGL
-# colours + opacity: 3D-xray depth grade (steel ghost 0.05 -> HPGe solid 1.00)
+/vis/viewer/set/lineSegmentsPerCircle 12
 /control/execute l200-colors.mac
-# live-peel counter (used by toggles/fadenext.mac)
-/control/alias FZ 0
 /vis/drawVolume
 /vis/viewer/set/style surface
 /vis/viewer/set/viewpointThetaPhi 70 20 deg
 /vis/viewer/set/lightsThetaPhi 70 20 deg
 /vis/viewer/set/autoRefresh true
 /vis/viewer/zoom 1
+# ════════════════════════════════════════════════════════════════════
+# RUN
+#   remage -i l200-vis.mac
+# PEELING
+#   /control/execute l200-autopeel.mac
+# Define group & LV, then hide/show
+#   /control/alias MAT <Group>
+#   /control/execute toggles/MAT.mac
+#   /control/alias LV <LogicalVolumeName>
+#   /control/execute toggles/XLV.mac
+#
+# !! NAME TRAP: Geant4 strips every GDML volume name at the first '0x'
+#    (it assumes a pointer suffix). 5 l200 names hit this — use the STRIPPED
+#    form in macros, NOT the GDML text:
+#      GDML minishroud_19.00x1400.00      -> use minishroud_19.0
+#      GDML minishroud_tube_44.00x1000.00 -> use minishroud_tube_44.0
+#      GDML minishroud_tube_48.00x1000.00 -> use minishroud_tube_48.0
+#      GDML minishroud_tube_51.00x1000.00 -> use minishroud_tube_51.0
+#      GDML minishroud_tube_54.00x800.00  -> use minishroud_tube_54.0
+#    (minishroud_lid_43.75x20.00 etc. contain '5x', not '0x', so are unchanged.)
+#    Authoritative list = /RMG/Geometry/PrintListOfLogicalVolumes, not the GDML.
+# ════════════════════════════════════════════════════════════════════
+# Order LogicalVolumeName                             Material                  #LVs  Note
+#  –    world                                         G4_Galactic               1     vacuum (not a component)
+#  1    cryostat_steel                                metal_steel               1     outer steel barrel (cryostat)
+#  2    gaseous_argon                                 gaseous_argon             1     gAr top fill (ullage)
+#  3    liquid_argon                                  liquid_argon              1     LAr bath (ACTIVE scintillator)
+#  4    wlsr_copper                                   metal_copper              1     WLSR copper shell (barrel)
+#  5    wlsr_tetratex                                 tetratex                  1     WLSR tetratex reflector
+#  6    wlsr_tpb                                      tpb_on_tetratex           1     WLSR TPB wavelength shifter
+#  7    minishroud_19.0                               tpb_on_nylon              1     calibration source tube (19 mm nylon shroud)
+#  8    fiber_core_*, fiber_cl1_*, fiber_cl2_*,       ps_fibers+pmma+pmma_cl2   58    LAr fibre barrels: PS core + 2 PMMA
+#         fiber_{inner,outer}_barrel_coating_tpb_*      +tpb_on_fibers                clads + TPB coat (inner/outer barrel)
+#  9    sipm_outer_{top,bottom}_*                     tetratex                  4     SiPM reflectors
+# 10    sipm_*_r*_nmod*                               metal_silicon             3     SiPM photosensors (58 optical channels)
+# 11    larinstr_support_{inner,outer}_copper_*       metal_copper              97    LAr-instrumentation copper supports
+# 12    minishroud_lid_*, minishroud_tube_*           tpb_on_nylon              8     string mini-shrouds (4 lids + 4 tubes)
+# 13    birds_nest_plate_copper, cable_{hv,signal}_*, metal_copper              33    string copper hardware: cables, pins,
+#         hpge_du_pin_*, hpge_string_support_*                                        hangers, rods
+# 14    hpge_assembly_insulator_ultem_*,              ultem                     68    DU insulators + HV/signal clamps
+#         ultem_clamp_{hv,signal}                                                     (radiopure PEI)
+# 15    pen_{large,medium,medium_ortec,ppc_small,     pen                       6     PEN holder plates (scintillating)
+#         small,xlarge}
+# 16    lmfe                                          silica                    1     LMFE front-end signal chip
+# 17    phbr_spring, phbr_washer                      metal_phosphor_bronze     2     contact springs + washers
+#  –    B*, C*, P*, V*                                EnrichedGermanium0.855    101   HPGe detectors — 24 distinct
+#         (B 28, C 6, P 26, V 41)                       …0.942 (24 mats)              enrichments; B=BEGe C=Coax P=PPC V=ICPC
+# ────────────────────────────────────────────────────────────────────────────────────
+# TOTAL LVs = 389 ( 1 + 1+1+1+1+1+1+1+58+4+3+97+8+33+68+6+1+2 + 101 ) = 1 + 287 + 101 HPGe
+# Readout (l200-dets.mac, 160): 101 Germanium (B/C/P/V) + 58 Optical (SiPM) + 1 Scintillator (LAr bath)
 
-# ══════════════════════════════════════════════════════════════════════════
-# by PEELING
-#   /control/execute toggles/fadenext.mac
-#   order: 1 outer-steel -> 2 gAr -> 3 lAr -> 4 wlsr-copper
-#          -> 5 wlsr-tetratex -> 6 wlsr-tpb -> 7 calib-tubes -> 8 fibre-barrels(58)
-#          -> 9 sipm-reflectors -> 10 sipms -> 11 larinstr-copper(97)
-#          -> 12 mini-shrouds -> 13 string-copper(33) -> 14 ultem(radiopure plastic clamps) (68) 
-#          -> 15 pen(plastic scintillation holders) -> 16 lmfe(sig chip) -> 17 springs -> bare 101 HPGe
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ════════════════════════════════════════════════════════════════════
+# INVENTORY — run in l200_geometry/ (SHELL, not at the Idle> prompt)
 #
-# by component
-#   /control/execute toggles/fade7.mac
+# ── SCALE ───────────────────────────────────────────────────────────
+#   grep -c '<volume name='  l200.gdml   #   389 LVs component definitions
+#   grep -c '<physvol name=' l200.gdml   # 2,747 PVs placements (NOT bare '<physvol')
+#   grep -c '<bordersurface' l200.gdml   # 1,621 optical surfaces (x2 is physvolref)
 #
-# RESET
-#   /vis/geometry/set/visibility world -1 true
-#   /control/alias FZ 0
+# ── MATERIALS  (count = # of component definitions using it) ────────
+#   grep -oE '<materialref ref="[^"]+"' l200.gdml | sed -E 's/.*"([^"]+)"/\1/' \
+#     | sort | uniq -c | sort -rn | awk '{printf "  %7d  %s\n", $1, $2}'
 #
-# by MATERIAL:
-#   /control/execute toggles/hide-<group>.mac   (undo: show-<group>.mac)
-#   groups: hpge  copper  ultem  fibers  minishrouds  calibtubes  pen  springs
-#           lmfe  sipm  sipm-reflectors  steel  lar  gar
-#           wlsr-copper  wlsr-tpb  wlsr-tetratex
+# ── MOST-PLACED COMPONENTS  (count = placements referencing that def) ──
+#   grep -oE '<volumeref ref="[^"]+"' l200.gdml | sed -E 's/.*"([^"]+)"/\1/' \
+#     | sort | uniq -c | sort -rn | head -15 | awk '{printf "  %7d  %s\n", $1, $2}'
 #
-# By volume:
-#   /vis/geometry/set/visibility <name> 0 false
-# ══════════════════════════════════════════════════════════════════════════
+# ── DETECTOR READOUT  (RegisterDetector by type) ────────────────────
+#   awk '/RegisterDetector/{print $2}' l200-dets.mac | sort | uniq -c \
+#     | awk '{printf "  %7d  %s\n", $1, $2}'
+#   grep -c 'RegisterDetector' l200-dets.mac                     # TOTAL 160
+#
+# ── LVs OF A GIVEN MATERIAL  (e.g. liquid_argon) ────────────────────
+#   awk '/<volume name=/{v=$0} /materialref ref="liquid_argon"/{gsub(/.*name="|".*/,"",v);print v}' l200.gdml
+#
+# ── AUDIT: macro LV names that do not exist in the Geant4 LV store ──
+#   NB the 's/0x.*//' is REQUIRED — it replays Geant4's name stripping.
+#   Without it the 5 minishroud names above show up as false positives.
+#   grep -oE '<volume name="[^"]*"' l200.gdml | sed -E 's/.*name="([^"]+)"/\1/' \
+#     | sed -E 's/0x.*//' | sort -u > /tmp/lvs
+#   grep -hoE '^/vis/geometry/set/(visibility|colour) [^ ]+' \
+#     toggles/*.mac l200-colors.mac l200-autopeel.mac \
+#     | awk '{print $2}' | grep -vE '^(world|\{LV\})$' | sort -u > /tmp/refs
+#   comm -23 /tmp/refs /tmp/lvs      # broken refs      (expect none)
+#   comm -13 /tmp/refs /tmp/lvs      # unreferenced LVs (expect only 'world')
+#
+# ── IN-SESSION EQUIVALENTS  (these DO run at the Idle> prompt) ──────
+#   /RMG/Geometry/PrintListOfLogicalVolumes    #   389 LVs definition (colour/material live here)
+#   /RMG/Geometry/PrintListOfPhysicalVolumes   # 2,747 PVs instance (position lives here)
+# ════════════════════════════════════════════════════════════════════

@@ -1,4 +1,0 @@
-# FADE 1/17 (hide/cull): outer steel barrel (cryostat) (1 vols).
-# Hides this component (culled from the render) -> reveals the argon bath.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility cryostat_steel 0 false

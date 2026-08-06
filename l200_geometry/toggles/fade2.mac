@@ -1,4 +1,0 @@
-# FADE 2/17 (hide/cull): gaseous argon (top fill) (1 vols).
-# Hides this component (culled from the render) -> reveals the liquid argon surface.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility gaseous_argon 0 false

@@ -1,0 +1,3 @@
+# clear screen, then show only that group's LVs.
+/vis/geometry/set/visibility world -1 false
+/control/execute toggles/{MAT}.mac

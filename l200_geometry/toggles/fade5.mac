@@ -1,4 +1,0 @@
-# FADE 5/17 (hide/cull): WLSR tetratex reflector (1 vols).
-# Hides this component (culled from the render) -> reveals the WLSR TPB coating.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility wlsr_tetratex 0 false

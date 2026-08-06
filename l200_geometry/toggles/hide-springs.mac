@@ -1,3 +1,0 @@
-# HIDE 'springs/washers' (2 vols)
-/vis/geometry/set/visibility phbr_spring 0 false
-/vis/geometry/set/visibility phbr_washer 0 false

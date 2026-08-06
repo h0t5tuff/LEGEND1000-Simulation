@@ -1,5 +1,0 @@
-# FADE 17/17 (hide/cull): springs and washers (2 vols).
-# Hides this component (culled from the render) -> only the bare HPGe detectors remain.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility phbr_spring 0 false
-/vis/geometry/set/visibility phbr_washer 0 false

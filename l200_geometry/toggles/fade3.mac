@@ -1,4 +1,0 @@
-# FADE 3/17 (hide/cull): liquid argon bath (1 vols).
-# Hides this component (culled from the render) -> reveals the WLSR barrel.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility liquid_argon 0 false

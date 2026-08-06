@@ -1,4 +1,0 @@
-# Fade the NEXT layer (repeat this line / up-arrow+enter to go deeper).
-# Requires the counter to be initialised (l200-vis.mac does: /control/alias FZ 0).
-/control/add FZ {FZ} 1
-/control/execute toggles/fade{FZ}.mac

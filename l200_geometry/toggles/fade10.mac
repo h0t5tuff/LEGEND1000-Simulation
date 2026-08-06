@@ -1,6 +1,0 @@
-# FADE 10/17 (hide/cull): SiPMs (3 vols).
-# Hides this component (culled from the render) -> reveals the copper support structure.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility sipm_bend165.00_r284.00_nmod20 0 false
-/vis/geometry/set/visibility sipm_r126.00_nmod9 0 false
-/vis/geometry/set/visibility sipm_r284.00_nmod20 0 false

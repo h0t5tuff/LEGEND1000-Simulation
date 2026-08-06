@@ -1,0 +1,2 @@
+# show 'WLSR copper (barrel)' (1 vols)
+/vis/geometry/set/visibility wlsr_copper 0 true

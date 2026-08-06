@@ -1,0 +1,3 @@
+# Auto-peel dwell keyframe B (see l200-autopeel.mac). 0.5 deg from A.
+/vis/viewer/set/viewpointThetaPhi 70 20.5 deg
+/vis/viewer/set/lightsThetaPhi 70 20 deg

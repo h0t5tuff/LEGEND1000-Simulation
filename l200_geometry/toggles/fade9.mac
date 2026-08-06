@@ -1,7 +1,0 @@
-# FADE 9/17 (hide/cull): SiPM reflectors (4 vols).
-# Hides this component (culled from the render) -> reveals the SiPMs.
-# Run fade1..fade17 in order to melt the array away from outside in.
-/vis/geometry/set/visibility sipm_outer_bottom_bend165.00_r284.00_nmod20 0 false
-/vis/geometry/set/visibility sipm_outer_bottom_r126.00_nmod9 0 false
-/vis/geometry/set/visibility sipm_outer_top_r126.00_nmod9 0 false
-/vis/geometry/set/visibility sipm_outer_top_r284.00_nmod20 0 false

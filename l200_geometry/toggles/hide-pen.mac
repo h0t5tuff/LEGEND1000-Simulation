@@ -1,7 +1,0 @@
-# HIDE 'PEN holder plates' (6 vols)
-/vis/geometry/set/visibility pen_large 0 false
-/vis/geometry/set/visibility pen_medium 0 false
-/vis/geometry/set/visibility pen_medium_ortec 0 false
-/vis/geometry/set/visibility pen_ppc_small 0 false
-/vis/geometry/set/visibility pen_small 0 false
-/vis/geometry/set/visibility pen_xlarge 0 false
