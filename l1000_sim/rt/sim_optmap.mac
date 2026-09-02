@@ -1,0 +1,27 @@
+#  CONFIG optMap: LAr light response via the optical map.
+
+#-------------------------------------------------------------------------------
+#  1. Before init:
+/RMG/Geometry/RegisterDetectorsFromGDML Germanium
+/RMG/Geometry/RegisterDetector Scintillator undergroundlar 0    # the LAr volume the optical map is evaluated over
+/RMG/Geometry/RegisterDetector Scintillator atmosphericlar 1
+/RMG/Geometry/RegisterDetector Scintillator pen.* 10000         # matches all 336 pen_V#### plates
+/RMG/Processes/EnableGammaAngularCorrelation
+/RMG/Output/ActivateOutputScheme Track          # the Track commands below do not exist until this scheme is activated
+/RMG/Output/NtupleUseVolumeName true
+/RMG/Geometry/GDMLDisableOverlapCheck true
+/RMG/Geometry/IncludeGDMLFile {GDML}
+/run/initialize
+
+#-------------------------------------------------------------------------------
+#  2. After init:
+/geometry/navigator/check_mode false
+/RMG/Output/Track/EnergyFilter 1 keV
+/RMG/Output/Germanium/StoreTrackID true         # reboost joins deposits to tracks by this id
+/RMG/Output/Scintillator/StoreTrackID true
+/RMG/Output/Germanium/StoreSinglePrecisionPosition
+/RMG/Output/Germanium/StoreSinglePrecisionEnergy
+/RMG/Output/Scintillator/StoreSinglePrecisionPosition
+/RMG/Output/Scintillator/StoreSinglePrecisionEnergy
+/RMG/Output/Vertex/StoreSinglePrecisionPosition
+/control/execute src_events.mac
