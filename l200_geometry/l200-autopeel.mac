@@ -1,38 +1,46 @@
 # ══════════════════════════════════════════════════════════════════════════
-# remage -i l200-vis.mac   
+# remage -i l200-vis.mac
 # /control/execute l200-autopeel.mac
+# Peel order (FADE ids = narration table rows):
+#   1,2,3,6,5,4,8,7,11,9,10,12,13,14,15, FLIP, 16,17, STAR
 # RESET afterwards:  /vis/geometry/set/visibility world -1 true
+#                    /vis/viewer/set/upVector 0 0 1
+#                    /vis/viewer/set/viewpointThetaPhi 70 20 deg
+#                    /vis/viewer/set/lightsThetaPhi 70 20 deg
 # ══════════════════════════════════════════════════════════════════════════
+# ═ STEP 1/19
 # ── FADE 1/17 (hide/cull): outer steel barrel (cryostat) (1 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility cryostat_steel 0 false
 
+# ═ STEP 2/19
 # ── FADE 2/17 (hide/cull): gaseous argon (top fill) (1 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility gaseous_argon 0 false
 
+# ═ STEP 3/19
 # ── FADE 3/17 (hide/cull): liquid argon bath (1 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility liquid_argon 0 false
 
-# ── FADE 4/17 (hide/cull): WLSR copper shell (1 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
-/vis/geometry/set/visibility wlsr_copper 0 false
-
-# ── FADE 5/17 (hide/cull): WLSR tetratex reflector (1 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
-/vis/geometry/set/visibility wlsr_tetratex 0 false
-
+# ═ STEP 4/19
 # ── FADE 6/17 (hide/cull): WLSR TPB coating (1 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility wlsr_tpb 0 false
 
-# ── FADE 7/17 (hide/cull): calibration tubes (1 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
-/vis/geometry/set/visibility minishroud_19.0 0 false
+# ═ STEP 5/19
+# ── FADE 5/17 (hide/cull): WLSR tetratex reflector (1 vols)
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
+/vis/geometry/set/visibility wlsr_tetratex 0 false
 
+# ═ STEP 6/19
+# ── FADE 4/17 (hide/cull): WLSR copper shell (1 vols)
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
+/vis/geometry/set/visibility wlsr_copper 0 false
+
+# ═ STEP 7/19
 # ── FADE 8/17 (hide/cull): LAr fibre barrels (58 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility fiber_cl1_bend_l1320.82 0 false
 /vis/geometry/set/visibility fiber_cl1_l1320.82 0 false
 /vis/geometry/set/visibility fiber_cl1_l1400.00 0 false
@@ -92,21 +100,14 @@
 /vis/geometry/set/visibility fiber_outer_barrel_coating_tpb_OB039040_bend_l1320.82_tpb1095 0 false
 /vis/geometry/set/visibility fiber_outer_barrel_coating_tpb_OB039040_l1320.82_tpb1095 0 false
 
-# ── FADE 9/17 (hide/cull): SiPM reflectors (4 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
-/vis/geometry/set/visibility sipm_outer_bottom_bend165.00_r284.00_nmod20 0 false
-/vis/geometry/set/visibility sipm_outer_bottom_r126.00_nmod9 0 false
-/vis/geometry/set/visibility sipm_outer_top_r126.00_nmod9 0 false
-/vis/geometry/set/visibility sipm_outer_top_r284.00_nmod20 0 false
+# ═ STEP 8/19
+# ── FADE 7/17 (hide/cull): calibration tubes (1 vols)
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
+/vis/geometry/set/visibility minishroud_19.0 0 false
 
-# ── FADE 10/17 (hide/cull): SiPMs (3 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
-/vis/geometry/set/visibility sipm_bend165.00_r284.00_nmod20 0 false
-/vis/geometry/set/visibility sipm_r126.00_nmod9 0 false
-/vis/geometry/set/visibility sipm_r284.00_nmod20 0 false
-
+# ═ STEP 9/19
 # ── FADE 11/17 (hide/cull): LAr-instrumentation copper supports (97 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility larinstr_support_inner_copper_0 0 false
 /vis/geometry/set/visibility larinstr_support_inner_copper_1 0 false
 /vis/geometry/set/visibility larinstr_support_inner_copper_10 0 false
@@ -205,8 +206,24 @@
 /vis/geometry/set/visibility larinstr_support_outer_copper_8 0 false
 /vis/geometry/set/visibility larinstr_support_outer_copper_9 0 false
 
+# ═ STEP 10/19
+# ── FADE 9/17 (hide/cull): SiPM reflectors (4 vols)
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
+/vis/geometry/set/visibility sipm_outer_bottom_bend165.00_r284.00_nmod20 0 false
+/vis/geometry/set/visibility sipm_outer_bottom_r126.00_nmod9 0 false
+/vis/geometry/set/visibility sipm_outer_top_r126.00_nmod9 0 false
+/vis/geometry/set/visibility sipm_outer_top_r284.00_nmod20 0 false
+
+# ═ STEP 11/19
+# ── FADE 10/17 (hide/cull): SiPMs (3 vols)
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
+/vis/geometry/set/visibility sipm_bend165.00_r284.00_nmod20 0 false
+/vis/geometry/set/visibility sipm_r126.00_nmod9 0 false
+/vis/geometry/set/visibility sipm_r284.00_nmod20 0 false
+
+# ═ STEP 12/19
 # ── FADE 12/17 (hide/cull): string mini-shrouds (8 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility minishroud_lid_43.75x20.00 0 false
 /vis/geometry/set/visibility minishroud_lid_47.75x20.00 0 false
 /vis/geometry/set/visibility minishroud_lid_50.75x20.00 0 false
@@ -216,8 +233,9 @@
 /vis/geometry/set/visibility minishroud_tube_51.0 0 false
 /vis/geometry/set/visibility minishroud_tube_54.0 0 false
 
+# ═ STEP 13/19
 # ── FADE 13/17 (hide/cull): string copper hardware (33 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility birds_nest_plate_copper 0 false
 /vis/geometry/set/visibility cable_hv_103.19 0 false
 /vis/geometry/set/visibility cable_hv_111.66 0 false
@@ -252,8 +270,9 @@
 /vis/geometry/set/visibility hpge_support_copper_tristar_xlarge 0 false
 /vis/geometry/set/visibility hpge_support_copper_weldment 0 false
 
+# ═ STEP 14/19
 # ── FADE 14/17 (hide/cull): ultem insulators (68 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility hpge_assembly_insulator_ultem_10.30 0 false
 /vis/geometry/set/visibility hpge_assembly_insulator_ultem_10.45 0 false
 /vis/geometry/set/visibility hpge_assembly_insulator_ultem_10.85 0 false
@@ -323,8 +342,9 @@
 /vis/geometry/set/visibility ultem_clamp_hv 0 false
 /vis/geometry/set/visibility ultem_clamp_signal 0 false
 
+# ═ STEP 15/19
 # ── FADE 15/17 (hide/cull): PEN holder plates (6 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility pen_large 0 false
 /vis/geometry/set/visibility pen_medium 0 false
 /vis/geometry/set/visibility pen_medium_ortec 0 false
@@ -332,11 +352,26 @@
 /vis/geometry/set/visibility pen_small 0 false
 /vis/geometry/set/visibility pen_xlarge 0 false
 
+# ═ STEP 16/19
+# ── FLIP: fast tumble over the top to 45 deg below the array, image upside down,
+#    so the detector bottoms and the LMFEs under them face the camera
+/vis/viewer/interpolate interpolation/flip 3 0 millisecond
+# interpolate restores the starting view when done, so pin the flipped end state
+/vis/viewer/set/upVector 0 0 -1
+/vis/viewer/set/viewpointThetaPhi 135 200 deg
+/vis/viewer/set/lightsThetaPhi 135 200 deg
+
+# ═ STEP 17/19
 # ── FADE 16/17 (hide/cull): LMFE front-end electronics (1 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility lmfe 0 false
 
+# ═ STEP 18/19
 # ── FADE 17/17 (hide/cull): springs and washers (2 vols)
-/vis/viewer/interpolate interpolation 10 300 millisecond
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond
 /vis/geometry/set/visibility phbr_spring 0 false
 /vis/geometry/set/visibility phbr_washer 0 false
+
+# ═ STEP 19/19
+# ── STAR: dwell on what remains — the 101 HPGe detectors (B*, C*, P*, V*)
+/vis/viewer/interpolate interpolation/dwell 10 300 millisecond

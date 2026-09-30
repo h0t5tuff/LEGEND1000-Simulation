@@ -2,4 +2,5 @@
 *.gdml
 *.root
 .DS_Store
-Edgars_l1000_simulations
+l1000_sim/Edgars_sim
+l1000_sim/Ralphs_sim

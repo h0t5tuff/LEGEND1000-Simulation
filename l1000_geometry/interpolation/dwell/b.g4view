@@ -1,0 +1,3 @@
+# Auto-peel dwell keyframe B: a 0.1% zoom, so interpolate always animates and honours
+# its wait-time. Relative, so the dwell works from any view (upright, flipped or zoomed).
+/vis/viewer/zoom 1.001

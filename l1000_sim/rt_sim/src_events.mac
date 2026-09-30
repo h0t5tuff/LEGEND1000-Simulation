@@ -1,20 +1,22 @@
-# make bkgrnds: the RT background source, shared by sim_ge.mac and sim_optmap.mac 
+#  the RT background source: one decay chain, uniformly through all three RT sections
+#  /control/execute'd AFTER /run/initialize by sim_run.mac. aliases: {Z} {A} {NEV} {SEED}
+#    Tl208 -> -s Z=81 -s A=208      Bi214 -> -s Z=83 -s A=214
 
 #-------------------------------------------------------------------------------
 #  1. Confine to the RT wall:
 /RMG/Manager/Randomization/Seed {SEED}
-/RMG/Output/Vertex/StorePrimaryParticleInformation true   # vertex xyz already goes to stp/vtx, this adds the primary's energy and direction
 /RMG/Generator/Confine Volume
 /RMG/Generator/Confinement/MaxSamplingTrials 100000        # the wall is a thin shell (1.5 mm EFCu, 6 mm OFHC/SS) so uniform-by-volume needs ~560 tries per vertex. the default is far too low and the sampler gives up
 /RMG/Generator/Confinement/Physical/AddVolume reentrancetube   # EFCu mother: endcap, lower wall AND the top lid
 /RMG/Generator/Confinement/Physical/AddVolume ofhc_cu          # OFHC shell, placed inside the mother
 /RMG/Generator/Confinement/Physical/AddVolume ss_316l          # SS shell. confining to only one of the three fills only that section, which was the stall
-# classify vertices in post with rt.materialAt() from rt_geom.h, NOT a z-cut: the EFCu top lid sits ABOVE the SS seam
+# vertex xyz lands in stp/vtx: sim_background.C reads its depth (the design slab) and its physical volume (the MC density)
 
 #-------------------------------------------------------------------------------
-#  2. The primary:
+#  2. The decaying nucleus:
 /RMG/Generator/Select GPS
-/gps/particle gamma     # 2614 keV is the most penetrating natural gamma and the worst case for RT shielding at Qbb = 2039 keV
-/gps/energy 2614 keV    # for a production run swap these for the chain: /gps/particle ion + /gps/energy 0 eV + /gps/ion 81 208 + /process/had/rdm/nucleusLimits 208 208 81 81
-/gps/ang/type iso
+/gps/particle ion
+/gps/energy 0 eV        # the ion is created at rest, all the energy comes from the decay
+/gps/ion {Z} {A}
+/process/had/rdm/nucleusLimits {A} {A} {Z} {Z}   # decay THIS nuclide only, do not follow the rest of the chain
 /run/beamOn {NEV}

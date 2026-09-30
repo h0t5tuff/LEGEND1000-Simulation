@@ -1,0 +1,5 @@
+# Auto-peel flip keyframe B: half-way, looking straight down (see l1000-autopeel.mac).
+/vis/viewer/set/upVector -0.7925 -0.2885 -0.5373
+/vis/viewer/set/viewpointVector -0.5049 -0.1838 0.8434
+/vis/viewer/set/lightsVector -0.5049 -0.1838 0.8434
+/vis/viewer/zoomTo 1.5

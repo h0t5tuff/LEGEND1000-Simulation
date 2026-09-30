@@ -3,6 +3,7 @@
 #ifndef RT_GEOM_H // include guard in case two macros have the same header
 #define RT_GEOM_H
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -60,6 +61,33 @@ struct Outline // struct is just a bundle of variables under one name plus funct
         inside = !inside;
     }
     return inside;
+  }
+  // Cross-section area at height zq [mm^2]. The line z = zq crosses the outline an even number
+  // of times; sorted, the crossings pair up into rings [r_in, r_out]. radiusAt only sees the
+  // outermost one, which is wrong wherever the solid is a ring rather than a disc: the argon at
+  // the very top is closed by a cone, so there it is a ring and the copper lid sits inside it
+  double areaAt(double zq) const
+  {
+    std::vector<double> x;
+    for (int i = 0, j = size() - 1; i < size(); j = i++)
+      if ((z[i] > zq) != (z[j] > zq))
+        x.push_back(r[i] + (zq - z[i]) / (z[j] - z[i]) * (r[j] - r[i]));
+    std::sort(x.begin(), x.end());
+    double a = 0;
+    for (size_t k = 0; k + 1 < x.size(); k += 2)
+      a += x[k + 1] * x[k + 1] - x[k] * x[k]; // one ring, pi applied once below
+    return M_PI * a;
+  }
+  // Volume of the whole solid [mm^3]: stack the cross-sections up its height
+  double volume(double dz = 0.5) const
+  {
+    double v = 0;
+    for (double zz = zmin; zz < zmax; zz += dz)
+    {
+      double step = std::min(dz, zmax - zz);
+      v += areaAt(zz + 0.5 * step) * step;
+    }
+    return v;
   }
 };
 
@@ -123,6 +151,42 @@ struct RT
       return "OFHC";
     return "SS";
   }
+  // Volume of the tube wall between two heights [mm^3]: the tube's solid minus the argon inside
+  // it, cross-section by cross-section. Uses areaAt, so the lid at the top is counted
+  double wallVolume(double z0, double z1, double dz = 0.5) const
+  {
+    if (z1 < z0)
+      std::swap(z0, z1);
+    z0 = std::max(z0, zBottom);
+    z1 = std::min(z1, zTop);
+    double v = 0;
+    for (double z = z0; z < z1; z += dz)
+    {
+      double step = std::min(dz, z1 - z);
+      v += (wall.areaAt(z + 0.5 * step) - argon.areaAt(z + 0.5 * step)) * step;
+    }
+    return v;
+  }
+  // Volume of each physical volume the source samples [mm^3]: 0 the reentrancetube mother
+  // (endcap, lower wall, lid), 1 the ofhc_cu shell, 2 the ss_316l shell. The shells are outer
+  // minus inner bound; the mother is whatever wall is left once both shells are taken out
+  double physVolume(int pv) const
+  {
+    double ofhc = ofhcOuter.volume() - ofhcInner.volume(), ss = ssOuter.volume() - ssInner.volume();
+    if (pv == 1) return ofhc;
+    if (pv == 2) return ss;
+    return wallVolume(zBottom, zTop) - ofhc - ss;
+  }
+  // Which physical volume a point sits in: 0 mother, 1 OFHC, 2 SS, -1 not in the wall at all
+  int physAt(double rq, double zq) const
+  {
+    const char *m = materialAt(rq, zq);
+    if (!strcmp(m, "OFHC")) return 1;
+    if (!strcmp(m, "SS")) return 2;
+    if (!strcmp(m, "EFCu")) return 0;
+    return -1;
+  }
+
   const char *materialAt(double rq, double zq, double tol = 1e-3) const // 1 um of slack: a vertex written as float32 lands a few nm off the surface it was generated on, and without slack that reads as a confinement bug
   {
     if (!wall.contains(rq, zq, tol))
@@ -189,6 +253,12 @@ inline RT rtLoad(const char *gdmlArg = "") // Load every outline we need, and me
   rt.seamSS = rt.ssOuter.zmin;
   rt.ok = true;
   return rt;
+}
+
+inline std::string rtOut(const std::string &name) // every generated file lands in output/, so the source folder stays clean
+{
+  gSystem->mkdir("output", kTRUE);                       // kTRUE: make parents too, and do not complain if it exists
+  return "output/" + name.substr(name.find_last_of("/\\") + 1); // npos+1 == 0, so a bare name passes through unchanged
 }
 
 inline void rtVerdict(const char *tag, bool ok) // One PASS/FAIL line, printed the same way by every check.

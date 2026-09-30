@@ -1,0 +1,30 @@
+#  the background run: what was deposited, where, by which gamma, and when
+#    remage -q --ignore-warnings -t 8 -w -o output/tl208.root -s GDML=$G -s Z=81 -s A=208 -s NEV=100000 -s SEED=1 -- sim_run.mac
+#  decays happen in the tube wall -> gammas cross the underground argon -> some reach a
+#  crystal. every deposit is recorded in BOTH media, tagged with the track that made it,
+#  so a germanium hit can be traced back to the gamma that caused it
+
+#-------------------------------------------------------------------------------
+#  1. Before init:
+/RMG/Geometry/RegisterDetectorsFromGDML Germanium              # detector map comes from inside the GDML
+/RMG/Geometry/RegisterDetector Scintillator undergroundlar 0   # the argon the gammas cross on the way in
+/RMG/Output/ActivateOutputScheme Track                         # the gamma catalogue: id, energy, origin, time
+/RMG/Output/NtupleUseVolumeName true                           # names the trees V0101 etc rather than det101
+/RMG/Processes/EnableGammaAngularCorrelation                   # physics-list settings are PreInit-only
+/RMG/Geometry/GDMLDisableOverlapCheck true                     # checked once on its own by geo_check.mac
+/RMG/Geometry/IncludeGDMLFile {GDML}
+/run/initialize
+
+#-------------------------------------------------------------------------------
+#  2. After init:
+/geometry/navigator/check_mode false
+/RMG/Output/Track/AddParticleFilter 22       # keep gammas only: they are what crosses the argon, and it keeps the table small
+/RMG/Output/Germanium/StoreTrackID true      # trackid + parent_trackid on every deposit, so it can be traced to its gamma
+/RMG/Output/Scintillator/StoreTrackID true
+/RMG/Output/Germanium/DiscardZeroEnergyHits true
+/RMG/Output/Germanium/StoreSinglePrecisionPosition
+/RMG/Output/Germanium/StoreSinglePrecisionEnergy
+/RMG/Output/Scintillator/StoreSinglePrecisionPosition
+/RMG/Output/Scintillator/StoreSinglePrecisionEnergy
+/RMG/Output/Vertex/StoreSinglePrecisionPosition
+/control/execute src_events.mac

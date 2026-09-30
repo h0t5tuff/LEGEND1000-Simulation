@@ -1,3 +1,18 @@
+# RUN
+#   remage -i l200-vis.mac
+
+# PEELING
+#   /control/execute l200-autopeel.mac
+
+# Define LV, then hide/show
+#   /control/alias LV <LogicalVolumeName>
+#  /control/execute toggles/0.mac
+#   /control/execute toggles/XLV.mac
+#   /control/execute toggles/OLV.mac
+
+#   /control/alias MAT <Group>
+#   /control/execute toggles/MAT.mac
+# ════════════════════════════════════════════════════════════════════
 # geom & dets
 /RMG/Geometry/GDMLDisableOverlapCheck true
 /RMG/Geometry/IncludeGDMLFile l200.gdml
@@ -10,31 +25,11 @@
 /control/execute l200-colors.mac
 /vis/drawVolume
 /vis/viewer/set/style surface
+/vis/viewer/set/upVector 0 0 1
 /vis/viewer/set/viewpointThetaPhi 70 20 deg
 /vis/viewer/set/lightsThetaPhi 70 20 deg
 /vis/viewer/set/autoRefresh true
 /vis/viewer/zoom 1
-# ════════════════════════════════════════════════════════════════════
-# RUN
-#   remage -i l200-vis.mac
-# PEELING
-#   /control/execute l200-autopeel.mac
-# Define group & LV, then hide/show
-#   /control/alias MAT <Group>
-#   /control/execute toggles/MAT.mac
-#   /control/alias LV <LogicalVolumeName>
-#   /control/execute toggles/XLV.mac
-#
-# !! NAME TRAP: Geant4 strips every GDML volume name at the first '0x'
-#    (it assumes a pointer suffix). 5 l200 names hit this — use the STRIPPED
-#    form in macros, NOT the GDML text:
-#      GDML minishroud_19.00x1400.00      -> use minishroud_19.0
-#      GDML minishroud_tube_44.00x1000.00 -> use minishroud_tube_44.0
-#      GDML minishroud_tube_48.00x1000.00 -> use minishroud_tube_48.0
-#      GDML minishroud_tube_51.00x1000.00 -> use minishroud_tube_51.0
-#      GDML minishroud_tube_54.00x800.00  -> use minishroud_tube_54.0
-#    (minishroud_lid_43.75x20.00 etc. contain '5x', not '0x', so are unchanged.)
-#    Authoritative list = /RMG/Geometry/PrintListOfLogicalVolumes, not the GDML.
 # ════════════════════════════════════════════════════════════════════
 # Order LogicalVolumeName                             Material                  #LVs  Note
 #  –    world                                         G4_Galactic               1     vacuum (not a component)
@@ -64,63 +59,3 @@
 # ────────────────────────────────────────────────────────────────────────────────────
 # TOTAL LVs = 389 ( 1 + 1+1+1+1+1+1+1+58+4+3+97+8+33+68+6+1+2 + 101 ) = 1 + 287 + 101 HPGe
 # Readout (l200-dets.mac, 160): 101 Germanium (B/C/P/V) + 58 Optical (SiPM) + 1 Scintillator (LAr bath)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ════════════════════════════════════════════════════════════════════
-# INVENTORY — run in l200_geometry/ (SHELL, not at the Idle> prompt)
-#
-# ── SCALE ───────────────────────────────────────────────────────────
-#   grep -c '<volume name='  l200.gdml   #   389 LVs component definitions
-#   grep -c '<physvol name=' l200.gdml   # 2,747 PVs placements (NOT bare '<physvol')
-#   grep -c '<bordersurface' l200.gdml   # 1,621 optical surfaces (x2 is physvolref)
-#
-# ── MATERIALS  (count = # of component definitions using it) ────────
-#   grep -oE '<materialref ref="[^"]+"' l200.gdml | sed -E 's/.*"([^"]+)"/\1/' \
-#     | sort | uniq -c | sort -rn | awk '{printf "  %7d  %s\n", $1, $2}'
-#
-# ── MOST-PLACED COMPONENTS  (count = placements referencing that def) ──
-#   grep -oE '<volumeref ref="[^"]+"' l200.gdml | sed -E 's/.*"([^"]+)"/\1/' \
-#     | sort | uniq -c | sort -rn | head -15 | awk '{printf "  %7d  %s\n", $1, $2}'
-#
-# ── DETECTOR READOUT  (RegisterDetector by type) ────────────────────
-#   awk '/RegisterDetector/{print $2}' l200-dets.mac | sort | uniq -c \
-#     | awk '{printf "  %7d  %s\n", $1, $2}'
-#   grep -c 'RegisterDetector' l200-dets.mac                     # TOTAL 160
-#
-# ── LVs OF A GIVEN MATERIAL  (e.g. liquid_argon) ────────────────────
-#   awk '/<volume name=/{v=$0} /materialref ref="liquid_argon"/{gsub(/.*name="|".*/,"",v);print v}' l200.gdml
-#
-# ── AUDIT: macro LV names that do not exist in the Geant4 LV store ──
-#   NB the 's/0x.*//' is REQUIRED — it replays Geant4's name stripping.
-#   Without it the 5 minishroud names above show up as false positives.
-#   grep -oE '<volume name="[^"]*"' l200.gdml | sed -E 's/.*name="([^"]+)"/\1/' \
-#     | sed -E 's/0x.*//' | sort -u > /tmp/lvs
-#   grep -hoE '^/vis/geometry/set/(visibility|colour) [^ ]+' \
-#     toggles/*.mac l200-colors.mac l200-autopeel.mac \
-#     | awk '{print $2}' | grep -vE '^(world|\{LV\})$' | sort -u > /tmp/refs
-#   comm -23 /tmp/refs /tmp/lvs      # broken refs      (expect none)
-#   comm -13 /tmp/refs /tmp/lvs      # unreferenced LVs (expect only 'world')
-#
-# ── IN-SESSION EQUIVALENTS  (these DO run at the Idle> prompt) ──────
-#   /RMG/Geometry/PrintListOfLogicalVolumes    #   389 LVs definition (colour/material live here)
-#   /RMG/Geometry/PrintListOfPhysicalVolumes   # 2,747 PVs instance (position lives here)
-# ════════════════════════════════════════════════════════════════════

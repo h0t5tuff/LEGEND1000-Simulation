@@ -46,12 +46,12 @@ static TGraph *rt_graph(const Outline &p, int col, int style) // (r,z) silhouett
 
 //-------------------------------------------------------------------------------
 //  2. Is the outline one clean surface?
-void rt_verify(const char *gdml = "", const char *reference = "l1000.gdml", double tol_mm = 0.05)
+void geo_rt(const char *gdml = "", const char *reference = "l1000.gdml", double tol_mm = 0.05)
 {
   RT s = rtLoad(gdml); // one load: every check below reuses these six outlines
   if (!s.ok)
   {
-    rtVerdict("rt_verify", false);
+    rtVerdict("geo_rt", false);
     return;
   }
   const Outline &w = s.wall;
@@ -254,6 +254,6 @@ void rt_verify(const char *gdml = "", const char *reference = "l1000.gdml", doub
     leg->AddEntry(rt_graph(s0.wall, kGray + 1, 2), "mint l1000", "l");
     leg->Draw();
   }
-  c->SaveAs("rt_verify.png");
-  rtVerdict("rt_verify", ok_surface && ok_step && ok_shells);
+  c->SaveAs(rtOut("geo_rt.png").c_str());
+  rtVerdict("geo_rt", ok_surface && ok_step && ok_shells);
 }

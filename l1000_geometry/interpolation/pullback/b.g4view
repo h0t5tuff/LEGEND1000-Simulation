@@ -1,0 +1,3 @@
+# Auto-peel pull-back keyframe B: re-centre and zoom out to the whole array, still seen from below.
+/vis/viewer/panTo 0 0
+/vis/viewer/zoomTo 1
