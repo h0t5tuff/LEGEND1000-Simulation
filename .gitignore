@@ -2,5 +2,5 @@
 *.gdml
 *.root
 .DS_Store
-l1000_sim/Edgars_sim
-l1000_sim/Ralphs_sim
+Edgars_sim
+Ralphs_sim

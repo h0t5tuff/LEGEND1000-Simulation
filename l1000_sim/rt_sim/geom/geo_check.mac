@@ -1,10 +1,10 @@
 #  does the KS geometry build, and does anything overlap? two modes, one file
 
 #    fast build only, ~6 s 
-#      remage -q --ignore-warnings -s GDML=$G -s SKIP=true  -s NPOINTS=1000  -- geo_check.mac
+#      remage -q --ignore-warnings -s GDML=$G -s SKIP=true  -s NPOINTS=1000  -- geom/geo_check.mac
 
 #    full overlap scan, ~3 min (for finer scan, increase the points)
-#      remage    --ignore-warnings -s GDML=$G -s SKIP=false -s NPOINTS=1000  -- geo_check.mac 2>&1 | grep "Overlap is detected"
+#      remage    --ignore-warnings -s GDML=$G -s SKIP=false -s NPOINTS=1000  -- geom/geo_check.mac 2>&1 | grep "Overlap is detected"
 
 #-------------------------------------------------------------------------------
 /RMG/Geometry/RegisterDetectorsFromGDML Germanium   # the KS file carries the pygeomtools map, so no hand-written dets macro

@@ -1,7 +1,7 @@
 //  read the reentrance tube's shape from the GDML in two steps.
 
-#ifndef RT_GEOM_H // include guard in case two macros have the same header
-#define RT_GEOM_H
+#ifndef RT_H // include guard in case two macros have the same header
+#define RT_H
 #include <algorithm>
 #include <cstring>
 #include <fstream>
@@ -9,6 +9,8 @@
 #include <vector>
 #include "TROOT.h"
 #include "TSystem.h"
+#include "TTree.h"
+#include "TTreeFormula.h"
 
 //-------------------------------------------------------------------------------
 //  1. Find RT Outline:
@@ -45,7 +47,7 @@ struct Outline // struct is just a bundle of variables under one name plus funct
     return best; // Returns -1 if zq is above or below the whole shape.
   }
   // Is the point (rq, zq) inside this outline? using ray casting trick
-  bool contains(double rq, double zq, double tol = 0) const // tol grows (or with a negative value shrinks) the outline radially
+  bool contains(double rq, double zq) const
   {
     bool inside = false;
     const int n = size();
@@ -57,10 +59,22 @@ struct Outline // struct is just a bundle of variables under one name plus funct
 
       double frac = (zq - z[i]) / (z[j] - z[i]); // Where does the edge sit at our height? If it is to our right, the ray (fired to the right) crosses it, so flip inside/outside.
       double rEdge = r[i] + frac * (r[j] - r[i]);
-      if (rq < rEdge + tol)
+      if (rq < rEdge)
         inside = !inside;
     }
     return inside;
+  }
+  // tolerant versions: inside or within tol of it (near), at least tol inside (deep). the point is
+  // nudged by tol in r AND z: on the lid's shallow cone a float32 z error of 0.2 um is 40 um in r
+  bool near(double rq, double zq, double tol) const
+  {
+    return contains(rq, zq) || contains(rq + tol, zq) || contains(fabs(rq - tol), zq) ||
+           contains(rq, zq + tol) || contains(rq, zq - tol);
+  }
+  bool deep(double rq, double zq, double tol) const
+  {
+    return contains(rq, zq) && contains(rq + tol, zq) && contains(fabs(rq - tol), zq) &&
+           contains(rq, zq + tol) && contains(rq, zq - tol);
   }
   // Cross-section area at height zq [mm^2]. The line z = zq crosses the outline an even number
   // of times; sorted, the crossings pair up into rings [r_in, r_out]. radiusAt only sees the
@@ -187,16 +201,16 @@ struct RT
     return -1;
   }
 
-  const char *materialAt(double rq, double zq, double tol = 1e-3) const // 1 um of slack: a vertex written as float32 lands a few nm off the surface it was generated on, and without slack that reads as a confinement bug
+  const char *materialAt(double rq, double zq, double tol = 1e-3) const // 1 um of slack in r and z: a vertex written as float32 lands off the surface it was generated on, and without slack that reads as a confinement bug
   {
-    if (!wall.contains(rq, zq, tol))
+    if (!wall.near(rq, zq, tol))
       return "outside";
-    if (ofhcOuter.contains(rq, zq, tol) && !ofhcInner.contains(rq, zq, -tol))
+    if (ofhcOuter.near(rq, zq, tol) && !ofhcInner.deep(rq, zq, tol))
       return "OFHC";
-    if (ssOuter.contains(rq, zq, tol) && !ssInner.contains(rq, zq, -tol))
+    if (ssOuter.near(rq, zq, tol) && !ssInner.deep(rq, zq, tol))
       return "SS";
 
-    if (argon.contains(rq, zq, -tol))
+    if (argon.deep(rq, zq, tol))
       return "LAr";
     return "EFCu";
   }
@@ -261,10 +275,39 @@ inline std::string rtOut(const std::string &name) // every generated file lands 
   return "output/" + name.substr(name.find_last_of("/\\") + 1); // npos+1 == 0, so a bare name passes through unchanged
 }
 
+inline bool rtIsGermanium(const TString &n) // a Ge detector's tree is "V" + 4 digits, e.g. V0101
+{
+  if (n.Length() != 5 || n[0] != 'V')
+    return false;
+  for (int i = 1; i < 5; i++)
+    if (!isdigit(n[i]))
+      return false;
+  return true;
+}
+
+// walk a tree row by row and hand the named columns to f as doubles, whatever type they were stored in:
+//   rtScan(t, {"evtid", "edep_in_keV"}, [&](const double *v) { sum[(int)v[0]] += v[1]; });
+template <class F> inline void rtScan(TTree *t, const std::vector<const char *> &cols, F f)
+{
+  std::vector<TTreeFormula *> col;
+  for (auto c : cols)
+    col.push_back(new TTreeFormula(c, c, t));
+  std::vector<double> v(cols.size());
+  for (Long64_t i = 0; i < t->GetEntries(); i++)
+  {
+    t->GetEntry(i);
+    for (size_t k = 0; k < col.size(); k++)
+      v[k] = col[k]->EvalInstance();
+    f(v.data()); // .data() is a plain pointer to the row's values
+  }
+  for (auto c : col)
+    delete c;
+}
+
 inline void rtVerdict(const char *tag, bool ok) // One PASS/FAIL line, printed the same way by every check.
 {
   printf("\nRESULT [%s]: %s\n", tag, ok ? "PASS" : "FAIL");
   if (gROOT->IsBatch())
     gSystem->Exit(ok ? 0 : 1);
 }
-#endif // RT_GEOM_H
+#endif // RT_H

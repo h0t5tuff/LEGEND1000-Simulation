@@ -1,6 +1,6 @@
 #  step 2: detector response - dead layer and pulse-shape discrimination (A/E), with reboost
-#    ~/venvs/v/bin/python sim_psd.py output/tl208.root          # seed 1
-#    ~/venvs/v/bin/python sim_psd.py output/tl208.root 7        # another seed
+#    ~/venvs/v/bin/python ana/sim_psd.py output/tl208.root          # seed 1
+#    ~/venvs/v/bin/python ana/sim_psd.py output/tl208.root 7        # another seed
 #  writes output/tl208_psd.csv, one row per detector response: evtid,det,energy_keV,aoe_class
 #  this is Edgar's build_hit.yaml "geds" group, operation for operation, using reboost's own
 #  functions. it reads remage's ROOT output with uproot, so it runs where remage has no HDF5
@@ -19,7 +19,7 @@ from reboost.units import ureg as u
 # ------------------------------------------------------------------------------
 #  1. Parameters, from Edgar's reboost/config (read-only mirror):
 HERE = os.path.dirname(os.path.abspath(__file__))
-REBOOST = os.path.join(HERE, "..", "Edgars_sim", "l1000_simulations", "reboost")
+REBOOST = os.path.join(HERE, "..", "..", "Edgars_sim", "l1000_simulations", "reboost")
 DT_MAP = os.path.join(REBOOST, "drift_time_maps", "drift_time_map.lh5")
 REF = "V00000A"                  # every detector uses this one reference set, as in Edgar's config
 
@@ -110,5 +110,5 @@ def main(path, seed=1):
 
 if __name__ == "__main__":
     if len(sys.argv) not in (2, 3):
-        sys.exit("usage: python sim_psd.py output/<run>.root [seed]")
+        sys.exit("usage: python ana/sim_psd.py output/<run>.root [seed]")
     main(sys.argv[1], int(sys.argv[2]) if len(sys.argv) == 3 else 1)
