@@ -1,7 +1,7 @@
 #  step 2: detector response - dead layer and pulse-shape discrimination (A/E), with reboost
-#    ~/venvs/v/bin/python ana/sim_psd.py output/tl208.root          # seed 1
-#    ~/venvs/v/bin/python ana/sim_psd.py output/tl208.root 7        # another seed
-#  writes output/tl208_psd.csv, one row per detector response: evtid,det,energy_keV,aoe_class
+#    ~/venvs/v/bin/python sim/response.py output/tl208.root          # seed 1
+#    ~/venvs/v/bin/python sim/response.py output/tl208.root 7        # another seed
+#  writes output/tl208_response.csv, one row per detector response: evtid,det,energy_keV,aoe_class
 #  this is Edgar's build_hit.yaml "geds" group, operation for operation, using reboost's own
 #  functions. it reads remage's ROOT output with uproot, so it runs where remage has no HDF5
 
@@ -86,7 +86,7 @@ def main(path, seed=1):
 
     germanium = sorted(k.split(";")[0] for k in stp.keys()
                        if len(k.split(";")[0]) == 5 and k[0] == "V" and k[1:5].isdigit())
-    out = os.path.join("output", os.path.basename(path).replace(".root", "") + "_psd.csv")
+    out = os.path.join("output", os.path.basename(path).replace(".root", "") + "_response.csv")
     os.makedirs("output", exist_ok=True)
     rows = 0
     with open(out, "w", newline="") as fh:
@@ -110,5 +110,5 @@ def main(path, seed=1):
 
 if __name__ == "__main__":
     if len(sys.argv) not in (2, 3):
-        sys.exit("usage: python ana/sim_psd.py output/<run>.root [seed]")
+        sys.exit("usage: python sim/response.py output/<run>.root [seed]")
     main(sys.argv[1], int(sys.argv[2]) if len(sys.argv) == 3 else 1)

@@ -1,5 +1,5 @@
 #  the background run: what was deposited, where, by which gamma, and when
-#    remage -q --ignore-warnings -t 8 -w -o output/tl208.root -s GDML=$G -s Z=81 -s A=208 -s NEV=1000000 -s SEED=1 -- sim/sim_run.mac
+#    remage -q --ignore-warnings -t 8 -w -o output/tl208.root -s GDML=$G -s Z=81 -s A=208 -s NEV=1000000 -s SEED=1 -- sim/run.mac
 #  decays happen in the tube wall -> gammas cross the underground argon -> some reach a
 #  crystal. every deposit is recorded in BOTH media, tagged with the track that made it,
 #  so a germanium hit can be traced back to the gamma that caused it
@@ -11,7 +11,7 @@
 /RMG/Output/ActivateOutputScheme Track                         # the gamma catalogue: id, energy, origin, time
 /RMG/Output/NtupleUseVolumeName true                           # names the trees V0101 etc rather than det101
 /RMG/Processes/EnableGammaAngularCorrelation                   # physics-list settings are PreInit-only
-/RMG/Geometry/GDMLDisableOverlapCheck true                     # checked once on its own by geo_check.mac
+/RMG/Geometry/GDMLDisableOverlapCheck true                     # checked once on its own by geom/check.mac
 /RMG/Geometry/IncludeGDMLFile {GDML}
 /run/initialize
 
@@ -28,4 +28,4 @@
 /RMG/Output/Scintillator/StoreSinglePrecisionPosition
 /RMG/Output/Scintillator/StoreSinglePrecisionEnergy
 /RMG/Output/Vertex/StoreSinglePrecisionPosition
-/control/execute sim/src_events.mac          # path from rt_sim/, where remage is launched
+/control/execute sim/source.mac          # path from rt_sim/, where remage is launched

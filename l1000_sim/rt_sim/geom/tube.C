@@ -1,5 +1,5 @@
 //  is the tube one clean surface, is the endcap flush, and how does it differ from the mint geometry
-//    root -l -b -q geom/geo_rt.C
+//    root -l -b -q geom/tube.C
 
 #include "rt.h"
 
@@ -20,11 +20,11 @@ static TGraph *silhouette(const Outline &p, int col, int style) // (r,z) outline
   return g;
 }
 
-void geo_rt(const char *gdml = "", const char *reference = "l1000.gdml", double tol_mm = 0.05)
+void tube(const char *gdml = "", const char *reference = "l1000.gdml", double tol_mm = 0.05)
 {
   RT s = rtLoad(gdml); // one load: every check below reuses these six outlines
   if (!s.ok)
-    return rtVerdict("geo_rt", false);
+    return rtVerdict("tube", false);
   const Outline &w = s.wall;
   const std::vector<double> &r = w.r, &z = w.z;
   const int n = w.size();
@@ -68,7 +68,7 @@ void geo_rt(const char *gdml = "", const char *reference = "l1000.gdml", double 
 //-------------------------------------------------------------------------------
 //  3. Endcap flush with the barrel:
   double zBarrel = 0.5 * (s.seamOFHC + s.seamSS), rBarrel = w.radiusAt(zBarrel); // mid-OFHC, where the tube is certainly a cylinder
-  double zEndcap = z[std::max_element(r.begin(), r.end()) - r.begin()], step = w.rmax - rBarrel; // the endcap radius is the global maximum
+  double zEndcap = s.zHead, step = w.rmax - rBarrel; // the endcap radius is the global maximum
   bool okStep = fabs(step) <= tol_mm;
   printf("\n[3] endcap flush: barrel r %.4f (z %.1f), endcap r %.4f (z %.1f), step %+.4f mm (tolerance %.3f)%s\n",
          rBarrel, zBarrel, w.rmax, zEndcap, step, tol_mm, okStep ? "" : "  <- NOT flush");
@@ -143,6 +143,6 @@ void geo_rt(const char *gdml = "", const char *reference = "l1000.gdml", double 
       t->Draw();
     }
   }
-  c->SaveAs(rtOut("geo_rt.png").c_str());
-  rtVerdict("geo_rt", okSurface && okStep && okShells);
+  c->SaveAs(rtOut("tube.png").c_str());
+  rtVerdict("tube", okSurface && okStep && okShells);
 }

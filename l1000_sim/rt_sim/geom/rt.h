@@ -156,6 +156,7 @@ struct RT
   Outline wall, argon, ofhcOuter, ofhcInner, ssOuter, ssInner;
   double zBottom = 0, zTop = 0;    // full extent of the tube
   double seamOFHC = 0, seamSS = 0; // where one section hands over to the next
+  double zHead = 0;                // where the bottom head meets the barrel: the height of the tube's widest point
   bool ok = false;
   const char *sectionAt(double zq) const
   {
@@ -265,6 +266,7 @@ inline RT rtLoad(const char *gdmlArg = "") // Load every outline we need, and me
   rt.zTop = rt.wall.zmax;
   rt.seamOFHC = rt.ofhcOuter.zmin;
   rt.seamSS = rt.ssOuter.zmin;
+  rt.zHead = rt.wall.z[std::max_element(rt.wall.r.begin(), rt.wall.r.end()) - rt.wall.r.begin()];
   rt.ok = true;
   return rt;
 }

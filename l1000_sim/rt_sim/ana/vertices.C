@@ -1,9 +1,9 @@
 //  are the RT vertices spread over the WHOLE tube, and in the right material?
-//    root -l -b -q 'ana/src_vertices.C("output/tl208.root")'
+//    root -l -b -q 'ana/vertices.C("output/tl208.root")'
 
 #include "../geom/rt.h"
 
-void src_vertices(const char *fn, const char *gdml = "")
+void vertices(const char *fn, const char *gdml = "")
 {
   RT rt = rtLoad(gdml);
   if (!rt.ok)
@@ -59,7 +59,8 @@ void src_vertices(const char *fn, const char *gdml = "")
     printf("   %8.0f..%8.0f mm | %-40s %lld%s\n", rt.zBottom + len * b / NB, rt.zBottom + len * (b + 1) / NB,
            TString('#', (int)(40.0 * h[b] / mx)).Data(), h[b], h[b] ? "" : "   <-- EMPTY"); // TString('#', k) is a bar of k hashes
   }
+  bool whole = nMat[0] && nMat[1] && nMat[2]; // a run of one section (VOLS=ss_316l, say) leaves the rest empty by design
   if (empty)
-    printf("\n%d empty bin(s) - the sampler never reached part of the tube.\n", empty);
-  rtVerdict("src_vertices", nMat[3] == 0 && nMat[4] == 0 && empty == 0);
+    printf("\n%d empty bin(s) - %s\n", empty, whole ? "the sampler never reached part of the tube" : "expected: this run fills only part of the tube");
+  rtVerdict("vertices", nMat[3] == 0 && nMat[4] == 0 && (!whole || empty == 0));
 }

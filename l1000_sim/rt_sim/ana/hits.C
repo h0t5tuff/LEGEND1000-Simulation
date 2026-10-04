@@ -1,6 +1,6 @@
 //  what a germanium hit is made of: a pile of Geant4 steps becomes ONE detector response,
 //  and each response traces back to the gamma that caused it
-//    root -l -b -q 'ana/sim_hits.C("output/tl208.root")'
+//    root -l -b -q 'ana/hits.C("output/tl208.root")'
 
 #include "../geom/rt.h"
 
@@ -9,7 +9,7 @@ const int   pdgOf[5] = {22, 11, -11, 2112, 0}; // the particles that deposit in 
 const char *pdgName[5] = {"gamma", "e-", "e+", "neutron", "other"};
 static int slot(int pdg) { int i = 0; while (i < 4 && pdg != pdgOf[i]) i++; return i; } // no match leaves it on "other"
 
-void sim_hits(const char *fn, double m1_keV = 5.0)
+void hits(const char *fn, double m1_keV = 5.0)
 {
   TFile f(fn);
   auto d = f.IsZombie() ? nullptr : (TDirectory *)f.Get("stp");
