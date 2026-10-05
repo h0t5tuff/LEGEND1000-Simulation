@@ -1,5 +1,5 @@
 #  the background run: what was deposited, where, by which gamma, and when
-#    remage -q --ignore-warnings -t 8 -w -o output/tl208.root -s GDML=$G -s Z=81 -s A=208 -s NEV=1000000 -s SEED=1 -- sim/run.mac
+#    remage -q --ignore-warnings -t 8 -w -o output/tl208.root -s GDML=$G -s Z=81 -s A=208 -s NEV=1000000 -s SEED=1 -s VOLS='reentrancetube|ofhc_cu|ss_316l' -- sim/run.mac
 #  decays happen in the tube wall -> gammas cross the underground argon -> some reach a
 #  crystal. every deposit is recorded in BOTH media, tagged with the track that made it,
 #  so a germanium hit can be traced back to the gamma that caused it

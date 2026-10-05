@@ -1,5 +1,5 @@
-//  how little underground EFCu the re-entrant tube can use: where the steel/Cu seam L1 and the Cu/EFCu seam L2 can sit
-//  while the tube's background stays under its budget. one run per chain, reweighted to every (L1, L2)
+//  the cheapest re-entrant tube: always steel (top) / Cu / EFCu (bottom), with the steel/Cu seam L1 as deep and the
+//  Cu/EFCu seam L2 as deep as the tube's background budget allows. one run per chain, reweighted to every (L1, L2)
 //    root -l -b -q 'ana/background.C("output/tl208.root=Tl208,output/bi214.root=Bi214")'
 //    root -l -b -q 'ana/background.C("output/tl208_*.root=Tl208,output/bi214_*.root=Bi214")'   job arrays, merged per isotope
 //  each run is weighted by its nuclide's activity and its own measured sampling density, then the chains are summed
@@ -13,21 +13,29 @@
 //  1. Configuration:
 namespace cfg
 {
-  const double qbb = 2039.0, roiHalf = 55.0;  // keV, the neutrinoless double beta window
+  // the background window of MAJORANA [Haufe et al., arXiv:2209.10592]: 1950-2350 keV, minus 10 keV around Qbb and the
+  // 2103.5 (Tl208 single escape), 2118.5 and 2204.1 keV (Bi214) lines [Arnquist et al., arXiv:2207.07638]. 360 keV of flat
+  // continuum, 3.3x the 110 keV ROI around Qbb it replaced: the BI is its counts / 360 keV
+  const double winLo = 1950, winHi = 2350, winGap[4] = {2039.0, 2103.5, 2118.5, 2204.1}, winGapHalf = 5.0;
+  bool inWindow(double e) { if (e < winLo || e > winHi) return false; for (double g : winGap) if (fabs(e - g) <= winGapHalf) return false; return true; }
+  const double winWidth = winHi - winLo - 4 * 2 * winGapHalf; // 360 keV
+  const double reachEnd = 4400;               // mm depth. above it a decay's chance of a Ge hit is fitted as exp(-distance / lambda) and
+                                              // extrapolated, so steel can be judged where the MC saw nothing; below it the MC is used as it is
+  const double line[2] = {1764.5, 2614.5};    // keV: the strongest line of each chain (Bi214, Tl208), the tracer MAJORANA used per detector
   const double m1_keV = 5.0;                  // a detector counts as fired above this
   const double lar_keV = 20.0;                // argon veto: fires above this deposit. 20 keV is where the 4 PE cut sits
   const double psdCut = -1.80;                // AoE_class cut in Edgar's analysis. his aoe_class_paras.yaml says -0.83
   const double geMass_kg = 1000.0;            // the array being protected
   const double exposureYr = 10.0;             // live time to quote real-life event counts over
   const double decaysPerSec = 1600.0;         // this laptop, -t 8, remage v0.26.0: 1M decays in ~10 min. only turns a required N into a wall time
-  const double bgGoal = 1e-5;                 // LEGEND-1000 target [cts/(keV kg yr)] in the ROI
-  const double rtBudget = 1e-5;               // the tube's share of that goal: a design passes when its 90% CL bound is below this
+  const double bgGoal = 1e-5;                 // LEGEND-1000 target [cts/(keV kg yr)] at Qbb
+  const double rtBudget = 1e-5;               // the tube's share of that goal: a design passes when its projected 90% BI is below this
   const double targetRel = 0.10;              // [7] sizes a run for this relative error on the BI AFTER cuts
   const double secPerYear = 365.25 * 24 * 3600;
   const double eLo = 1000, eHi = 3000;        // spectrum range [keV]
   const int    eBins = 200;
   const int    NDB = 10;                      // depth slabs for the reach profile
-  const int    NZ = 625;                      // ~1 cm depth bins: which sections have decays inside any slab
+  const int    NZ = 625;                      // ~1 cm depth bins: decays per section, the reach fit, the projection
 
   const char  *mat[3] = {"steel", "Cu", "EFCu"};      // ordered top to bottom
   const double density[3] = {7900.0, 8960.0, 8930.0}; // kg/m^3
@@ -49,6 +57,7 @@ namespace cfg
 struct Hit // one detector's response to one decay
 {
   Long64_t ev;     // its decay: the evtid while a file is read, then its slot among the run's decays with a hit
+  short det;       // index into Run::dets
   float e;         // active energy if response.py ran, else the summed deposit
   bool m1, lar;    // passes M1, passes the argon veto
   signed char psd; // 1 passes PSD, 0 fails, -1 unknown (response.py not run)
@@ -59,19 +68,22 @@ struct Run
   std::string file, iso;
   Long64_t nsim = 0;
   int ndet = 0;
+  std::vector<std::string> dets;      // Ge detector names, V<string><position>
   bool hasPsd = false;                // detector response supplied by response.py
   long nPv[3] = {0, 0, 0};            // every decay counts, but only as numbers. per physical volume: 0 mother, 1 OFHC, 2 SS
   long nRowPv[4][3] = {{0}};          // the same, per as-built row (steel, Cu, EFCu wall, EFCu head)
   long nZPv[3][cfg::NZ] = {{0}};      // the same, per ~1 cm of depth
   double mcDensity[3] = {0, 0, 0};    // simulated decays per m^3 in each physical volume, measured
+  double lam = 0, P0 = 0, lamHi = 0, P0Hi = 0; // the fitted reach: P(hit) = P0 exp((depth - reachEnd) / lam), and its 90% far-reaching variant
+  double fWin = 0, fWinHi = 0, fCut = 0, fCutHi = 0; // window hits per decay with a hit, before / after cuts, and 90% upper values
   long nBad = 0, nFiles = 1;          // decays outside the wall (a confinement bug); files merged in
   std::vector<float> depth;           // one slot per decay WITH a Ge hit, so memory follows the hits: mm below the top of the tube
   std::vector<signed char> pv;        // physical volume it was drawn in: 0 mother, 1 OFHC, 2 SS, -1 none
-  std::vector<short> roiRaw, roiCut;  // ROI hits: before cuts, after the full chain
-  std::vector<Long64_t> roiIdx;       // the slots with an ROI hit: the only decays a design can change
+  std::vector<short> winRaw, winCut;  // hits in the background window: before cuts, after the full chain
+  std::vector<Long64_t> winIdx;       // the slots with a window hit: the only decays a design can change
   std::vector<Hit> hits;
   long nHit[4] = {0, 0, 0, 0};        // no cuts, M1, M1 + argon, M1 + argon + PSD
-  long dN[cfg::NDB] = {0}, dH[cfg::NDB] = {0}, dR[cfg::NDB] = {0}; // per depth slab: decays, hits, ROI hits
+  long dN[cfg::NDB] = {0}, dH[cfg::NDB] = {0}, dR[cfg::NDB] = {0}; // per depth slab: decays, hits, window hits
 };
 
 static int slabOf(double dep, double L1, double L2) { return dep < L1 ? 0 : (dep < L2 ? 1 : 2); } // a design's three slabs, from the top
@@ -96,7 +108,7 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
   }
   const Long64_t n = r.nsim = vtx->GetEntries();
   std::vector<float> eLAr(n, 0), depth(n, -1); // per decay, but for this file only (10^7 on NERSC): the run keeps just the decays with a hit
-  std::vector<short> nFired(n, 0), roiRaw(n, 0), roiCut(n, 0);
+  std::vector<short> nFired(n, 0), winRaw(n, 0), winCut(n, 0);
   std::vector<signed char> pv(n, -1);
 
   std::map<std::pair<int, std::string>, std::pair<float, float>> psd; // response.py: (event, detector) -> (active energy, AoE_class)
@@ -118,6 +130,8 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
     if (!t || !t->GetBranch("edep_in_keV"))
       continue;
     r.ndet++;
+    r.dets.push_back(k->GetName());
+    short id = r.dets.size() - 1;
     std::map<int, float> sum;
     rtScan(t, {"evtid", "edep_in_keV"}, [&](const double *v) { sum[(int)v[0]] += v[1]; });
     for (auto &p : sum)
@@ -137,7 +151,7 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
       if (e <= cfg::m1_keV)
         continue;
       nFired[p.first]++; // a detector fired: M1 counts these
-      r.hits.push_back({p.first, e, false, false, pass});
+      r.hits.push_back({p.first, id, e, false, false, pass});
     }
   }
   if (auto tl = (TTree *)d->Get("undergroundlar"))
@@ -162,12 +176,12 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
     r.nHit[1] += h.m1;
     r.nHit[2] += h.m1 && h.lar;
     r.nHit[3] += r.hasPsd && full;
-    if (fabs(h.e - cfg::qbb) <= cfg::roiHalf) { roiRaw[h.ev]++; roiCut[h.ev] += full; }
+    if (cfg::inWindow(h.e)) { winRaw[h.ev]++; winCut[h.ev] += full; }
   }
   for (Long64_t i = 0; i < n; i++) // every decay, reduced to counts
   {
     r.dN[depthBin(depth[i], tot)]++;
-    r.dR[depthBin(depth[i], tot)] += roiRaw[i];
+    r.dR[depthBin(depth[i], tot)] += winRaw[i];
     if (pv[i] >= 0) { r.nPv[pv[i]]++; r.nRowPv[rowOf(depth[i], L1, L2, Lh)][pv[i]]++; r.nZPv[pv[i]][zBin(depth[i], tot)]++; }
   }
   std::vector<int> slot(n, -1); // a decay with a hit gets one slot, and each of its hits points there
@@ -180,8 +194,8 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
       sl = r.depth.size();
       r.depth.push_back(depth[h.ev]);
       r.pv.push_back(pv[h.ev]);
-      r.roiRaw.push_back(roiRaw[h.ev]);
-      r.roiCut.push_back(roiCut[h.ev]);
+      r.winRaw.push_back(winRaw[h.ev]);
+      r.winCut.push_back(winCut[h.ev]);
     }
     h.ev = sl;
   }
@@ -240,11 +254,17 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
       if (!into) { R.push_back(std::move(r)); continue; }
       // files of one isotope are one run split into jobs: stitch them, slots renumbered, or it counts once per file
       Long64_t off = into->depth.size();
-      for (auto h : r.hits) { h.ev += off; into->hits.push_back(h); }
+      std::vector<short> map(r.dets.size()); // detector indices by name, in case a file lists them in another order
+      for (size_t k = 0; k < r.dets.size(); k++)
+      {
+        auto it = std::find(into->dets.begin(), into->dets.end(), r.dets[k]);
+        map[k] = it != into->dets.end() ? it - into->dets.begin() : (into->dets.push_back(r.dets[k]), into->dets.size() - 1);
+      }
+      for (auto h : r.hits) { h.ev += off; h.det = map[h.det]; into->hits.push_back(h); }
       append(into->depth, r.depth);
       append(into->pv, r.pv);
-      append(into->roiRaw, r.roiRaw);
-      append(into->roiCut, r.roiCut);
+      append(into->winRaw, r.winRaw);
+      append(into->winCut, r.winCut);
       for (int k = 0; k < 4; k++) into->nHit[k] += r.nHit[k];
       for (int p = 0; p < 3; p++) { into->nPv[p] += r.nPv[p]; for (int k = 0; k < 4; k++) into->nRowPv[k][p] += r.nRowPv[k][p]; for (int b = 0; b < cfg::NZ; b++) into->nZPv[p][b] += r.nZPv[p][b]; }
       for (int b = 0; b < cfg::NDB; b++) { into->dN[b] += r.dN[b]; into->dH[b] += r.dH[b]; into->dR[b] += r.dR[b]; }
@@ -264,20 +284,21 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
   }
 
   const double depthTot = rt.zTop - rt.zBottom, L1ks = rt.zTop - rt.seamSS, L2ks = rt.zTop - rt.seamOFHC, Lhks = rt.zTop - rt.zHead; // KS seams and head as depths
-  const double binW = (cfg::eHi - cfg::eLo) / cfg::eBins, UL90 = 2.30, roiW = 2 * cfg::roiHalf;
+  const double binW = (cfg::eHi - cfg::eLo) / cfg::eBins, UL90 = 2.30, winW = cfg::winWidth; // the BI is window counts per keV of window
   const int ORD[3] = {0, 1, 2};
   double physV[3]; // m^3 of the mother, the OFHC shell, the SS shell
   for (int p = 0; p < 3; p++) physV[p] = rt.physVolume(p) * 1e-9;
   for (auto &r : R)
   {
     for (int p = 0; p < 3; p++) r.mcDensity[p] = r.nPv[p] / physV[p]; // remage fills the mother ~20% sparser than its daughters: measure, never assume
-    for (Long64_t i = 0; i < (Long64_t)r.roiRaw.size(); i++)
-      if (r.roiRaw[i]) r.roiIdx.push_back(i); // after cuts is a subset of before
+    for (Long64_t i = 0; i < (Long64_t)r.winRaw.size(); i++)
+      if (r.winRaw[i]) r.winIdx.push_back(i); // after cuts is a subset of before
   }
   printf("geometry  : %s\n", rt.file.c_str());
   printf("RT wall   : %.5f m^3 over %.3f m\n", rt.wallVolume(rt.zBottom, rt.zTop) * 1e-9, depthTot / 1000);
-  printf("cuts      : M1 (> %.0f keV) + argon veto (<= %.0f keV) + PSD (AoE_class > %.2f)   ROI %.0f +/- %.0f keV\n",
-         cfg::m1_keV, cfg::lar_keV, cfg::psdCut, cfg::qbb, cfg::roiHalf);
+  printf("cuts      : M1 (> %.0f keV) + argon veto (<= %.0f keV) + PSD (AoE_class > %.2f)\n", cfg::m1_keV, cfg::lar_keV, cfg::psdCut);
+  printf("window    : %.0f-%.0f keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's BEW): %.0f keV\n",
+         cfg::winLo, cfg::winHi, cfg::winWidth);
   for (auto &r : R)
     printf("            %-6s %s\n", r.iso.c_str(), r.hasPsd ? "detector response from response.py: active energy + PSD"
                                                           : "NO response.py output: summed deposit, and the chain stops at M1 + argon");
@@ -289,8 +310,8 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
     if (pv < 0 || r.mcDensity[pv] <= 0) return 0.0;
     return cfg::density[m] * cfg::activity(r.iso, m) * cfg::secPerYear / (r.mcDensity[pv] * cfg::geMass_kg);
   };
-  // a design, honest about what the MC did not see: the measured ROI rate, and a 90% CL bound summed slab by slab.
-  // a slab with n ROI hits is bounded at UL(n) x its mean hit weight; one with none at 2.30 x the heaviest decay in it
+  // a design, honest about what the MC did not see: the measured window rate, and a 90% CL bound summed slab by slab.
+  // a slab with n window hits is bounded at UL(n) x its mean hit weight; one with none at 2.30 x the heaviest decay in it
   auto ulN = [](long n) { const double t[11] = {2.30, 3.89, 5.32, 6.68, 7.99, 9.27, 10.53, 11.77, 12.99, 14.21, 15.41}; return n <= 10 ? t[n] : n + 1.28 * sqrt((double)n) + 1; };
   struct Eval { double bi = 0, up = 0; long n = 0; };
   auto judge = [&](double L1, double L2, const int *ord, bool cut) {
@@ -305,12 +326,12 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
       {
         for (int p = 0; p < 3; p++)
           for (int b = b0; b < b1; b++)
-            if (r.nZPv[p][b]) { wmax = std::max(wmax, weight(r, ord[s], p) / roiW); break; } // decays from section p lie in this slab
-        for (Long64_t i : r.roiIdx) // never loop over every decay: the scan calls this ~1800 times
+            if (r.nZPv[p][b]) { wmax = std::max(wmax, weight(r, ord[s], p) / winW); break; } // decays from section p lie in this slab
+        for (Long64_t i : r.winIdx) // never loop over every decay: the scan calls this ~1800 times
           if (slabOf(r.depth[i], L1, L2) == s)
           {
-            int k = cut ? r.roiCut[i] : r.roiRaw[i];
-            B += k * weight(r, ord[s], r.pv[i]) / roiW;
+            int k = cut ? r.winCut[i] : r.winRaw[i];
+            B += k * weight(r, ord[s], r.pv[i]) / winW;
             n += k;
           }
       }
@@ -320,8 +341,83 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
     }
     return e;
   };
-  auto xg = [&](double v) { return Form(v / cfg::bgGoal < 10 ? "%.2f" : "%.0f", v / cfg::bgGoal); };     // in units of the goal
-  auto xb = [&](double v) { return Form(v / cfg::rtBudget < 10 ? "%.2f" : "%.0f", v / cfg::rtBudget); }; // in units of the tube's budget
+  // the reach: how likely a decay at depth d is to put a hit (any energy) in the Ge. above reachEnd it falls through the
+  // argon as exp(-distance / lambda); a Poisson fit of that tail, profiled over its normalisation, judges designs where the
+  // MC saw few or no hits, i.e. where steel would go. lamHi is the one-sided 90% value (dlnL = 0.82): the farther reach
+  const double dz = depthTot / cfg::NZ;
+  const int bEnd = (int)(cfg::reachEnd / dz);
+  std::vector<double> Vz(cfg::NZ); // wall volume per ~1 cm of depth [m^3]
+  for (int b = 0; b < cfg::NZ; b++) Vz[b] = rt.wallVolume(rt.zTop - (b + 1) * dz, rt.zTop - b * dz) * 1e-9;
+  auto survOf = [&](const Run &r) { int is = cfg::iso(r.iso); return r.hasPsd ? cfg::edgar[is][0] * cfg::edgar[is][2] / 1e4 : cfg::edgar[is][0] / 100; }; // Edgar's Combined
+  for (auto &r : R)
+  {
+    const int G = 10, K = bEnd / G; // 10 cm fit bins, whole ones only
+    std::vector<double> N(K, 0), n(K, 0), d(K);
+    for (int k = 0; k < K; k++)
+    {
+      d[k] = (k + 0.5) * G * dz;
+      for (int b = k * G; b < (k + 1) * G; b++) for (int p = 0; p < 3; p++) N[k] += r.nZPv[p][b];
+    }
+    long nWin = 0, nWinCut = 0;
+    for (size_t i = 0; i < r.depth.size(); i++)
+    {
+      int k = zBin(r.depth[i], depthTot) / G;
+      if (k < K) n[k]++;
+      nWin += r.winRaw[i];
+      nWinCut += r.winCut[i];
+    }
+    auto lnL = [&](double lam, double &P0) {
+      double sn = 0, se = 0, l = 0;
+      for (int k = 0; k < K; k++) { sn += n[k]; se += N[k] * exp((d[k] - cfg::reachEnd) / lam); }
+      P0 = se > 0 ? sn / se : 0; // the normalisation that maximises lnL for this lambda
+      for (int k = 0; k < K; k++)
+      {
+        double mu = N[k] * P0 * exp((d[k] - cfg::reachEnd) / lam);
+        if (mu > 0) l += n[k] * log(mu) - mu;
+      }
+      return l;
+    };
+    double best = -1e300, P;
+    for (double lam = 30; lam <= 1500; lam += 1) { double l = lnL(lam, P); if (l > best) { best = l; r.lam = lam; r.P0 = P; } }
+    for (double lam = r.lam; lam <= 1500 && lnL(lam, P) >= best - 0.82; lam += 1) { r.lamHi = lam; r.P0Hi = P; }
+    long nh = r.depth.size();
+    r.fWin = nh ? (double)nWin / nh : 0;
+    r.fWinHi = nh ? ulN(nWin) / nh : 0;
+    r.fCut = nWinCut >= 10 ? (double)nWinCut / nh : r.fWin * survOf(r); // measured once 10 survive, until then Edgar's Combined survival
+    r.fCutHi = nWinCut >= 10 ? ulN(nWinCut) / nh : r.fWinHi * survOf(r);
+  }
+  // a design's projected BI: the MC where it has statistics (below reachEnd), the fitted reach above it. hi = its 90% value
+  auto project = [&](double L1, double L2, const int *ord, bool cut, bool hi) {
+    double bi = 0, var = 0;
+    for (auto &r : R)
+    {
+      for (Long64_t i : r.winIdx)
+        if (r.depth[i] >= cfg::reachEnd)
+        {
+          int k = cut ? r.winCut[i] : r.winRaw[i];
+          double w = weight(r, ord[slabOf(r.depth[i], L1, L2)], r.pv[i]) / winW;
+          bi += k * w;
+          var += k * w * w;
+        }
+      double lam = hi ? r.lamHi : r.lam, P0 = hi ? r.P0Hi : r.P0, f = cut ? (hi ? r.fCutHi : r.fCut) : (hi ? r.fWinHi : r.fWin);
+      for (int b = 0; b < bEnd; b++) // decays per year x the reach x the window fraction
+      {
+        double dd = (b + 0.5) * dz;
+        int m = ord[slabOf(dd, L1, L2)];
+        bi += cfg::density[m] * cfg::activity(r.iso, m) * cfg::secPerYear * Vz[b] * f * P0 * exp((dd - cfg::reachEnd) / lam) / (cfg::geMass_kg * winW);
+      }
+    }
+    return hi ? bi + 1.28 * sqrt(var) : bi;
+  };
+  auto massOf = [&](double d0, double d1, int m) { return d1 > d0 ? cfg::density[m] * rt.wallVolume(rt.zTop - d1, rt.zTop - d0) * 1e-9 : 0.0; };
+  auto passes = [&](double L1, double L2) { return project(L1, L2, ORD, false, true) <= cfg::rtBudget; };
+  auto deepestSteel = [&](double L2) { // the deepest steel/Cu seam that still passes for this L2, on a 1 cm grid. -1: not even 1 cm of steel
+    double l1 = -1;
+    for (double L1 = 10; L1 <= L2 - 10 && passes(L1, L2); L1 += 10) l1 = L1; // always some Cu between the seams: three materials
+    return l1;
+  };
+  auto xg = [&](double v) { double x = v / cfg::bgGoal; return Form(x < 0.01 ? "%.0e" : (x < 10 ? "%.2f" : "%.0f"), x); };     // in units of the goal
+  auto xb = [&](double v) { double x = v / cfg::rtBudget; return Form(x < 0.01 ? "%.0e" : (x < 10 ? "%.2f" : "%.0f"), x); }; // in units of the tube's budget
 
   for (auto &r : R)
   {
@@ -357,93 +453,99 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
 
 //-------------------------------------------------------------------------------
 //  6. Reach vs depth:
-    printf("[6] reach vs depth:  %-16s %9s %8s %13s %9s\n", "depth [m]", "decays", "hits", "hits/decay", "ROI");
+    printf("[6] reach vs depth:  %-16s %9s %8s %13s %9s\n", "depth [m]", "decays", "hits", "hits/decay", "window");
     for (int b = 0; b < cfg::NDB; b++)
       printf("      %6.2f..%-9.2f %9ld %8ld %13.2e %9ld%s\n", depthTot * b / cfg::NDB / 1000, depthTot * (b + 1) / cfg::NDB / 1000,
              r.dN[b], r.dH[b], r.dN[b] ? (double)r.dH[b] / r.dN[b] : 0.0, r.dR[b], b == cfg::NDB - 1 ? "   <- nearest the detectors" : "");
+    printf("      reach above %.1f m: P(hit) = %.2e x exp((depth - %.1f m) / lambda), lambda = %.0f mm (90%%: %.0f mm)\n",
+           cfg::reachEnd / 1000, r.P0, cfg::reachEnd / 1000, r.lam, r.lamHi);
+    printf("      window hits per decay with a hit: %.2e before cuts (90%%: %.2e), %.2e after%s\n", r.fWin, r.fWinHi, r.fCut,
+           r.fCut == r.fWin * survOf(r) ? " (before x Edgar's Combined)" : "");
 
 //-------------------------------------------------------------------------------
 //  7. Statistics for the seams:
-    // a slab of material m over section p that saw no ROI hit is only bounded, at 2.30 x one decay's weight. that bound
+    // a slab of material m over section p that saw no window hit is only bounded, at 2.30 x one decay's weight. that bound
     // falls as 1/decays: this is how many decays each section needs to bound such a slab at 10% of the budget
-    printf("[7] statistics: decays each section needs before a slab over it with no ROI hit is bounded at 10%% of the budget\n");
+    printf("[7] statistics: decays each section needs before the MC alone bounds a slab over it, with no window hit, at 10%% of the budget\n");
     printf("      %-8s %9s   %-26s %-26s\n", "section", "decays", "steel there: bound, needs", "Cu there: bound, needs");
     for (int p = 2; p >= 0; p--) // top to bottom
     {
       std::string c[2];
       for (int m = 0; m < 2; m++)
       {
-        double b = UL90 * weight(r, m, p) / roiW;
+        double b = UL90 * weight(r, m, p) / winW;
         c[m] = r.nPv[p] ? Form("%.1e, %.1e", b, r.nPv[p] * b / (0.1 * cfg::rtBudget)) : "-";
       }
       printf("      %-8s %9ld   %-26s %-26s\n", pvName[p], r.nPv[p], c[0].c_str(), c[1].c_str());
     }
-    long roiB = 0, roiA = 0; // the BI after cuts needs 1/p^2 SURVIVING ROI hits
-    for (Long64_t i : r.roiIdx) { roiB += r.roiRaw[i]; roiA += r.roiCut[i]; }
-    int is = cfg::iso(r.iso);
-    double surv = r.hasPsd ? cfg::edgar[is][0] * cfg::edgar[is][2] / 1e4 : cfg::edgar[is][0] / 100; // Edgar's Combined = AC x PSD|AC. no PSD: AC alone
-    double eff = roiA >= 10 ? (double)roiA / r.nsim : (roiB ? (double)roiB : UL90) / r.nsim * surv;  // measured once 10 survive, else before cuts x Edgar
+    long winB = 0, winA = 0; // the BI after cuts needs 1/p^2 SURVIVING window hits
+    for (Long64_t i : r.winIdx) { winB += r.winRaw[i]; winA += r.winCut[i]; }
+    double surv = survOf(r); // Edgar's Combined = AC x PSD|AC. no PSD: AC alone
+    double eff = winA >= 10 ? (double)winA / r.nsim : (winB ? (double)winB : UL90) / r.nsim * surv;  // measured once 10 survive, else before cuts x Edgar
     double need = 1.0 / (cfg::targetRel * cfg::targetRel) / eff;
-    printf("      %.0f%% on the as-built BI after cuts: %s%.1e decays (%.0f h here); ROI hits %ld before / %ld after cuts%s\n",
-           100 * cfg::targetRel, roiA < 10 && roiB == 0 ? ">" : "", need, need / cfg::decaysPerSec / 3600, roiB, roiA,
-           roiA < 10 ? Form(", rate from before cuts x Edgar's Combined %.2f%%", 100 * surv) : "");
+    printf("      %.0f%% on the as-built BI after cuts: %s%.1e decays (%.0f h here); window hits %ld before / %ld after cuts%s\n",
+           100 * cfg::targetRel, winA < 10 && winB == 0 ? ">" : "", need, need / cfg::decaysPerSec / 3600, winB, winA,
+           winA < 10 ? Form(", rate from before cuts x Edgar's Combined %.2f%%", 100 * surv) : "");
     int dead = 0; // the slabs from the top down that no hit came from
     long nDead = 0;
     while (dead < cfg::NDB && r.dH[dead] == 0 && r.dN[dead] > 500) nDead += r.dN[dead++];
     if (nDead)
-      printf("      no hit at all came from above %.2f m depth (%.0f%% of the decays): there the MC only gives bounds\n",
+      printf("      no hit at all came from above %.2f m depth (%.0f%% of the decays): there the fitted reach stands in\n",
              depthTot * dead / cfg::NDB / 1000, 100.0 * nDead / r.nsim);
     printf("\n");
   }
 
 //-------------------------------------------------------------------------------
-//  8. Designs, summed over every run:
-  struct { const char *name; double L1, L2; int ord[3]; } design[] = {
-      {"KS as built: steel / Cu / EFCu", L1ks, L2ks, {0, 1, 2}},
-      {"all EFCu", 0, 0, {2, 2, 2}},
-      {"all Cu", 0, 0, {1, 1, 1}},
-      {"all steel", 0, 0, {0, 0, 0}},
-      {"KS, steel reaching twice as far down", 2 * L1ks, L2ks, {0, 1, 2}},
-      {"KS, no steel (Cu down to L2)", 0, L2ks, {0, 1, 2}},
-      {"SAME slabs, order reversed: EFCu / Cu / steel", L1ks, L2ks, {2, 1, 0}}};
-  printf("[8] designs [cts/(keV kg yr)], all chains, tube budget %.0e. 90%% up = the measured rate plus what the MC did not see\n", cfg::rtBudget);
-  printf("      %-44s %9s %10s %10s %8s %12s %8s\n", "design", "ROI hits", "measured", "90% up", "x budget", "after: up", "x budget");
+//  8. Three-material designs, summed over every run:
+  // the cheapest tube in this order: least EFCu first (the deepest L2 for which some steel still passes), then most steel
+  double L2best = 0, L2ksSteel = 0;
+  for (double L2 = 20; L2 <= depthTot && passes(10, L2); L2 += 10) L2best = L2;       // even 1 cm of steel must pass
+  for (double L2 = L1ks; L2 <= depthTot && passes(L1ks, L2); L2 += 10) L2ksSteel = L2;  // keeping KS's steel
+  double L1best = deepestSteel(L2best), L1ksEf = deepestSteel(L2ks);
+  struct { const char *name; double L1, L2; } design[] = {
+      {"KS as built", L1ks, L2ks},
+      {"KS EFCu, the most steel", L1ksEf, L2ks},
+      {"KS steel, the least EFCu", L1ks, L2ksSteel},
+      {"the least EFCu, then the most steel", L1best, L2best}};
+  printf("[8] three-material designs [cts/(keV kg yr)], all chains, budget %.0e. projected = MC below %.1f m + the fitted reach above;\n"
+         "    MC 90%% = the MC alone, unseen slabs at 2.30 x their heaviest decay: the proof, once statistics allow\n", cfg::rtBudget, cfg::reachEnd / 1000);
+  printf("      %-36s %6s %6s %6s %6s %6s %10s %10s %8s %11s %9s\n", "design", "L1 [m]", "L2 [m]", "steel", "Cu", "EFCu", "projected",
+         "proj 90%", "x budget", "after: 90%", "MC 90% x");
   for (auto &q : design)
   {
-    Eval b = judge(q.L1, q.L2, q.ord, false), a = judge(q.L1, q.L2, q.ord, true);
-    printf("      %-44s %4ld/%-4ld %10.2e %10.2e %8s %12.2e %8s\n", q.name, a.n, b.n, b.bi, b.up, xb(b.up), a.up, xb(a.up));
+    if (q.L1 < 0) { printf("      %-36s no steel passes at this L2\n", q.name); continue; }
+    double pc = project(q.L1, q.L2, ORD, false, false), ph = project(q.L1, q.L2, ORD, false, true), pa = project(q.L1, q.L2, ORD, true, true);
+    printf("      %-36s %6.2f %6.2f %6.0f %6.0f %6.0f %10.2e %10.2e %8s %11.2e %9s\n", q.name, q.L1 / 1000, q.L2 / 1000, massOf(0, q.L1, 0),
+           massOf(q.L1, q.L2, 1), massOf(q.L2, depthTot, 2), pc, ph, xb(ph), pa, xb(judge(q.L1, q.L2, ORD, false).up));
   }
+  printf("      masses in kg; steel includes the lid, which sits in the top slab\n");
 
 //-------------------------------------------------------------------------------
-//  9. How much EFCu, with no steel: Cu from the top down to the seam L2, EFCu below
-  auto efcuKg = [&](double L2) { return cfg::density[2] * rt.wallVolume(rt.zBottom, rt.zTop - L2) * 1e-9; };
-  auto deepest = [&](double L2) { // the deepest steel/Cu seam this run can vouch for, given L2: -1 if the design fails even without steel
-    if (judge(0, L2, ORD, false).up > cfg::rtBudget) return -1.0;
-    double l1 = 0;
-    for (double L1 = 10; L1 <= L2 && judge(L1, L2, ORD, false).up <= cfg::rtBudget; L1 += 10) l1 = L1;
-    return l1;
-  };
-  double best = 0; // the deepest L2 such that every shallower one passes too, on a 1 cm grid
-  for (double L2 = 0; L2 <= depthTot && judge(0, L2, ORD, false).up <= cfg::rtBudget; L2 += 10) best = L2;
-  std::vector<double> rows = {L2ks, best};
-  for (double L2 = 2000; L2 < depthTot; L2 += 500) rows.push_back(L2);
+//  9. The trade-off: for each Cu/EFCu seam L2, the deepest steel that still passes
+  std::vector<double> rows = {L2ks, L2best, L2ksSteel};
+  for (double L2 = 3000; L2 < depthTot; L2 += 250) rows.push_back(L2);
   std::sort(rows.begin(), rows.end());
-  printf("\n[9] how much EFCu: Cu from the top down to the seam L2, EFCu below. judged on the 90%% bound before cuts (cuts only lower it)\n");
-  printf("      %-8s %9s %10s %10s %10s %8s   %-9s %11s %10s\n", "L2 [m]", "EFCu [m]", "EFCu [kg]", "measured", "90% up", "x budget",
-         "verdict", "after: up", "steel to");
+  rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
+  printf("\n[9] the trade-off: for each L2, the deepest steel/Cu seam L1 whose projected 90%% BI is under the budget (before cuts: cuts only lower it)\n");
+  printf("      %-7s %9s %9s %10s %9s %10s %8s %11s %9s\n", "L2 [m]", "EFCu [kg]", "steel to", "steel [kg]", "Cu [kg]", "proj 90%",
+         "x budget", "after: 90%", "MC 90% x");
   for (double L2 : rows)
   {
-    Eval b = judge(0, L2, ORD, false), a = judge(0, L2, ORD, true);
-    double l1 = deepest(L2);
-    printf("      %-8.2f %9.2f %10.0f %10.2e %10.2e %8s   %-9s %11.2e %10s%s\n", L2 / 1000, (depthTot - L2) / 1000, efcuKg(L2), b.bi, b.up,
-           xb(b.up), b.up <= cfg::rtBudget ? "passes" : (b.bi <= cfg::rtBudget ? "unproven" : "fails"), a.up,
-           l1 < 0 ? "-" : Form("%.2f m", l1 / 1000), L2 == L2ks ? "   <- KS" : (L2 == best ? "   <- least EFCu" : ""));
+    double l1 = deepestSteel(L2);
+    if (l1 < 0)
+    {
+      printf("      %-7.2f %9.0f %9s   no steel passes: EFCu must reach higher\n", L2 / 1000, massOf(L2, depthTot, 2), "-");
+      continue;
+    }
+    double ph = project(l1, L2, ORD, false, true);
+    printf("      %-7.2f %9.0f %7.2f m %10.0f %9.0f %10.2e %8s %11.2e %9s%s\n", L2 / 1000, massOf(L2, depthTot, 2), l1 / 1000, massOf(0, l1, 0),
+           massOf(l1, L2, 1), ph, xb(ph), project(l1, L2, ORD, true, true), xb(judge(l1, L2, ORD, false).up),
+           L2 == L2ks ? "   <- KS EFCu" : (L2 == L2best ? "   <- least EFCu" : (L2 == L2ksSteel ? "   <- least EFCu with KS steel" : "")));
   }
-  printf("      least EFCu this run can vouch for: seam at %.2f m, %.0f kg of EFCu (KS: %.2f m, %.0f kg)\n",
-         best / 1000, efcuKg(best), L2ks / 1000, efcuKg(L2ks));
+  printf("      KS: steel to %.2f m (%.0f kg), EFCu from %.2f m (%.0f kg)\n", L1ks / 1000, massOf(0, L1ks, 0), L2ks / 1000, massOf(L2ks, depthTot, 2));
 
 //-------------------------------------------------------------------------------
-//  10. Survival in the ROI, per chain and section:
+//  10. Survival in the background window, per chain and section:
   auto surv = [&](long pass, long of) -> std::string { // percent, binomial error; a limit when nothing survives
     if (of <= 0) return "-";
     if (pass == 0) return Form("< %.1f", 100.0 * UL90 / of);
@@ -451,13 +553,13 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
     return Form("%.1f +- %.1f", 100 * f, 100 * sqrt(f * (1 - f) / of));
   };
   std::vector<std::array<long, 4>> tube; // per chain, whole tube: N0, AC, PSD, AC + PSD
-  printf("\n[10] survival in the ROI, counted in hits as Edgar does [%%]:\n");
+  printf("\n[10] survival in the background window, counted in hits as Edgar does [%%]:\n");
   printf("      %-6s %-6s %5s   %-16s %-16s %-16s %-16s\n", "chain", "sect", "N0", "AC (M1+argon)", "PSD", "PSD | AC", "Combined");
   for (auto &r : R)
   {
     long n[5][4] = {{0}}; // [row, 4 = whole tube][N0, AC, PSD, AC + PSD]
     for (auto &h : r.hits)
-      if (fabs(h.e - cfg::qbb) <= cfg::roiHalf)
+      if (cfg::inWindow(h.e))
         for (int k : {rowOf(r.depth[h.ev], L1ks, L2ks, Lhks), 4})
         {
           n[k][0]++;
@@ -478,7 +580,7 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
 
 //-------------------------------------------------------------------------------
 //  11. Background index, per chain and section:
-  struct Sum { double w = 0, w2 = 0, wbar = 0; long n = 0; }; // one section: summed weight, its square for Poisson, mean weight of every decay there, ROI hits
+  struct Sum { double w = 0, w2 = 0, wbar = 0; long n = 0; }; // one section: summed weight, its square for Poisson, mean weight of every decay there, window hits
   struct Tot { double v = 0, va = 0, vs = 0; long n = 0; bool ul = false; }; // a total: value, radioassay and MC variances, hits, rests on a limit?
   auto cell = [&](const Sum &q, double rel, bool ul) -> std::string {
     if (q.n == 0) return Form("< %.2e", UL90 * q.wbar); // nothing seen: 90% CL on the MC alone
@@ -489,12 +591,12 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
     t.v += q.w; t.va += pow(q.w * rel, 2); t.vs += q.w2; t.n += q.n; t.ul |= ul; // radioassay and MC are independent: variances add
   };
   auto show = [&](const Tot &t, bool goal) -> std::string {
-    if (t.n == 0) return "no ROI hit";
+    if (t.n == 0) return "no window hit";
     std::string out = Form("%s%.2e +-%.1e +-%.1e", t.ul ? "<" : "", t.v, sqrt(t.va), sqrt(t.vs));
     return goal ? out + Form("  (%s%s x goal)", t.ul ? "<" : "", xg(t.v)) : out;
   };
   printf("\n[11] background index, KS as built [cts/(keV kg yr)] = BI +- radioassay +- MC statistics:\n");
-  printf("      %-6s %-6s %9s   %-34s %-34s\n", "chain", "sect", "ROI hits", "before cuts", "after cuts");
+  printf("      %-6s %-6s %9s   %-34s %-34s\n", "chain", "sect", "win hits", "before cuts", "after cuts");
   Tot gB, gA;
   struct Pure { std::string iso; int sec; Sum b, a; };
   std::vector<Pure> pure; // kept for [12]
@@ -511,16 +613,16 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
       for (int p = 0; p < 3; p++) // mean weight over every decay in the section, from the counts
       {
         nsec += r.nRowPv[sec][p];
-        qb.wbar += r.nRowPv[sec][p] * weight(r, m, p) / roiW;
+        qb.wbar += r.nRowPv[sec][p] * weight(r, m, p) / winW;
       }
       qa.wbar = qb.wbar = nsec ? qb.wbar / nsec : 0;
-      for (Long64_t i : r.roiIdx)
+      for (Long64_t i : r.winIdx)
       {
         if (rowOf(r.depth[i], L1ks, L2ks, Lhks) != sec)
           continue;
-        double w = weight(r, m, r.pv[i]) / roiW; // per decay: the row can mix volumes
-        if (r.roiRaw[i]) { qb.w += r.roiRaw[i] * w; qb.w2 += r.roiRaw[i] * w * w; qb.n += r.roiRaw[i]; }
-        if (r.roiCut[i]) { qa.w += r.roiCut[i] * w; qa.w2 += r.roiCut[i] * w * w; qa.n += r.roiCut[i]; }
+        double w = weight(r, m, r.pv[i]) / winW; // per decay: the row can mix volumes
+        if (r.winRaw[i]) { qb.w += r.winRaw[i] * w; qb.w2 += r.winRaw[i] * w * w; qb.n += r.winRaw[i]; }
+        if (r.winCut[i]) { qa.w += r.winCut[i] * w; qa.w2 += r.winCut[i] * w * w; qa.n += r.winCut[i]; }
       }
       printf("      %-6s %-6s %4ld/%-4ld   %-34s %-34s%s\n", sec ? "" : r.iso.c_str(), rowName[sec], qa.n, qb.n,
              cell(qb, rel, ul).c_str(), cell(qa, rel, ul).c_str(), ul ? "  activity is an upper limit" : "");
@@ -535,7 +637,7 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
 //-------------------------------------------------------------------------------
 //  12. Purity requirement, per chain and section:
   auto allowed = [&](const Sum &q, double A) -> std::string { // BI is proportional to activity, so the activity that gives the goal is A x goal / BI
-    if (q.n == 0) return Form("> %.2g", A * cfg::bgGoal / (UL90 * q.wbar)); // no ROI hit: the MC can only vouch for activities up to this
+    if (q.n == 0) return Form("> %.2g", A * cfg::bgGoal / (UL90 * q.wbar)); // no window hit: the MC can only vouch for activities up to this
     return Form("%.2g +- %.1g", A * cfg::bgGoal / q.w, A * cfg::bgGoal / q.w * sqrt(q.w2) / q.w);
   };
   printf("\n[12] purity requirement: specific activity [uBq/kg] at which a section ALONE gives the goal:\n");
@@ -550,21 +652,60 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
   }
 
 //-------------------------------------------------------------------------------
-//  13. Draw: spectrum, seam scan, EFCu curve, survival, and raw vs weighted per chain x material
+//  13. Per detector, as built: the line each chain gives, the tracer MAJORANA used to locate a source [arXiv:2209.10592]
+  std::vector<TH2D *> hDet; // string x position map of the line rate, one per chain
+  printf("\n[13] per detector, as built, before cuts: counts per year in each chain's strongest line (+-5 keV), the tube's fingerprint in data\n");
+  for (auto &r : R)
+  {
+    int is = cfg::iso(r.iso);
+    std::vector<double> rate(r.dets.size(), 0), raw(r.dets.size(), 0), byPos(9, 0);
+    for (auto &h : r.hits)
+      if (fabs(h.e - cfg::line[is]) <= 5)
+      {
+        double cy = weight(r, ORD[slabOf(r.depth[h.ev], L1ks, L2ks)], r.pv[h.ev]) * cfg::geMass_kg; // real counts per year in the array
+        rate[h.det] += cy;
+        raw[h.det]++;
+      }
+    auto hm = new TH2D(Form("hDet%d", is), Form("%s, %.1f keV line from the tube as built;string;position (1 = top)", r.iso.c_str(), cfg::line[is]),
+                       42, 0.5, 42.5, 8, 0.5, 8.5);
+    double tot = 0, totRaw = 0;
+    for (size_t k = 0; k < r.dets.size(); k++)
+    {
+      int st = atoi(r.dets[k].substr(1, 2).c_str()), ps = atoi(r.dets[k].substr(3, 2).c_str()); // V<string><position>
+      hm->Fill(st, 9 - ps, rate[k]); // position 1 is the top of the string: draw it at the top
+      if (ps >= 1 && ps <= 8) byPos[ps] += rate[k];
+      tot += rate[k];
+      totRaw += raw[k];
+    }
+    for (int j = 1; j <= 8; j++) hm->GetYaxis()->SetBinLabel(j, Form("%d", 9 - j)); // row j holds position 9 - j
+    hDet.push_back(hm);
+    printf("      %s %.1f keV: %.2e counts/yr in the whole array, from %.0f MC events\n", r.iso.c_str(), cfg::line[is], tot, totRaw);
+    printf("        by position, top to bottom [counts/yr]:");
+    for (int ps = 1; ps <= 8; ps++) printf(" %.1e", byPos[ps]);
+    std::vector<size_t> order(r.dets.size());
+    for (size_t k = 0; k < order.size(); k++) order[k] = k;
+    std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return rate[a] > rate[b]; });
+    printf("\n        brightest detectors:");
+    for (int k = 0; k < 5 && k < (int)order.size(); k++) printf("  %s %.1e (%.0f MC)", r.dets[order[k]].c_str(), rate[order[k]], raw[order[k]]);
+    printf("\n");
+  }
+
+//-------------------------------------------------------------------------------
+//  14. Draw: spectrum, seam scan, trade-off, survival, raw vs weighted per chain x material, per-detector map
   const int NS = 60;
-  auto hScan = new TH2D("hScan", "90% bound on the ROI rate before cuts, x budget;L1 steel/Cu seam [m];L2 Cu/EFCu seam [m]",
+  auto hScan = new TH2D("hScan", "projected 90% BI before cuts, x budget;L1 steel/Cu seam [m];L2 Cu/EFCu seam [m]",
                         NS, 0, depthTot / 1000, NS, 0, depthTot / 1000);
   for (int i = 1; i <= NS; i++)
     for (int j = i; j <= NS; j++) // only L1 <= L2 is a design
-      hScan->SetBinContent(i, j, judge(hScan->GetXaxis()->GetBinCenter(i) * 1000, hScan->GetYaxis()->GetBinCenter(j) * 1000, ORD, false).up / cfg::rtBudget);
-  TGraph *gEf[3]; // no steel, EFCu below L2: measured, 90% bound before cuts, 90% bound after cuts, against the EFCu mass
-  for (auto &g : gEf) g = new TGraph();
-  for (double L2 = depthTot; L2 >= 0 && efcuKg(L2) <= 2.5 * efcuKg(L2ks); L2 -= 20)
+      hScan->SetBinContent(i, j, project(hScan->GetXaxis()->GetBinCenter(i) * 1000, hScan->GetYaxis()->GetBinCenter(j) * 1000, ORD, false, true) / cfg::rtBudget);
+  auto gEdge = new TGraph(); // the deepest steel that passes, per L2: the edge of the allowed region in the scan
+  auto gTrade = new TGraph(); // the same as masses: steel kg against EFCu kg
+  for (double L2 = 100; L2 <= depthTot; L2 += 50)
   {
-    Eval b = judge(0, L2, ORD, false), a = judge(0, L2, ORD, true);
-    double v[3] = {b.bi, b.up, a.up}, kg = efcuKg(L2);
-    for (int k = 0; k < 3; k++)
-      if (v[k] > 0) gEf[k]->SetPoint(gEf[k]->GetN(), kg, v[k]);
+    double l1 = deepestSteel(L2);
+    if (l1 < 0) continue;
+    gEdge->SetPoint(gEdge->GetN(), l1 / 1000, L2 / 1000);
+    gTrade->SetPoint(gTrade->GetN(), massOf(L2, depthTot, 2), massOf(0, l1, 0));
   }
   hScan->SetMinimum(0.5 * hScan->GetMinimum(0)); // log z would otherwise cut at max/1000 and blank every design with EFCu at the bottom
 
@@ -606,40 +747,35 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
   c->cd(2)->SetLogz();
   gPad->SetRightMargin(0.17);
   hScan->Draw("COLZ");
+  gEdge->SetLineColor(kRed + 1);
+  gEdge->SetLineWidth(3);
+  if (gEdge->GetN()) gEdge->Draw("L SAME");
   auto star = new TMarker(L1ks / 1000, L2ks / 1000, 29); // the KS design
   dot(star, kRed + 1, 29, 2.2);
   star->Draw();
-  c->cd(3)->SetLogy();
+  c->cd(3);
   gPad->SetGrid();
   gPad->SetLeftMargin(0.15);
-  double kgMax = 2.5 * efcuKg(L2ks); // the decision is around KS, not at a tube made all of EFCu
-  auto fr = gPad->DrawFrame(0, 0.3 * cfg::rtBudget * 1e-2, kgMax, 3e3 * cfg::rtBudget);
-  fr->SetTitle("no steel: Cu above, EFCu below the seam;EFCu [kg];cts / (keV kg yr)");
+  double kgMax = 2.5 * massOf(L2ks, depthTot, 2), stMax = 1.3 * massOf(0, depthTot, 0); // the decision is around KS
+  auto fr = gPad->DrawFrame(0, 0, kgMax, stMax);
+  fr->SetTitle("the cheapest tubes: most steel for each EFCu mass;EFCu [kg];steel [kg]");
   fr->GetYaxis()->SetTitleOffset(1.6);
-  const char *efLabel[3] = {"measured, before cuts", "90% bound, before cuts", "90% bound, after cuts"};
-  const int efColor[3] = {kAzure + 2, kRed + 1, kViolet + 1};
-  auto leg3 = new TLegend(0.40, 0.70, 0.88, 0.88);
+  gTrade->SetLineColor(kRed + 1);
+  gTrade->SetLineWidth(3);
+  if (gTrade->GetN()) gTrade->Draw("L SAME");
+  auto leg3 = new TLegend(0.35, 0.74, 0.88, 0.88);
   leg3->SetTextSize(0.032);
-  for (int k = 0; k < 3; k++)
+  leg3->AddEntry(gTrade, "projected 90% BI = budget", "l");
+  struct { double L1, L2; int col, style; const char *lab; } pt[3] = {{L1ks, L2ks, kRed + 1, 29, "KS"}, {L1best, L2best, kGreen + 2, 20, "least EFCu, then most steel"},
+                                                                    {L1ks, L2ksSteel, kAzure + 2, 21, "KS steel, least EFCu"}};
+  for (auto &q : pt)
   {
-    gEf[k]->SetLineColor(efColor[k]);
-    gEf[k]->SetLineWidth(2);
-    gEf[k]->SetLineStyle(k == 2 ? 2 : 1);
-    gEf[k]->Draw("L SAME");
-    leg3->AddEntry(gEf[k], efLabel[k], "l");
+    if (q.L1 < 0) continue;
+    auto m = new TMarker(massOf(q.L2, depthTot, 2), massOf(0, q.L1, 0), q.style);
+    dot(m, q.col, q.style, 2.0);
+    m->Draw();
+    leg3->AddEntry(m, q.lab, "p");
   }
-  auto budget = new TLine(0, cfg::rtBudget, kgMax, cfg::rtBudget);
-  budget->SetLineStyle(7);
-  budget->Draw();
-  for (double kg : {efcuKg(L2ks), efcuKg(best)}) // KS, and the least EFCu this run can vouch for
-  {
-    auto l = new TLine(kg, 0.3 * cfg::rtBudget * 1e-2, kg, 3e3 * cfg::rtBudget);
-    l->SetLineColor(kg == efcuKg(L2ks) ? kRed + 1 : kGreen + 2);
-    l->SetLineStyle(2);
-    l->Draw();
-    leg3->AddEntry(l, kg == efcuKg(L2ks) ? "KS" : "least EFCu vouched for", "l");
-  }
-  leg3->AddEntry(budget, "tube budget", "l");
   leg3->Draw();
   std::string tag;
   for (auto &r : R) tag += (tag.empty() ? "" : "_") + r.iso;
@@ -647,7 +783,7 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
   c->SaveAs(png.c_str());
   printf("\nwrote %s\n", png.c_str());
 
-  auto cs = new TCanvas("c_surv", "", 560 * R.size(), 480); // survival in the ROI against the RE-vessel references
+  auto cs = new TCanvas("c_surv", "", 560 * R.size(), 480); // survival in the window against the RE-vessel references
   cs->Divide(R.size(), 1);
   const char *cutName[4] = {"AC (M1+argon)", "PSD", "PSD | AC", "Combined"};
   for (size_t i = 0; i < R.size(); i++)
@@ -657,7 +793,7 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
     gPad->SetLeftMargin(0.14);
     gPad->SetBottomMargin(0.14);
     int is = cfg::iso(R[i].iso);
-    auto bars = new TH1D(Form("cdr%zu", i), Form("%s from the RT wall;;survival in ROI [%%]", R[i].iso.c_str()), 4, 0, 4); // the CDR
+    auto bars = new TH1D(Form("cdr%zu", i), Form("%s from the RT wall;;survival [%%]", R[i].iso.c_str()), 4, 0, 4); // the CDR
     auto ge = new TGraph();       // Edgar's remage for the same component
     auto gm = new TGraphErrors(); // this simulation: whole tube, binomial errors, each cut against its own denominator
     std::vector<TArrow *> lim;    // nothing survived: a 90% CL limit, drawn as an arrow down from it
@@ -703,7 +839,7 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
     lg->SetTextSize(0.035);
     lg->AddEntry(bars, "CDR - RE vessel (EFCu)", "f");
     lg->AddEntry(ge, "Edgar remage - RE Cu", "p");
-    lg->AddEntry(gm, Form("this sim - KS tube (%ld ROI hits)", n[0]), "pe");
+    lg->AddEntry(gm, Form("this sim - KS tube (%ld window hits)", n[0]), "pe");
     if (!lim.empty()) lg->AddEntry(lim[0], "this sim - none survived (90% CL)", "l");
     lg->Draw();
   }
@@ -761,9 +897,9 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
       double y0 = 0.5, y1 = 40 * top; // headroom above the highest line for the legend
       auto fr = gPad->DrawFrame(cfg::eLo, y0, cfg::eHi, y1);
       fr->SetTitle(Form("%s;energy [keV];MC counts", title.c_str()));
-      auto roi = new TBox(cfg::qbb - cfg::roiHalf, y0, cfg::qbb + cfg::roiHalf, y1);
-      roi->SetFillColorAlpha(kRed, 0.12);
-      roi->Draw();
+      auto band = new TBox(cfg::winLo, y0, cfg::winHi, y1); // the background window (its four 10 keV gaps are too thin to draw)
+      band->SetFillColorAlpha(kRed, 0.12);
+      band->Draw();
       auto lg = new TLegend(0.14, 0.74, 0.84, 0.89);
       lg->SetNColumns(2);
       lg->SetTextSize(0.032);
@@ -779,7 +915,7 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
         lg->AddEntry(raw[s], Form("%s raw", stage[s]), "l");
         lg->AddEntry(wtd[s], Form("%s weighted", stage[s]), "l");
       }
-      lg->AddEntry(roi, "ROI", "f");
+      lg->AddEntry(band, "BI window", "f");
       lg->Draw();
       auto ax = new TGaxis(cfg::eHi, y0, cfg::eHi, y1, y0 / k, y1 / k, 510, "+LG"); // plain values: ROOT maps them onto the log pad
       ax->SetTitle("weighted: cts / (keV kg yr)");
@@ -791,4 +927,18 @@ void background(const char *runs = "output/tl208.root=Tl208,output/bi214.root=Bi
   std::string mpng = rtOut(tag + "_spectra.png");
   cm->SaveAs(mpng.c_str());
   printf("wrote %s\n", mpng.c_str());
+
+  auto cd = new TCanvas("c_det", "", 760 * hDet.size(), 420);
+  cd->Divide(hDet.size(), 1);
+  for (size_t i = 0; i < hDet.size(); i++)
+  {
+    cd->cd(i + 1)->SetLogz();
+    gPad->SetRightMargin(0.16);
+    hDet[i]->SetMinimum(0.5 * hDet[i]->GetMinimum(0));
+    hDet[i]->GetZaxis()->SetTitle("counts / yr");
+    hDet[i]->Draw("COLZ");
+  }
+  std::string dpng = rtOut(tag + "_detectors.png");
+  cd->SaveAs(dpng.c_str());
+  printf("wrote %s\n", dpng.c_str());
 }
