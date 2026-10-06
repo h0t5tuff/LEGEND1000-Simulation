@@ -1,0 +1,16 @@
+#  Am-241, the collimated am_HS1: a 1.0 mm x 25.6 mm channel, a 2.24 deg half-angle. the dead layer, by its 59.5 keV line
+#  legend-pygeom-hades builds output/am241.gdml from this. measurement is {source}_{HSX}_{position}_{ID}:
+#    sources am_HS1 th_HS2 co_HS5 ba_HS4 am_HS6, position top (lat: am_HS1, th_HS2 only). the ID only labels the campaign
+
+detector: V99000A              # public dummy diode. V -> ICPC, B -> BEGe
+measurement: am_HS1_top_dlt
+
+source_position:               # where the source sits on the cryostat
+  phi_in_deg: 0.0
+  r_in_mm: 0.0
+  z_in_mm: 38.0
+
+run: run0001
+daq_settings:
+  flashcam:
+    card_interface: efb2       # required by the package; the lead castle table is picked by detector name (table 1 here, none for am_HS1)

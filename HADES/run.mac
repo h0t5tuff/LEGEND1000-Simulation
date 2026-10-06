@@ -1,0 +1,42 @@
+#  fire a calibration source at the crystal and record every step it deposits. two modes, one file:
+#    decay  -s PARTICLE=ion   -s E=0                  the nuclide {Z} {A} decays: every line, x-ray and coincidence sum, per decay
+#    line   -s PARTICLE=gamma -s E=<keV> -s THETA=<deg>  one gamma line aimed into a cone: for the collimated am_HS1, where decays waste 99.96%
+#      remage -q --ignore-warnings -t 8 -w -o output/co60.root -s GDML=output/co60.gdml -s PARTICLE=ion -s Z=27 -s A=60 -s E=0 -s THETA=180 -s NEV=2000000 -s SEED=3 -- run.mac
+#  aliases: {GDML} {PARTICLE} {Z} {A} {E} keV {THETA} deg {NEV} {SEED}
+
+#-------------------------------------------------------------------------------
+#  1. Before init:
+/RMG/Geometry/RegisterDetectorsFromGDML Germanium   # legend-pygeom-hades writes the pygeomtools map, so the diode is already uid 1
+/RMG/Output/NtupleUseVolumeName true                # names the tree after the diode
+/RMG/Geometry/GDMLDisableOverlapCheck true          # pyg4ometry already checked when it built the GDML
+/RMG/Geometry/IncludeGDMLFile {GDML}
+/run/initialize
+
+#-------------------------------------------------------------------------------
+#  2. After init - output. dist_to_surf comes for free and is what the dead layer needs:
+/geometry/navigator/check_mode false
+/RMG/Output/Germanium/DiscardZeroEnergyHits true
+/RMG/Output/Germanium/StoreSinglePrecisionEnergy
+/RMG/Output/Germanium/StoreSinglePrecisionPosition
+/RMG/Output/Vertex/StorePrimaryParticleInformation true   # stp/particles: spectrum.C reads the source (nuclide, or line and cone) from it
+/RMG/Output/Vertex/StoreSinglePrecisionPosition
+/RMG/Output/Vertex/StoreSinglePrecisionEnergy
+
+#-------------------------------------------------------------------------------
+#  3. Decay physics:
+/RMG/Processes/Stepping/DaughterNucleusMaxLifetime 1 y   # a daughter living longer than a year stops the chain (Np-237 after Am-241); the Th-228 chain (<= 3.6 d) runs to Pb-208
+
+#-------------------------------------------------------------------------------
+#  4. The source, inside the source disc. Source_PV is the disc that decays. NOT source_pv, which is the holder around it
+/RMG/Manager/Randomization/Seed {SEED}
+/RMG/Generator/Confine Volume
+/RMG/Generator/Confinement/Physical/AddVolume Source_PV
+/RMG/Generator/Select GPS
+/gps/particle ion
+/gps/ion {Z} {A}                # needs particle ion first. PARTICLE=ion keeps this nucleus, PARTICLE=gamma replaces it
+/gps/particle {PARTICLE}
+/gps/energy {E} keV             # 0 for a nucleus: at rest, all the energy comes from the decay
+/gps/ang/type iso
+/gps/ang/mintheta 0 deg
+/gps/ang/maxtheta {THETA} deg   # a gamma only: GPS measures theta from -z, where the crystal is. a decay ignores it (180 = 4 pi)
+/run/beamOn {NEV}
