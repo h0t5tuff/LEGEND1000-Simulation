@@ -1,6 +1,0 @@
-# Auto-peel flip keyframe C: 45 deg below, zoomed on the bottom of string 28 (see l1000-autopeel.mac).
-/vis/viewer/set/upVector 0.6645 0.2418 -0.7071
-/vis/viewer/set/viewpointVector -0.6645 -0.2418 -0.7071
-/vis/viewer/set/lightsVector -0.6645 -0.2418 -0.7071
-/vis/viewer/set/targetPoint -747.2 -184.9 -887 mm
-/vis/viewer/zoomTo 7

@@ -1,78 +1,49 @@
 # /vis/geometry/set/colour <logical-volume> <depth> R G B alpha
+# read by l1000-vis.mac (Geant4) and l1000-autopeel.py (VTK)
 
-# ═══════════════════════════════════════════════════════════
-# STEEL CRYOSTAT + SUPPORTS (OUTERMOST)   —   alpha = 0.12 (inner cryostat 0.18)
-# ═══════════════════════════════════════════════════════════
-# --- steel cryostat/supports  (5 vol)  rgb=0.55 0.57 0.60
+# ── steel cryostat and supports
 /vis/geometry/set/colour foot 0 0.55 0.57 0.6 1
 /vis/geometry/set/colour innercryostat 0 0.55 0.57 0.6 1
 /vis/geometry/set/colour outercryostat 0 0.55 0.57 0.6 1
 /vis/geometry/set/colour skirt 0 0.55 0.57 0.6 1
-# RT upper section (SS 316L, z 2857..4919) — cooler blue-grey than cryostat steel
+# re-entrant tube upper section (SS 316L, z 2857..4919): bluer than the cryostat steel
 /vis/geometry/set/colour ss_316l 0 0.50 0.56 0.66 1
 
-# ═══════════════════════════════════════════════════════════
-# CRYOSTAT VACUUM GAP   —   alpha = 0.15
-# ═══════════════════════════════════════════════════════════
-# --- vacuum gap  (1 vol)  rgb=0.55 0.55 0.62
+# ── vacuum gap
 /vis/geometry/set/colour vacuumgap 0 0.55 0.55 0.62 1
 
-# ═══════════════════════════════════════════════════════════
-# ATMOSPHERIC LAR (OUTER BATH)   —   alpha = 0.22
-# ═══════════════════════════════════════════════════════════
-# --- atmospheric LAr  (1 vol)  rgb=0.55 0.80 1.00
+# ── atmospheric LAr (outer bath)
 /vis/geometry/set/colour atmosphericlar 0 0.55 0.8 1 1
 
-# ═══════════════════════════════════════════════════════════
-# NEUTRON MODERATOR   —   alpha = 0.26
-# ═══════════════════════════════════════════════════════════
-# --- neutron moderator  (1 vol)  rgb=0.65 0.55 0.30
+# ── neutron moderator
 /vis/geometry/set/colour neutronmoderator 0 0.65 0.55 0.3 1
 
-# ═══════════════════════════════════════════════════════════
-# OUTER WLS SHROUD   —   alpha = 0.30
-# ═══════════════════════════════════════════════════════════
-# --- outer WLS shroud  (2 vol)  rgb=0.96 0.96 0.96
+# ── outer WLS shroud: tetratex white, TPB light blue
 /vis/geometry/set/colour wls_tetratex_outer_atmospheric_lv 0 0.96 0.96 0.96 1
 /vis/geometry/set/colour wls_tpb_outer_atmospheric_lv 0 0.6 0.9 1 1
 
-# ═══════════════════════════════════════════════════════════
-# COPPER REENTRANT TUBE   —   alpha = 0.35
-# ═══════════════════════════════════════════════════════════
-# --- reentrant tube (Cu)  (1 vol)  rgb=0.85 0.45 0.12
-# RT lower section + endcap (EFCu mother, exposed z -1327..852) — bright copper
+# ── re-entrant tube
+# lower section + endcap (EFCu mother, exposed z -1327..852): bright copper
 /vis/geometry/set/colour reentrancetube 0 0.85 0.45 0.12 1
 
-# ═══════════════════════════════════════════════════════════
-# UNDERGROUND LAR (INNER ACTIVE BATH)   —   alpha = 0.40
-# ═══════════════════════════════════════════════════════════
-# --- underground LAr  (1 vol)  rgb=0.55 0.80 1.00
+# ── underground LAr (inner active bath)
 /vis/geometry/set/colour undergroundlar 0 0.55 0.8 1 1
 
-# ═══════════════════════════════════════════════════════════
-# INNER WLS SHROUD   —   alpha = 0.45
-# ═══════════════════════════════════════════════════════════
-# --- inner WLS shroud  (2 vol)  rgb=0.96 0.96 0.96
+# ── inner WLS shroud: tetratex white, TPB light blue
 /vis/geometry/set/colour wls_tetratex_inner_argon_lv 0 0.96 0.96 0.96 1
 /vis/geometry/set/colour wls_tpb_inner_argon_lv 0 0.6 0.9 1 1
 
-# ═══════════════════════════════════════════════════════════
-# WLS FIBRES   —   alpha = 0.50
-# ═══════════════════════════════════════════════════════════
-# --- WLS fibres  (4 vol)  rgb=0.40 0.90 0.45
+# ── WLS fibres
 /vis/geometry/set/colour fiber_cl1_l1349_bNone 0 0.4 0.9 0.45 1
 /vis/geometry/set/colour fiber_cl2_l1349_bNone 0 0.4 0.9 0.45 1
 /vis/geometry/set/colour fiber_coating_l1349_tpb1093 0 0.4 0.9 0.45 1
 /vis/geometry/set/colour fiber_core_l1349_bNone 0 0.4 0.9 0.45 1
 
-# ═══════════════════════════════════════════════════════════
-# STRING HARDWARE   —   alpha graded by peel depth: Cu 0.60, ultem 0.66, PEN 0.72, ASIC 0.80, SiPM 0.88
-# ═══════════════════════════════════════════════════════════
-# --- PEN holders  (2 vol)  rgb=0.95 0.80 0.28
+# ── PEN holder plates
 /vis/geometry/set/colour hpge_support_copper_tristar_xlarge 0 0.95 0.8 0.28 1
 /vis/geometry/set/colour pen_xlarge 0 0.95 0.8 0.28 1
 
-# --- copper (string)  (1054 vol)  rgb=0.85 0.45 0.12
+# ── copper: string hardware, cables, SiPM mounts
 /vis/geometry/set/colour cable_hv_V0101 0 0.85 0.45 0.12 1
 /vis/geometry/set/colour cable_hv_V0102 0 0.85 0.45 0.12 1
 /vis/geometry/set/colour cable_hv_V0103 0 0.85 0.45 0.12 1
@@ -1124,12 +1095,12 @@
 /vis/geometry/set/colour hpge_support_copper_weldment_top_V4206 0 0.85 0.45 0.12 1
 /vis/geometry/set/colour hpge_support_copper_weldment_top_V4207 0 0.85 0.45 0.12 1
 /vis/geometry/set/colour hpge_support_copper_weldment_top_V4208 0 0.85 0.45 0.12 1
-# RT mid section (OFHC Cu, z 852..2857) — darker bronze vs bright EFCu mother
+# re-entrant tube mid section (OFHC Cu, z 852..2857): darker than the EFCu
 /vis/geometry/set/colour ofhc_cu 0 0.55 0.25 0.08 1
 /vis/geometry/set/colour sipm_outer_bottom_r52.750000001_nmod3 0 0.85 0.45 0.12 1
 /vis/geometry/set/colour sipm_outer_top_r52.750000001_nmod3 0 0.85 0.45 0.12 1
 
-# --- ultem clamps/insulators  (1008 vol)  rgb=0.70 0.62 0.35
+# ── ultem clamps and insulators
 /vis/geometry/set/colour ultem_clamp_hv_V0101 0 0.7 0.62 0.35 1
 /vis/geometry/set/colour ultem_clamp_hv_V0102 0 0.7 0.62 0.35 1
 /vis/geometry/set/colour ultem_clamp_hv_V0103 0 0.7 0.62 0.35 1
@@ -2139,7 +2110,7 @@
 /vis/geometry/set/colour ultem_insulator_du_holder_V4207 0 0.7 0.62 0.35 1
 /vis/geometry/set/colour ultem_insulator_du_holder_V4208 0 0.7 0.62 0.35 1
 
-# --- signal ASICs  (336 vol)  rgb=1 0.8 0.1  (gold: 1 mm chips must stand out against the blue HPGe in the flipped view)
+# ── signal ASICs: gold, so the 1 mm chips stand out against the blue detectors
 /vis/geometry/set/colour signal_asic_V0101 0 1 0.8 0.1 1
 /vis/geometry/set/colour signal_asic_V0102 0 1 0.8 0.1 1
 /vis/geometry/set/colour signal_asic_V0103 0 1 0.8 0.1 1
@@ -2477,13 +2448,10 @@
 /vis/geometry/set/colour signal_asic_V4207 0 1 0.8 0.1 1
 /vis/geometry/set/colour signal_asic_V4208 0 1 0.8 0.1 1
 
-# --- SiPMs  (1 vol)  rgb=0.65 0.25 0.65
+# ── SiPMs
 /vis/geometry/set/colour sipm_r52.750000001_nmod3 0 0.65 0.25 0.65 1
 
-# ═══════════════════════════════════════════════════════════
-# HPGE DETECTORS (INNERMOST)   —   alpha = 1.00
-# ═══════════════════════════════════════════════════════════
-# --- HPGe detectors  (336 vol)  rgb=0.40 0.58 0.78
+# ── HPGe detectors
 /vis/geometry/set/colour V0101 0 0.4 0.58 0.78 1
 /vis/geometry/set/colour V0102 0 0.4 0.58 0.78 1
 /vis/geometry/set/colour V0103 0 0.4 0.58 0.78 1
@@ -2821,9 +2789,5 @@
 /vis/geometry/set/colour V4207 0 0.4 0.58 0.78 1
 /vis/geometry/set/colour V4208 0 0.4 0.58 0.78 1
 
-# ═══════════════════════════════════════════════════════════
-# WORLD BOX   —   alpha = 0.00
-# ═══════════════════════════════════════════════════════════
-# --- world box  (1 vol)  rgb=0.50 0.50 0.50
+# ── world box (alpha 0: not drawn)
 /vis/geometry/set/colour world 0 0.5 0.5 0.5 0
-

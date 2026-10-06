@@ -1,4 +1,0 @@
-# Auto-peel flip keyframe A: start view (see l1000-autopeel.mac).
-/vis/viewer/set/upVector -0.3214 -0.117 0.9397
-/vis/viewer/set/viewpointVector 0.883 0.3214 0.342
-/vis/viewer/set/lightsVector 0.883 0.3214 0.342

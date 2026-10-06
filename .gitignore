@@ -1,7 +1,13 @@
+.DS_Store
 *dets.mac
 *.gdml
-*.root
-.DS_Store
-Edgars_sim
-Ralphs_sim
 *.lh5
+*.root
+
+output/*
+!l1000_sim/rt/output/*.png
+!l1000_sim/EFCuHolders/output/*.png
+!HADES/output/*.png
+
+*Edgars_sim
+*Ralphs_sim
