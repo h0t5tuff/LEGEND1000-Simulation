@@ -1,7 +1,7 @@
 #  fire a calibration source at the crystal and record every step it deposits. two modes, one file:
 #    decay  -s PARTICLE=ion   -s E=0                  the nuclide {Z} {A} decays: every line, x-ray and coincidence sum, per decay
 #    line   -s PARTICLE=gamma -s E=<keV> -s THETA=<deg>  one gamma line aimed into a cone: for the collimated am_HS1, where decays waste 99.96%
-#      remage -q --ignore-warnings -t 8 -w -o output/co60.root -s GDML=output/co60.gdml -s PARTICLE=ion -s Z=27 -s A=60 -s E=0 -s THETA=180 -s NEV=2000000 -s SEED=3 -- run.mac
+#      remage -q --ignore-warnings -t 8 -w -o output/co60.root -s GDML=output/co60.gdml -s PARTICLE=ion -s Z=27 -s A=60 -s E=0 -s THETA=180 -s NEV=2000000 -s SEED=3 -- sim/run.mac
 #  aliases: {GDML} {PARTICLE} {Z} {A} {E} keV {THETA} deg {NEV} {SEED}
 
 #-------------------------------------------------------------------------------

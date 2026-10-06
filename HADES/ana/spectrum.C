@@ -1,7 +1,7 @@
 //  what a calibration source looks like in the HPGe, and what that says about the detector
-//    root -l -b -q 'spectrum.C("output/ba133.root")'                    FCCD 1.0 mm: peaks, resolution, FCCD scan, output/ba133_spectrum.png
-//    root -l -b -q 'spectrum.C("output/ba133.root", 0.8)'               the spectrum at another FCCD
-//    root -l -b -q 'spectrum.C("output/ba133.root", 1.0, 1.52, 0.02)'   a measured observable +- its error -> the detector's FCCD
+//    root -l -b -q 'ana/spectrum.C("output/ba133.root")'                       FCCD 1.0 mm: peaks, resolution, FCCD scan, output/ba133_spectrum.png
+//    root -l -b -q 'ana/spectrum.C("output/ba133.root", 0.8)'                  the spectrum at another FCCD
+//    root -l -b -q 'ana/spectrum.C("output/ba133.root", 1.0, 0.86712, 0.01)'   a measured observable +- its error -> the detector's FCCD
 //  args: file, fccd [mm], measured, error, dlf, seed. the source (nuclide, or gamma line and cone) is read from stp/particles
 
 #include <algorithm>
@@ -61,7 +61,7 @@ void spectrum(const char *file, double fccd = 1.0, double meas = -1, double meas
   auto f = TFile::Open(file);
   auto d = (f && !f->IsZombie()) ? (TDirectory *)f->Get("stp") : nullptr;
   auto tp = d ? (TTree *)d->Get("particles") : nullptr;
-  if (!tp) { printf("ERROR: no stp/particles in %s - simulate with run.mac, which stores the primaries\n", file); return; }
+  if (!tp) { printf("ERROR: no stp/particles in %s - simulate with sim/run.mac, which stores the primaries\n", file); return; }
   const Long64_t nev = tp->GetEntries();
   int pdg = 0;
   double ekin = 0, cosMin = 1; // the primary's energy [keV] and the widest emission angle from -z, where the crystal is

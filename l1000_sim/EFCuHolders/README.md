@@ -13,7 +13,7 @@ uniformly through the copper and every one of the 336 detectors is read out.
 From this folder:
 
 ```bash
-remage -t 8 -g l1000.gdml -o l1000_EFCu_holders.lh5 -- run.mac
+remage -t 8 -m -g l1000.gdml -o l1000_EFCu_holders.lh5 -- run.mac
 ~/venvs/v/bin/python spectrum.py l1000_EFCu_holders.lh5
 ```
 
@@ -34,3 +34,5 @@ response. Tagged: Pb-212 238 keV, Tl-208 583 and 2614 keV (Th-232); Pb-214 352 k
 - `nucleusLimits 1 238 1 92` lets both chains run to their stable ends. Each event holds a whole
   chain, so members that decay days apart sum in the same event.
 - Counts are per simulated decay, not normalised to an activity or mass.
+- `-m` merges the per-thread outputs: with remage 1.1, multithreaded LH5 output is otherwise split
+  into `<file>_t0.lh5 … _t7.lh5` (ROOT output is merged either way).

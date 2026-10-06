@@ -34,8 +34,8 @@ builds its own.
 remage v0.26.0 (Geant4 11.4.2), ROOT 6.40 for the analysis macros, and a Python environment with
 the legend-pygeom packages and reboost. Long runs are set up for NERSC (see `rt`).
 
-`rt` and `HADES` keep their source at the top of the folder and write everything they generate to
-`output/`.
+`rt` and `HADES` keep their source in `sim/` (the simulation) and `ana/` (the analysis of its output),
+and write everything they generate to `output/`.
 
 ## License
 

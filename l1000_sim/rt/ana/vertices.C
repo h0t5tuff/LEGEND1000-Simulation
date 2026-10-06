@@ -1,7 +1,7 @@
 //  are the RT vertices spread over the WHOLE tube, and in the right material?
 //    root -l -b -q 'ana/vertices.C("output/tl208.root")'
 
-#include "../geom/rt.h"
+#include "../sim/rt.h"
 
 void vertices(const char *fn, const char *gdml = "")
 {

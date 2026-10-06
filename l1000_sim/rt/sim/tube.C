@@ -1,5 +1,5 @@
 //  is the tube one clean surface, is the endcap flush, and how does it differ from the mint geometry
-//    root -l -b -q geom/tube.C
+//    root -l -b -q sim/tube.C
 
 #include "rt.h"
 
