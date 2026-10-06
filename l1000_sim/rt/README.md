@@ -109,7 +109,7 @@ shared       geom/rt.h           (the tube's shape from the GDML, used by every 
 
 ## Run
 
-From `l1000_sim/rt_sim/`: every path in the macros is relative to it, and everything writes to
+From `l1000_sim/rt/`: every path in the macros is relative to it, and everything writes to
 `output/`. remage v0.26.0 (Geant4 11.4.2), ROOT 6.40, Python 3.14 in `~/venvs/v` (reboost 1.3.1,
 uproot). In remage, `-q` prints only warnings and errors, `--ignore-warnings` keeps a warning from
 failing the exit code, `-t` sets the threads, `-w` overwrites, `-s KEY=VALUE` fills a `{KEY}` alias in
@@ -742,15 +742,15 @@ tasks add statistics, `scancel` drops extras.
 The task counts are `[7]`'s decays over 10⁷, from the first 3 M-decay run: resize them if your `[7]`
 differs.
 
-Here, once, from `rt_sim/`, with `<user>` and `<path>` (your NERSC login and repo path) filled in:
+Here, once, from `rt/`, with `<user>` and `<path>` (your NERSC login and repo path) filled in:
 
 ```bash
-ssh <user>@perlmutter.nersc.gov "mkdir -p <path>/LEGEND-background-simulation/l1000_sim/rt_sim/output <path>/LEGEND-background-simulation/l1000_sim/rt_sim/sim"
-rsync -av ../../KSendcap_l1kGeometry.gdml <user>@perlmutter.nersc.gov:<path>/LEGEND-background-simulation/
-rsync -av sim/ <user>@perlmutter.nersc.gov:<path>/LEGEND-background-simulation/l1000_sim/rt_sim/sim/
+ssh <user>@perlmutter.nersc.gov "mkdir -p <path>/LEGEND1000-Simulation/l1000_sim/rt/output <path>/LEGEND1000-Simulation/l1000_sim/rt/sim"
+rsync -av ../../KSendcap_l1kGeometry.gdml <user>@perlmutter.nersc.gov:<path>/LEGEND1000-Simulation/
+rsync -av sim/ <user>@perlmutter.nersc.gov:<path>/LEGEND1000-Simulation/l1000_sim/rt/sim/
 ```
 
-On Perlmutter, from `l1000_sim/rt_sim/` (`m2676` is assumed to be the LEGEND allocation: check it):
+On Perlmutter, from `l1000_sim/rt/` (`m2676` is assumed to be the LEGEND allocation: check it):
 
 ```bash
 shifterimg pull docker:legendexp/remage:v0.26.0
@@ -774,7 +774,7 @@ table: ~0.2-0.3 GB per task, so stage 1 ~9 GB, stage 2 ~8 GB, stage 3 ~19 GB, pl
 After each stage, here, fetch the runs and rerun ② and ③; `[7]` and `[8]` show what it settled:
 
 ```bash
-rsync -av --include='*_[0-9]*.root' --exclude='*' <user>@perlmutter.nersc.gov:<path>/LEGEND-background-simulation/l1000_sim/rt_sim/output/ output/
+rsync -av --include='*_[0-9]*.root' --exclude='*' <user>@perlmutter.nersc.gov:<path>/LEGEND1000-Simulation/l1000_sim/rt/output/ output/
 for f in output/tl208_*.root output/bi214_*.root; do ~/venvs/v/bin/python sim/response.py "$f"; done
 root -l -b -q 'ana/background.C("output/tl208*.root=Tl208,output/bi214*.root=Bi214")'
 ```

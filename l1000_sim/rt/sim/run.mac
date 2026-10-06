@@ -28,4 +28,4 @@
 /RMG/Output/Scintillator/StoreSinglePrecisionPosition
 /RMG/Output/Scintillator/StoreSinglePrecisionEnergy
 /RMG/Output/Vertex/StoreSinglePrecisionPosition
-/control/execute sim/source.mac          # path from rt_sim/, where remage is launched
+/control/execute sim/source.mac          # path from rt/, where remage is launched
