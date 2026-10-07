@@ -1,12 +1,13 @@
 .DS_Store
+
+output/*
+*.pdf
 *dets.mac
 *.gdml
 *.lh5
 *.root
-
-output/*
-!l1000_sim/rt/output/*.png
-!l1000_sim/EFCuHolders/output/*.png
+*.parquet
+!sim/output/*.png
 !HADES/output/*.png
 
 *Edgars_sim

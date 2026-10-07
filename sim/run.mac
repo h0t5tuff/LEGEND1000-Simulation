@@ -1,0 +1,39 @@
+#  the background run: one nuclide decays uniformly in the tube wall; every step it deposits in the germanium and in the
+#  underground argon (UGLAr) is recorded. remage loads the whole GDML, so the gammas cross every volume on their way
+#    remage -q --ignore-warnings -t 8 -w -o output/tl208.root -s GDML=$G -s Z=81 -s A=208 -s NEV=1000000 -s SEED=1 -s VOLS='reentrancetube|ofhc_cu|ss_316l' -- sim/run.mac
+#  aliases: {GDML} the geometry, {Z} {A} the nuclide (Tl208: 81 208, Bi214: 83 214), {NEV} decays, {SEED} the random stream,
+#           {VOLS} a regex over the wall sections: reentrancetube (EFCu: endcap, lower wall, lid), ofhc_cu, ss_316l
+
+#-------------------------------------------------------------------------------
+#  1. Before init:
+/RMG/Geometry/RegisterDetectorsFromGDML Germanium              # the 336 HPGe detectors, from the map inside the GDML
+/RMG/Geometry/RegisterDetector Scintillator undergroundlar 0   # the UGLAr: its deposited energy is the argon veto
+/RMG/Output/NtupleUseVolumeName true                           # trees named V0101 ... and undergroundlar
+/RMG/Processes/EnableGammaAngularCorrelation                   # physics-list settings are PreInit-only
+/RMG/Geometry/GDMLDisableOverlapCheck true                     # overlaps are checked with the geometry, in l1000_geometry/
+/RMG/Geometry/IncludeGDMLFile {GDML}
+/run/initialize
+
+#-------------------------------------------------------------------------------
+#  2. Output:
+/geometry/navigator/check_mode false
+/RMG/Output/Germanium/DiscardZeroEnergyHits true
+/RMG/Output/Germanium/EdepCutLow 0 keV              # decays that leave nothing in germanium (~99%) keep only their vertex
+/RMG/Output/Germanium/StoreSinglePrecisionPosition
+/RMG/Output/Germanium/StoreSinglePrecisionEnergy
+/RMG/Output/Scintillator/StoreSinglePrecisionPosition
+/RMG/Output/Scintillator/StoreSinglePrecisionEnergy
+/RMG/Output/Vertex/StoreSinglePrecisionPosition
+
+#-------------------------------------------------------------------------------
+#  3. The source:
+/RMG/Manager/Randomization/Seed {SEED}
+/RMG/Generator/Confine Volume
+/RMG/Generator/Confinement/MaxSamplingTrials 100000     # the wall is a thin shell: uniform by volume needs ~560 tries per vertex
+/RMG/Generator/Confinement/Physical/AddVolume {VOLS}
+/RMG/Generator/Select GPS
+/gps/particle ion
+/gps/energy 0 eV                                        # at rest: all the energy comes from the decay
+/gps/ion {Z} {A}
+/process/had/rdm/nucleusLimits {A} {A} {Z} {Z}          # this nuclide only, not the rest of its chain
+/run/beamOn {NEV}
