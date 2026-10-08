@@ -526,4 +526,6 @@ $SCRATCH/LEGEND1000-Simulation'` frees it.
 6. LEGEND, legend-simflow (github.com/legend-exp/legend-simflow, the `hit`, `opt` and `evt` tiers) and
    legend1000-metadata (`simprod/config`, `6cd0209`).
 7. reboost 1.4.0, reboost.readthedocs.io.
-8. ENSDF, ²¹²Bi alpha decay to ²⁰⁸Tl: 35.94 ± 0.06%, nndc.bnl.gov/ensnds/208/Tl/a_decay_60.55_m.pdf.
+8. M. J. Martin, "Nuclear Data Sheets for A = 208", Nuclear Data Sheets 108(8), 1583-1806 (2007),
+   doi:10.1016/j.nds.2007.07.001: the ENSDF evaluation, ²¹²Bi alpha decay to ²⁰⁸Tl in 35.94 ± 0.06%
+   (nndc.bnl.gov/ensnds/208/Tl/a_decay_60.55_m.pdf).
