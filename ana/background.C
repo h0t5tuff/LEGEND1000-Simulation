@@ -8,6 +8,7 @@
 #include "TRegexp.h"
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 
 //-------------------------------------------------------------------------------
 //  1. Configuration:
@@ -21,7 +22,10 @@ namespace cfg
   // the cuts of the LEGEND-1000 simulation production (legend1000-metadata simprod/config, l1000dsg01: tier/evt, pars/geds/psdcuts)
   const double m1_keV = 25.0;                 // a detector fired above this; M1: exactly one did
   const double lar_pe = 4.0;                  // the LAr veto rejects a decay whose SiPMs see this many photoelectrons, summed
-  const double psd_low = -1.5;                // the A/E cut keeps a hit whose A/E classifier is above this (low side)
+  const double psd_low = -1.5;                // the production's A/E cut: keep a hit whose A/E classifier is above this (low side)
+  // ...but the analysis sets it as LEGEND does in data ([5]): at the classifier value that keeps this fraction of the Tl208
+  // double-escape peak (DEP, single site like 0vbb) in M1 events, net of the continuum under it
+  const double depKeep = 0.90, depE = 1592.5, depHalf = 2.5, sideLo = 5.0, sideHi = 10.0; // keV: peak +-2.5, sidebands 5-10 off it
   const int    NC = 4;                        // cut levels: none, M1, M1 + LAr, M1 + LAr + A/E
   const char  *cutName[NC] = {"no cut", "M1", "M1 + LAr", "M1 + LAr + A/E"};
   const double geMass_kg = 1000.0;            // the array the BI is per kg of
@@ -37,7 +41,7 @@ namespace cfg
   // chain activities [uBq/kg], {232Th, 238U}, from Ralph's MaterialMix slides (23 Jun 2026): steel from Bernhard (p. 5),
   // OFHC Cu from the MAJORANA assay paper (p. 15), EFCu from M. Green, CD-1 (p. 5)
   const double chain[3][2] = {{1000, 2500}, {1.1, 1.3}, {0.37, 0.19}};
-  const double branch[2] = {0.37, 1.0};       // decays of the simulated nuclide per chain decay, fixed: Tl208 is 37% of the 232Th chain, Bi214 100% of the 238U chain
+  const double branch[2] = {0.3594, 1.0};     // decays of the simulated nuclide per chain decay: Tl208 is 35.94% (~36%) of the 232Th chain, the alpha branch of Bi212 (ENSDF); Bi214 100% of the 238U chain
   int iso(const std::string &s) { return s.find("Bi") != std::string::npos ? 1 : 0; } // 0 Tl208, 1 Bi214
   double activity(const std::string &s, int m) { return chain[m][iso(s)] * branch[iso(s)] * 1e-6; } // Bq/kg of the simulated nuclide
   // the EFCu detector holders (hpge_string_support_weldment_copper in the GDML): one weldment, two copper boxes
@@ -296,6 +300,8 @@ struct Run
 static int slabOf(double dep, double L1, double L2) { return dep < L1 ? 0 : (dep < L2 ? 1 : 2); } // a design's three slabs, from the top
 static int bin(double dep, double tot, int n) { return std::min(n - 1, std::max(0, (int)(dep / tot * n))); }
 
+static double gPsdLow = cfg::psd_low; // the A/E cut in use: tuneAoE() sets it before any run is read
+
 static void readHits(TFile *f, Long64_t n, std::vector<Hit> &hits, const std::string &file) // every decay's Ge hits, with the cuts decided
 {
   std::vector<float> pe(n, 0), peMap(n, 0);
@@ -316,7 +322,7 @@ static void readHits(TFile *f, Long64_t n, std::vector<Hit> &hits, const std::st
     h.m1 = nFired[h.ev] == 1;
     h.lar = pe[h.ev] < cfg::lar_pe;
     h.larMap = peMap[h.ev] < cfg::lar_pe;
-    h.psd = aoe[i] > cfg::psd_low; // an undefined A/E (NaN) fails
+    h.psd = aoe[i] > gPsdLow; // an undefined A/E (NaN) fails
   }
 }
 
@@ -420,6 +426,50 @@ static std::vector<std::string> expand(const std::string &pat) // "output/tl208*
   return out;
 }
 
+// the A/E cut as LEGEND sets it: the classifier threshold that keeps cfg::depKeep of the DEP of Tl208, in M1 hits of every
+// Tl208 run (tube and holders), the continuum under the peak subtracted with the sidebands. one value for all detectors: they
+// share one template and one set of parameters
+static void tuneAoE(const std::vector<std::string> &files)
+{
+  std::vector<float> peak, side; // A/E classifier of the M1 hits in the peak and in the sidebands
+  for (auto &file : files)
+  {
+    auto f = TFile::Open(file.c_str());
+    auto t = (f && !f->IsZombie()) ? (TTree *)f->Get("geds") : nullptr;
+    if (!t) { delete f; continue; }
+    std::unordered_map<Long64_t, short> nFired;
+    scanTree(t, {"evtid", "energy"}, [&](const double *v) { if (v[1] > cfg::m1_keV) nFired[(Long64_t)v[0]]++; });
+    scanTree(t, {"evtid", "energy", "aoe_class"}, [&](const double *v) {
+      double d = fabs(v[1] - cfg::depE);
+      if (v[1] <= cfg::m1_keV || nFired[(Long64_t)v[0]] != 1 || d > cfg::sideHi) return;
+      if (d < cfg::depHalf) peak.push_back(std::isnan(v[2]) ? -1e30 : v[2]); // an undefined A/E fails
+      else if (d > cfg::sideLo) side.push_back(std::isnan(v[2]) ? -1e30 : v[2]);
+    });
+    delete f;
+  }
+  const double k = 2 * cfg::depHalf / (2 * (cfg::sideHi - cfg::sideLo)); // sideband counts per peak width
+  const double net = peak.size() - k * side.size();
+  std::sort(peak.begin(), peak.end());
+  std::sort(side.begin(), side.end());
+  auto kept = [&](double thr) { // net DEP fraction above thr
+    double p = peak.end() - std::upper_bound(peak.begin(), peak.end(), (float)thr), q = side.end() - std::upper_bound(side.begin(), side.end(), (float)thr);
+    return (p - k * q) / net;
+  };
+  if (net < 30) { printf("[5] A/E cut: only %.0f DEP events net, kept at the production's %.2f
+
+", net, cfg::psd_low); return; }
+  double thr = 0;
+  while (thr > -50 && kept(thr) < cfg::depKeep) thr -= 0.005;
+  gPsdLow = thr;
+  printf("[5] A/E cut tuned on the Tl208 DEP (%.1f keV) in M1 hits: %zu in +-%.1f keV, %zu in the sidebands %.0f-%.0f keV off it, %.0f net
+",
+         cfg::depE, peak.size(), cfg::depHalf, side.size(), cfg::sideLo, cfg::sideHi, net);
+  printf("    classifier > %.2f keeps %.0f%% of it (+- %.0f%% statistics); the production's > %.2f kept %.0f%%
+
+", gPsdLow, 100 * kept(gPsdLow),
+         100 * sqrt(cfg::depKeep * (1 - cfg::depKeep) / net), cfg::psd_low, 100 * kept(cfg::psd_low));
+}
+
 void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_hit.root=Bi214",
                 const char *holders = "output/holders_tl208*_hit.root=Tl208,output/holders_bi214*_hit.root=Bi214", const char *gdml = "geom/output/l1000.gdml")
 {
@@ -427,6 +477,18 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
   RT rt = loadRT(gdml);
   if (!rt.ok) return;
   checkTube(rt);
+  std::vector<std::string> tlFiles; // every Tl208 file, tube and holders, for the A/E cut
+  for (const char *list : {runs, holders})
+  {
+    std::stringstream ls(list);
+    for (std::string tok; std::getline(ls, tok, ',');)
+    {
+      size_t eq = tok.find('=');
+      if ((eq == std::string::npos ? "Tl208" : tok.substr(eq + 1)).find("Tl") != std::string::npos)
+        for (auto &f : expand(tok.substr(0, eq))) tlFiles.push_back(f);
+    }
+  }
+  tuneAoE(tlFiles);
   std::vector<Run> R; // one per isotope
   std::stringstream list(runs);
   for (std::string tok; std::getline(list, tok, ',');) // "a_hit.root=Tl208,b_hit.root=Bi214"
@@ -467,8 +529,8 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
   auto massOf = [&](double d0, double d1, int m) { return d1 > d0 ? rt.density[m] * rt.wallVolume(rt.zTop - d1, rt.zTop - d0) * 1e-9 : 0.0; };
   auto ulN = [](long n) { const double t[11] = {2.30, 3.89, 5.32, 6.68, 7.99, 9.27, 10.53, 11.77, 12.99, 14.21, 15.41}; return n <= 10 ? t[n] : n + 1.28 * sqrt((double)n) + 1; }; // Poisson 90% upper limit
   printf("window   : %.0f-%.0f keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's BEW): %.0f keV\n", cfg::winLo, cfg::winHi, cfg::winWidth);
-  printf("cuts     : M1 (exactly one detector above %.0f keV), LAr veto (the SiPMs see < %.0f photoelectrons), A/E classifier > %.1f. energies: the detector response\n",
-         cfg::m1_keV, cfg::lar_pe, cfg::psd_low);
+  printf("cuts     : M1 (exactly one detector above %.0f keV), LAr veto (the SiPMs see < %.0f photoelectrons), A/E classifier > %.2f (%.0f%% DEP, [5]). energies: the detector response\n",
+         cfg::m1_keV, cfg::lar_pe, gPsdLow, 100 * cfg::depKeep);
   printf("activity : chain [uBq/kg] 232Th / 238U: steel %g / %g, Cu %g / %g, EFCu %g / %g; Tl208 is %.2f%% of 232Th, Bi214 %.0f%% of 238U\n\n",
          cfg::chain[0][0], cfg::chain[0][1], cfg::chain[1][0], cfg::chain[1][1], cfg::chain[2][0], cfg::chain[2][1], 100 * cfg::branch[0], 100 * cfg::branch[1]);
 
@@ -513,7 +575,7 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
 
 //-------------------------------------------------------------------------------
 //  8. Background index as built, per chain and section:
-  printf("[8] background index as built [cts/(keV kg yr)], +- MC statistics; a section with no window hit gets its 90%% limit\n");
+  printf("[8] background index as built [cts/(keV kg yr)], +- MC statistics; a section with no window hit gets its 90%% limit, 2.30 x its heaviest decay\n");
   printf("    %-6s %-6s %15s   %-22s %-22s %-22s %-22s\n", "chain", "sect", "win hits", cutName[0], cutName[1], cutName[2], cutName[3]);
   double gB[NC] = {0}, gV[NC] = {0};
   long gN[NC] = {0}; // window hits behind each total
@@ -528,12 +590,11 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
     long tN[NC] = {0};
     for (int s = 0; s < 3; s++) // the slabs as built: steel, Cu, EFCu
     {
-      double B[NC] = {0}, V[NC] = {0}, wbar = 0;
-      long n[NC] = {0}, nsec = 0;
-      for (int p = 0; p < 3; p++) // mean weight of a decay in this section, for the limit
+      double B[NC] = {0}, V[NC] = {0}, wmax = 0;
+      long n[NC] = {0};
+      for (int p = 0; p < 3; p++) // the heaviest decay in the slab, for the limit: runs confined to one section sample a slab unevenly
         for (int b = bin(edgeBuilt[s], depthTot, cfg::NZ); b < std::min(cfg::NZ, (int)ceil(edgeBuilt[s + 1] / depthTot * cfg::NZ)); b++)
-        { nsec += r.nZPv[p][b]; wbar += r.nZPv[p][b] * weight(r, s, p) / cfg::winWidth; }
-      wbar = nsec ? wbar / nsec : 0;
+          if (r.nZPv[p][b]) { wmax = std::max(wmax, weight(r, s, p) / cfg::winWidth); break; }
       for (size_t i = 0; i < r.depth.size(); i++)
       {
         if (slabOf(r.depth[i], L1built, L2built) != s) continue;
@@ -543,7 +604,7 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
       std::string cell[NC];
       for (int c = 0; c < NC; c++)
       {
-        cell[c] = n[c] ? Form("%.2e +- %.1e", B[c], sqrt(V[c])) : Form("< %.2e (90%%)", UL90 * wbar);
+        cell[c] = n[c] ? Form("%.2e +- %.1e", B[c], sqrt(V[c])) : Form("< %.2e (90%%)", UL90 * wmax);
         if (n[c]) { tB[c] += B[c]; tV[c] += V[c]; tN[c] += n[c]; }
       }
       printf("    %-6s %-6s %15s   %-22s %-22s %-22s %-22s\n", s ? "" : r.iso.c_str(), cfg::mat[s], Form("%ld/%ld/%ld/%ld", n[0], n[1], n[2], n[3]), cell[0].c_str(),
@@ -627,7 +688,8 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
 
 //-------------------------------------------------------------------------------
 //  10. Three-material designs: the MC alone, after all cuts, judged by its 90% upper bound
-  // per slab: n window hits count UL(n) x their mean weight; none count 2.30 x the heaviest decay in the slab
+  // per slab: n window hits (n = 0 too) count UL(n) x the heaviest decay in the slab. their mean weight would not do: runs
+  // confined to one section sample a slab unevenly, and hits from a light, well-sampled part say nothing of an empty heavy one
   auto judge = [&](double L1, double L2, double &bi) {
     const double edge[4] = {0, L1, L2, depthTot};
     double up = 0;
@@ -646,7 +708,7 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
           if (r.win[ALL][i] && slabOf(r.depth[i], L1, L2) == s) { B += r.win[ALL][i] * weight(r, s, r.pv[i]) / cfg::winWidth; n += r.win[ALL][i]; }
       }
       bi += B;
-      up += n ? ulN(n) * B / n : UL90 * wmax;
+      up += ulN(n) * wmax;
     }
     return up;
   };
