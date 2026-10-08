@@ -1,0 +1,11 @@
+# show 'tpb_on_nylon' (10 vols)
+/vis/geometry/set/visibility minishroud_19.00x1400.00 0 true
+/vis/geometry/set/visibility minishroud_lid_43.75x20.00 0 true
+/vis/geometry/set/visibility minishroud_lid_47.75x20.00 0 true
+/vis/geometry/set/visibility minishroud_lid_50.75x20.00 0 true
+/vis/geometry/set/visibility minishroud_lid_53.75x20.00 0 true
+/vis/geometry/set/visibility minishroud_tube_44.00x1000.00 0 true
+/vis/geometry/set/visibility minishroud_tube_44.00x880.00 0 true
+/vis/geometry/set/visibility minishroud_tube_48.00x1000.00 0 true
+/vis/geometry/set/visibility minishroud_tube_51.00x1000.00 0 true
+/vis/geometry/set/visibility minishroud_tube_54.00x800.00 0 true

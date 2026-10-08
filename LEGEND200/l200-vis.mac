@@ -1,61 +1,14 @@
-# RUN
-#   remage -i l200-vis.mac
-
-# PEELING
-#   /control/execute l200-autopeel.mac
-
-# Define LV, then hide/show
-#   /control/alias LV <LogicalVolumeName>
-#  /control/execute toggles/0.mac
-#   /control/execute toggles/XLV.mac
-#   /control/execute toggles/OLV.mac
-
-#   /control/alias MAT <Group>
-#   /control/execute toggles/MAT.mac
-# ════════════════════════════════════════════════════════════════════
-# geom & dets
+# Geant4 viewer of LEGEND-200:  remage -i l200-vis.mac   (see README.md)
 /RMG/Geometry/GDMLDisableOverlapCheck true
 /RMG/Geometry/IncludeGDMLFile l200.gdml
-/control/execute l200-dets.mac
 /run/initialize
 
-# open Qt viewer
 /vis/open OGL
 /vis/viewer/set/lineSegmentsPerCircle 12
 /control/execute l200-colors.mac
 /vis/drawVolume
 /vis/viewer/set/style surface
-/vis/viewer/set/upVector 0 0 1
 /vis/viewer/set/viewpointThetaPhi 70 20 deg
+/vis/viewer/set/upVector 0 0 1
 /vis/viewer/set/lightsThetaPhi 70 20 deg
 /vis/viewer/set/autoRefresh true
-/vis/viewer/zoom 1
-# ════════════════════════════════════════════════════════════════════
-# Order LogicalVolumeName                             Material                  #LVs  Note
-#  –    world                                         G4_Galactic               1     vacuum (not a component)
-#  1    cryostat_steel                                metal_steel               1     outer steel barrel (cryostat)
-#  2    gaseous_argon                                 gaseous_argon             1     gAr top fill (ullage)
-#  3    liquid_argon                                  liquid_argon              1     LAr bath (ACTIVE scintillator)
-#  4    wlsr_copper                                   metal_copper              1     WLSR copper shell (barrel)
-#  5    wlsr_tetratex                                 tetratex                  1     WLSR tetratex reflector
-#  6    wlsr_tpb                                      tpb_on_tetratex           1     WLSR TPB wavelength shifter
-#  7    minishroud_19.0                               tpb_on_nylon              1     calibration source tube (19 mm nylon shroud)
-#  8    fiber_core_*, fiber_cl1_*, fiber_cl2_*,       ps_fibers+pmma+pmma_cl2   58    LAr fibre barrels: PS core + 2 PMMA
-#         fiber_{inner,outer}_barrel_coating_tpb_*      +tpb_on_fibers                clads + TPB coat (inner/outer barrel)
-#  9    sipm_outer_{top,bottom}_*                     tetratex                  4     SiPM reflectors
-# 10    sipm_*_r*_nmod*                               metal_silicon             3     SiPM photosensors (58 optical channels)
-# 11    larinstr_support_{inner,outer}_copper_*       metal_copper              97    LAr-instrumentation copper supports
-# 12    minishroud_lid_*, minishroud_tube_*           tpb_on_nylon              8     string mini-shrouds (4 lids + 4 tubes)
-# 13    birds_nest_plate_copper, cable_{hv,signal}_*, metal_copper              33    string copper hardware: cables, pins,
-#         hpge_du_pin_*, hpge_string_support_*                                        hangers, rods
-# 14    hpge_assembly_insulator_ultem_*,              ultem                     68    DU insulators + HV/signal clamps
-#         ultem_clamp_{hv,signal}                                                     (radiopure PEI)
-# 15    pen_{large,medium,medium_ortec,ppc_small,     pen                       6     PEN holder plates (scintillating)
-#         small,xlarge}
-# 16    lmfe                                          silica                    1     LMFE front-end signal chip
-# 17    phbr_spring, phbr_washer                      metal_phosphor_bronze     2     contact springs + washers
-#  –    B*, C*, P*, V*                                EnrichedGermanium0.855    101   HPGe detectors — 24 distinct
-#         (B 28, C 6, P 26, V 41)                       …0.942 (24 mats)              enrichments; B=BEGe C=Coax P=PPC V=ICPC
-# ────────────────────────────────────────────────────────────────────────────────────
-# TOTAL LVs = 389 ( 1 + 1+1+1+1+1+1+1+58+4+3+97+8+33+68+6+1+2 + 101 ) = 1 + 287 + 101 HPGe
-# Readout (l200-dets.mac, 160): 101 Germanium (B/C/P/V) + 58 Optical (SiPM) + 1 Scintillator (LAr bath)

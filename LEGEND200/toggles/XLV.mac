@@ -1,2 +1,0 @@
-# hide ONE LV by name 
-/vis/geometry/set/visibility {LV} 0 false

@@ -1,16 +1,20 @@
-#  the background run: one nuclide decays uniformly in the tube wall; every step it deposits in the germanium and in the
-#  underground argon (UGLAr) is recorded. remage loads the whole GDML, so the gammas cross every volume on their way
-#    remage -q --ignore-warnings -t 8 -w -o output/tl208.root -s GDML=$G -s Z=81 -s A=208 -s NEV=1000000 -s SEED=1 -s VOLS='reentrancetube|ofhc_cu|ss_316l' -- sim/run.mac
+#  the background run: one nuclide decays uniformly in the source volumes, the tube wall or the EFCu detector holders; every
+#  step it deposits in the germanium and in the underground argon (UGLAr) is recorded, grouped into hits, as LH5 for
+#  sim/response.py. remage loads the whole GDML, so the gammas cross every volume on their way
+#    remage -q --ignore-warnings -t 8 -w -m -o output/tl208.lh5 -s GDML=$G -s Z=81 -s A=208 -s NEV=1000000 -s SEED=1 -s VOLS='reentrance_tube_.*' -- sim/run.mac
 #  aliases: {GDML} the geometry, {Z} {A} the nuclide (Tl208: 81 208, Bi214: 83 214), {NEV} decays, {SEED} the random stream,
-#           {VOLS} a regex over the wall sections: reentrancetube (EFCu: endcap, lower wall, lid), ofhc_cu, ss_316l
+#           {VOLS} a regex over the source volumes:
+#             the tube:    reentrance_tube_.*, or one section: reentrance_tube_copper (EFCu: endcap, lower wall, lid),
+#                          reentrance_tube_layer_copper_ofhc, reentrance_tube_layer_steel_316L
+#             the holders: hpge_string_support_weldment_copper_.* (EFCu, 1008 identical pieces holding the detectors)
 
 #-------------------------------------------------------------------------------
 #  1. Before init:
 /RMG/Geometry/RegisterDetectorsFromGDML Germanium              # the 336 HPGe detectors, from the map inside the GDML
-/RMG/Geometry/RegisterDetector Scintillator undergroundlar 0   # the UGLAr: its deposited energy is the argon veto
-/RMG/Output/NtupleUseVolumeName true                           # trees named V0101 ... and undergroundlar
+/RMG/Geometry/RegisterDetector Scintillator liquid_argon_underground 10001   # the UGLAr, uid as in the GDML: the argon veto
+/RMG/Output/NtupleUseVolumeName true                           # tables named V00101Z ... and liquid_argon_underground
 /RMG/Processes/EnableGammaAngularCorrelation                   # physics-list settings are PreInit-only
-/RMG/Geometry/GDMLDisableOverlapCheck true                     # overlaps are checked with the geometry, in l1000_geometry/
+/RMG/Geometry/GDMLDisableOverlapCheck true                     # overlaps are checked with the geometry, in geom/
 /RMG/Geometry/IncludeGDMLFile {GDML}
 /run/initialize
 
@@ -29,7 +33,7 @@
 #  3. The source:
 /RMG/Manager/Randomization/Seed {SEED}
 /RMG/Generator/Confine Volume
-/RMG/Generator/Confinement/MaxSamplingTrials 100000     # the wall is a thin shell: uniform by volume needs ~560 tries per vertex
+/RMG/Generator/Confinement/MaxSamplingTrials 100000     # thin or small volumes: the wall needs ~560 tries per vertex
 /RMG/Generator/Confinement/Physical/AddVolume {VOLS}
 /RMG/Generator/Select GPS
 /gps/particle ion

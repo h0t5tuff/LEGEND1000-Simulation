@@ -1,0 +1,2 @@
+# show 'vacuum' (1 vols)
+/vis/geometry/set/visibility cryostat_vacuum_gap 0 true

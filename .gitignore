@@ -1,14 +1,15 @@
 .DS_Store
+__pycache__/
+.ipynb_checkpoints/
 
-output/*
-*.pdf
-*dets.mac
+**/output/*
+!**/output/*.png
+
 *.gdml
 *.lh5
 *.root
 *.parquet
-!sim/output/*.png
-!HADES/output/*.png
+*.pdf
 
 *Edgars_sim
 *Ralphs_sim

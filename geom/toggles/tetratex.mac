@@ -1,3 +1,3 @@
 # show 'tetratex' (2 vols)
-/vis/geometry/set/visibility wls_tetratex_inner_argon_lv 0 true
-/vis/geometry/set/visibility wls_tetratex_outer_atmospheric_lv 0 true
+/vis/geometry/set/visibility atmospheric_wlsr_tetratex 0 true
+/vis/geometry/set/visibility underground_wlsr_tetratex 0 true

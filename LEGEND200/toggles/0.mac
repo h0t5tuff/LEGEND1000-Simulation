@@ -1,2 +1,0 @@
-# clear screen: hide world + every descendant (recursive, depth -1).
-/vis/geometry/set/visibility world -1 false

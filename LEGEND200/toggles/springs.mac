@@ -1,3 +1,0 @@
-# show 'springs/washers' (2 vols)
-/vis/geometry/set/visibility phbr_spring 0 true
-/vis/geometry/set/visibility phbr_washer 0 true

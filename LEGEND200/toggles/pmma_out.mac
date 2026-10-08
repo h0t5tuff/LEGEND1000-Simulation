@@ -1,0 +1,12 @@
+# show 'pmma_out' (11 vols)
+/vis/geometry/set/visibility fiber_cl2_bend_l1320.82_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1313.22_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1315.12_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1317.02_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1318.92_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1320.82_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1322.72_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1324.62_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1326.52_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1328.42_b165.00 0 true
+/vis/geometry/set/visibility fiber_cl2_l1400.00 0 true

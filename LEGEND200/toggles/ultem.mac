@@ -1,4 +1,4 @@
-# show 'ultem insulators' (68 vols)
+# show 'ultem' (68 vols)
 /vis/geometry/set/visibility hpge_assembly_insulator_ultem_10.30 0 true
 /vis/geometry/set/visibility hpge_assembly_insulator_ultem_10.45 0 true
 /vis/geometry/set/visibility hpge_assembly_insulator_ultem_10.85 0 true

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-"""Peel the LEGEND-1000 geometry layer by layer on a timer while you rotate it (see README.md).
+"""Peel the LEGEND-200 geometry layer by layer on a timer while you rotate it (see README.md).
 
-    ~/venvs/v/bin/python l1000-autopeel.py
+    ~/venvs/v/bin/python l200-autopeel.py
 """
 
 import itertools
@@ -27,34 +27,37 @@ from vtkmodules.vtkRenderingCore import (
 )
 
 HERE = Path(__file__).resolve().parent
-GDML = HERE / "output" / "l1000.gdml"
-COLOURS = HERE / "l1000-colors.mac"
+GDML = HERE / "l200.gdml"
+COLOURS = HERE / "l200-colors.mac"
 CACHE = HERE / "output" / "autopeel-cache.npz"
 DWELL = 3.0  # s per layer at start (up/down change it)
 FADE = 0.5  # s a layer takes to fade out or back in
-START_THETA_PHI = (70, 20)  # deg, z up: the start view of l1000-vis.mac
+START_THETA_PHI = (70, 20)  # deg, z up: the start view of l200-vis.mac
 
-# Peel order, outside in. Each LV goes to the first layer whose regex matches its whole name;
-# whatever no layer matches (the HPGe detectors V00101Z ...) is left at the end.
+# Peel order, outside in (the old l200-autopeel.mac's). Each LV goes to the first layer whose regex matches its
+# whole name; whatever no layer matches (the HPGe detectors: B BEGe, C coax, P PPC, V ICPC) is left at the end.
 LAYERS = [
-    ("outer cryostat: outer steel tank, skirt and foot", r"cryostat_(outer|skirt|foot)_steel_316L"),
-    ("vacuum insulation between the two steel tanks", r"cryostat_insulation_vacuum"),
-    ("inner cryostat", r"cryostat_inner_steel_316L"),
-    ("atmospheric LAr (outer bath)", r"liquid_argon_atmospheric"),
-    ("neutron moderator", r"neutron_moderator_pmma"),
-    ("outer reflector: TPB coating", r"atmospheric_wlsr_tpb"),
-    ("outer reflector: tetratex lining", r"atmospheric_wlsr_tetratex"),
-    ("re-entrant tube: EFCu (z < 920 mm), OFHC Cu (920-2925), SS 316L (> 2925)", r"reentrance_tube_.*"),
-    ("underground LAr (inner active bath)", r"liquid_argon_underground"),
-    ("inner reflector: TPB coating", r"underground_wlsr_tpb"),
-    ("inner reflector: tetratex lining", r"underground_wlsr_tetratex"),
-    ("WLS fibres: outer and inner cladding, TPB coating, PS core", r"fiber_.*"),
-    ("SiPM mounts (copper rings, top and bottom)", r"larinstr_.*_sipm_wrap_copper_.*"),
-    ("SiPMs", r"larinstr_.*_sipm_silicon_.*"),
-    ("string hardware: hangers, rods, tristars, weldments, cable caps, cables", r"hpge_string_.*|hpge_cable_.*"),
-    ("ultem insulators and signal/HV clamps", r"hpge_assembly_(clamp_.*|insulator)_ultem.*"),
-    ("PEN holder plates", r"hpge_assembly_plate_pen_.*"),
-    ("signal ASICs (1 mm silica chips under each detector: look from below)", r"hpge_assembly_asic"),
+    ("cryostat: outer steel wall", r"cryostat_outer_wall"),
+    ("cryostat: vacuum insulation between the two walls", r"cryostat_vacuum_gap"),
+    ("cryostat: inner steel wall", r"cryostat_inner_wall"),
+    ("gaseous argon (top fill)", r"gaseous_argon"),
+    ("liquid argon bath", r"liquid_argon"),
+    ("WLS reflector: TPB coating", r"wlsr_tpb"),
+    ("WLS reflector: tetratex lining", r"wlsr_tetratex"),
+    ("WLS reflector: copper shell", r"wlsr_copper"),
+    ("WLS fibres: inner and outer barrel, cladding, TPB coating, PS core", r"fiber_.*"),
+    ("calibration tubes (nylon)", r"minishroud_19\..*"),
+    ("LAr instrumentation: copper supports", r"larinstr_support_.*"),
+    ("SiPM reflectors (tetratex, top and bottom)", r"sipm_outer_.*"),
+    ("SiPMs", r"sipm_.*|S\d{3}"),
+    ("string mini-shrouds (nylon tubes and lids)", r"minishroud_(lid|tube)_.*"),
+    ("string hardware: rods, hangers, pins, tristars, weldment, boards, cables",
+     r"hpge_string_support_.*|hpge_support_copper_.*|hpge_du_pin_.*|birds_nest_plate_copper"
+     r"|hpge_string_(hv|cc\d+)_board_copper|cable_(hv|signal)_.*"),
+    ("ultem insulators and signal/HV clamps", r"hpge_assembly_insulator_ultem_.*|ultem_clamp_(hv|signal)"),
+    ("PEN holder plates", r"pen_.*"),
+    ("LMFE front-end chip (under the detectors: look from below)", r"lmfe"),
+    ("contact springs and washers (phosphor bronze, under the detectors)", r"phbr_(spring|washer)"),
 ]
 
 
@@ -101,7 +104,7 @@ def _surface(verts, polys):
 
 
 def build_cache(key):
-    print(f"meshing {GDML.name} (first run, or the GDML changed): ~25 s", flush=True)
+    print(f"meshing {GDML.name} (first run, or the GDML changed): ~10 s", flush=True)
     from pyg4ometry import gdml
     from pyg4ometry.visualisation.ViewerBase import ViewerBase
 
@@ -207,8 +210,7 @@ def make_actor(parts, rgba, depth):
     mapper.SetInputData(pd)
     mapper.ScalarVisibilityOff()
     mapper.StaticOn()  # geometry never changes: upload once
-    # a daughter that shares a face with its mother (e.g. the OFHC and SS layers on the re-entrant
-    # tube) wins the depth test, instead of the two z-fighting
+    # a daughter that shares a face with its mother wins the depth test, instead of the two z-fighting
     mapper.SetRelativeCoincidentTopologyPolygonOffsetParameters(0, -2.0 * depth)
     actor = vtkActor()
     actor.SetMapper(mapper)
@@ -244,7 +246,7 @@ def assemble(g, colours):
         counts[layer][0] += 1
         counts[layer][1] += int(g["n_pl"][i])
 
-    core = (f"the {len(left)} HPGe detectors" if all(re.fullmatch(r"V\d{5}Z", n) for n in left)
+    core = (f"the {len(left)} HPGe detectors" if all(re.fullmatch(r"[BCPV][0-9A-Z]{6}", n) for n in left)
             else f"{len(left)} volumes no layer matches")
     layers = []
     for j, grp in enumerate(groups):
@@ -397,7 +399,7 @@ def main():
     win = vtkRenderWindow()
     win.AddRenderer(ren)
     win.SetSize(1500, 1000)
-    win.SetWindowName("LEGEND-1000 autopeel")
+    win.SetWindowName("LEGEND-200 autopeel")
     iren = vtkRenderWindowInteractor()
     iren.SetRenderWindow(win)
     style = vtkInteractorStyleTrackballCamera()

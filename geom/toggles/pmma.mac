@@ -1,3 +1,3 @@
 # show 'pmma' (2 vols)
-/vis/geometry/set/visibility fiber_cl1_l1349_bNone 0 true
-/vis/geometry/set/visibility neutronmoderator 0 true
+/vis/geometry/set/visibility fiber_cl1_l1349.00 0 true
+/vis/geometry/set/visibility neutron_moderator_pmma 0 true

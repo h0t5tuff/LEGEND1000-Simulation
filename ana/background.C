@@ -1,7 +1,9 @@
-//  RT backgrounds, everything after the simulation: the tube read from the GDML and checked, the runs read and checked,
-//  the background as built, and every steel (top) / Cu / EFCu (bottom) design with seams L1, L2, by reweighting
-//    root -l -b -q 'ana/background.C("output/tl208*.root=Tl208,output/bi214*.root=Bi214")'
-//  energies are what Geant4 deposited, no detector model. cuts: M1, and an argon veto on the energy deposited in the UGLAr
+//  LEGEND-1000 backgrounds, everything after the detector response: the re-entrant tube (RT) read from the GDML and
+//  checked, the runs read and checked, the background index (BI) as built of the tube and of the EFCu detector holders
+//  before and after every cut, and every steel (top) / Cu / EFCu (bottom) tube design with seams L1, L2, by reweighting
+//    root -l -b -q ana/background.C       (defaults: output/tl208*_hit.root, output/bi214*_hit.root, output/holders_*_hit.root, geom/output/l1000.gdml)
+//  reads what sim/response.py made of each remage run: germanium energy and A/E classifier, UGLAr photoelectrons, vertices.
+//  cuts, in the order LEGEND applies them: M1, the LAr veto, the A/E (PSD) cut
 
 #include "TRegexp.h"
 #include <fstream>
@@ -16,8 +18,12 @@ namespace cfg
   const double winLo = 1950, winHi = 2350, winGap[4] = {2039.0, 2103.5, 2118.5, 2204.1}, winGapHalf = 5.0;
   bool inWindow(double e) { if (e < winLo || e > winHi) return false; for (double g : winGap) if (fabs(e - g) <= winGapHalf) return false; return true; }
   const double winWidth = winHi - winLo - 4 * 2 * winGapHalf; // 360 keV
-  const double m1_keV = 5.0;                  // a detector fired above this
-  const double lar_keV = 50.0;                // the argon veto rejects a decay leaving more than this in the UGLAr: ~4 photoelectrons (Ralph's slides, p. 4)
+  // the cuts of the LEGEND-1000 simulation production (legend1000-metadata simprod/config, l1000dsg01: tier/evt, pars/geds/psdcuts)
+  const double m1_keV = 25.0;                 // a detector fired above this; M1: exactly one did
+  const double lar_pe = 4.0;                  // the LAr veto rejects a decay whose SiPMs see this many photoelectrons, summed
+  const double psd_low = -1.5;                // the A/E cut keeps a hit whose A/E classifier is above this (low side)
+  const int    NC = 4;                        // cut levels: none, M1, M1 + LAr, M1 + LAr + A/E
+  const char  *cutName[NC] = {"no cut", "M1", "M1 + LAr", "M1 + LAr + A/E"};
   const double geMass_kg = 1000.0;            // the array the BI is per kg of
   const double bgGoal = 1e-5;                 // LEGEND-1000 target [cts/(keV kg yr)] at Qbb
   const double rtBudget = 1e-5;               // the tube's share of it: a design passes when its 90% bound after all cuts is below this
@@ -27,14 +33,18 @@ namespace cfg
   const int    NDB = 10;                      // depth slabs of the hit table
   const int    NZ = 625;                      // ~1 cm depth bins: where each section's decays lie
 
-  const char  *mat[3] = {"steel", "Cu", "EFCu"};      // top to bottom
-  const double density[3] = {7900.0, 8960.0, 8930.0}; // kg/m^3
+  const char  *mat[3] = {"steel", "Cu", "EFCu"};      // top to bottom; their densities are the GDML's (RT::density)
   // chain activities [uBq/kg], {232Th, 238U}, from Ralph's MaterialMix slides (23 Jun 2026): steel from Bernhard (p. 5),
   // OFHC Cu from the MAJORANA assay paper (p. 15), EFCu from M. Green, CD-1 (p. 5)
   const double chain[3][2] = {{1000, 2500}, {1.1, 1.3}, {0.37, 0.19}};
-  const double branch[2] = {0.3594, 1.0};     // decays of the simulated nuclide per chain decay: Tl208 is 35.94% of 232Th (Bi212 branch), Bi214 every 238U
+  const double branch[2] = {0.37, 1.0};       // decays of the simulated nuclide per chain decay, fixed: Tl208 is 37% of the 232Th chain, Bi214 100% of the 238U chain
   int iso(const std::string &s) { return s.find("Bi") != std::string::npos ? 1 : 0; } // 0 Tl208, 1 Bi214
   double activity(const std::string &s, int m) { return chain[m][iso(s)] * branch[iso(s)] * 1e-6; } // Bq/kg of the simulated nuclide
+  // the EFCu detector holders (hpge_string_support_weldment_copper in the GDML): one weldment, two copper boxes
+  // 20.8 x 5 x 1.5 and 7.8 x 5 x 2.2 mm minus a 1.6 mm-radius hole through both, 212.04 mm^3, placed 3 times per detector
+  const double holderVolume_m3 = 1008 * 212.04e-9;
+  const double holderLine[7] = {583.2, 609.3, 860.6, 1120.3, 1764.5, 2204.1, 2614.5}; // keV, tagged on the holders' spectrum
+  const char  *holderLineName[7] = {"Tl208", "Bi214", "Tl208", "Bi214", "Bi214", "Bi214", "Tl208"};
 }
 
 //-------------------------------------------------------------------------------
@@ -101,10 +111,27 @@ static Outline readOutline(const std::string &file, const char *solid) // one <g
   return o;
 }
 
+static std::map<std::string, double> readDensities(const std::string &file) // [kg/m^3] of each logical volume's material, out of the GDML text
+{
+  std::map<std::string, double> material, volume; // materials come before the volumes that use them
+  std::ifstream in(file.c_str());
+  std::string mat, vol;
+  auto attr = [](const std::string &line, const char *key) { size_t a = line.find(key); if (a == std::string::npos) return std::string(); a += strlen(key); return line.substr(a, line.find('"', a) - a); };
+  for (std::string line; std::getline(in, line);)
+  {
+    if (line.find("<material ") != std::string::npos) mat = attr(line, "name=\"");
+    else if (!mat.empty() && line.find("<D ") != std::string::npos) { material[mat] = 1000 * atof(attr(line, "value=\"").c_str()); mat.clear(); } // no unit: g/cm^3
+    else if (line.find("<volume ") != std::string::npos) vol = attr(line, "name=\"");
+    else if (!vol.empty() && line.find("<materialref ") != std::string::npos) { volume[vol] = material[attr(line, "ref=\"")]; vol.clear(); }
+  }
+  return volume;
+}
+
 struct RT
 {
   std::string file;
   Outline wall, argon, ofhcOuter, ofhcInner, ssOuter, ssInner; // the tube (EFCu mother), the UGLAr inside it, the two shells
+  double density[3] = {0, 0, 0}, holderDensity = 0; // kg/m^3, the GDML's: steel, Cu, EFCu (the SS shell, the OFHC shell, the mother), the holders
   double zBottom = 0, zTop = 0, seamOFHC = 0, seamSS = 0, zHead = 0; // zHead: the widest point, where the head meets the barrel
   bool ok = false;
   const char *sectionAt(double zq) const { return zq < seamOFHC ? "EFCu" : (zq < seamSS ? "OFHC" : "SS"); }
@@ -142,13 +169,22 @@ static RT loadRT(const std::string &gdml)
   RT rt;
   rt.file = findFile(gdml);
   if (rt.file.empty()) { printf("ERROR: %s not found\n", gdml.c_str()); return rt; }
-  rt.wall = readOutline(rt.file, "reentrancetube");
-  rt.argon = readOutline(rt.file, "undergroundlar");
-  rt.ofhcOuter = readOutline(rt.file, "ofhc_cu_outer_bound");
-  rt.ofhcInner = readOutline(rt.file, "ofhc_cu_inner_bound");
-  rt.ssOuter = readOutline(rt.file, "ss_316l_outer_bound");
-  rt.ssInner = readOutline(rt.file, "ss_316l_inner_bound");
-  if (!rt.wall.size() || !rt.ofhcOuter.size() || !rt.ssOuter.size()) { printf("ERROR: %s has no re-entrant tube\n", rt.file.c_str()); return rt; }
+  rt.wall = readOutline(rt.file, "reentrance_tube_copper");
+  rt.argon = readOutline(rt.file, "liquid_argon_underground");
+  rt.ofhcOuter = readOutline(rt.file, "reentrance_tube_layer_copper_ofhc_outer_bound");
+  rt.ofhcInner = readOutline(rt.file, "reentrance_tube_layer_copper_ofhc_inner_bound");
+  rt.ssOuter = readOutline(rt.file, "reentrance_tube_layer_steel_316L_outer_bound");
+  rt.ssInner = readOutline(rt.file, "reentrance_tube_layer_steel_316L_inner_bound");
+  if (!rt.wall.size() || !rt.argon.size() || !rt.ofhcOuter.size() || !rt.ofhcInner.size() || !rt.ssOuter.size() || !rt.ssInner.size())
+  { printf("ERROR: %s has no re-entrant tube\n", rt.file.c_str()); return rt; }
+  auto rho = readDensities(rt.file);
+  const char *densityOf[4] = {"reentrance_tube_layer_steel_316L", "reentrance_tube_layer_copper_ofhc", "reentrance_tube_copper", "hpge_string_support_weldment_copper"};
+  for (int k = 0; k < 4; k++)
+  {
+    double d = rho.count(densityOf[k]) ? rho[densityOf[k]] : 0;
+    if (d <= 0) { printf("ERROR: no density for %s in %s\n", densityOf[k], rt.file.c_str()); return rt; }
+    (k < 3 ? rt.density[k] : rt.holderDensity) = d;
+  }
   rt.zBottom = rt.wall.zmin; rt.zTop = rt.wall.zmax;
   rt.seamOFHC = rt.ofhcOuter.zmin; rt.seamSS = rt.ssOuter.zmin;
   rt.zHead = rt.wall.z[std::max_element(rt.wall.r.begin(), rt.wall.r.end()) - rt.wall.r.begin()];
@@ -168,7 +204,7 @@ template <class F> static void scanTree(TTree *t, const std::vector<const char *
 static std::string outPath(const std::string &name) { gSystem->mkdir("output", kTRUE); return "output/" + name; }
 
 //-------------------------------------------------------------------------------
-//  3. Check the tube: one clean surface, the endcap flush with the barrel, and how it differs from the unmodified geometry
+//  3. Check the tube: one clean surface, the endcap flush with the barrel, the shells on the barrel; and the densities read
 static void checkTube(const RT &s)
 {
   const Outline &w = s.wall;
@@ -204,13 +240,7 @@ static void checkTube(const RT &s)
   for (double zq : {s.zHead, 0.5 * (s.zHead + s.seamOFHC), s.seamOFHC - 10, zBarrel, 0.5 * (s.seamSS + s.zTop)})
     printf("  %s %.2f (z %.0f)", s.sectionAt(zq), w.radiusAt(zq) - s.argon.radiusAt(zq), zq);
   printf("\n");
-  RT m0;
-  std::string mint = findFile("l1000.gdml");
-  if (!mint.empty()) m0 = loadRT(mint);
-  if (m0.ok)
-    printf("    against the unmodified %s: bottom %+.1f, top %+.1f, length %+.1f, seams %+.1f / %+.1f, barrel radius %+.1f, endcap radius %+.1f mm\n",
-           mint.c_str(), s.zBottom - m0.zBottom, s.zTop - m0.zTop, (s.zTop - s.zBottom) - (m0.zTop - m0.zBottom), s.seamOFHC - m0.seamOFHC,
-           s.seamSS - m0.seamSS, rBarrel - m0.wall.radiusAt(0.5 * (m0.seamOFHC + m0.seamSS)), w.rmax - m0.wall.rmax);
+  printf("    densities [kg/m^3], the GDML's: steel %.0f, Cu %.0f, EFCu %.0f, holders %.0f\n", s.density[0], s.density[1], s.density[2], s.holderDensity);
   bool ok = nAxis == 2 && !nDup && !nSpike && !nCross && fabs(step) <= tol && fabs(s.ofhcOuter.rmax - rBarrel) <= tol && fabs(s.ssOuter.rmax - rBarrel) <= tol;
   printf("    tube: %s\n\n", ok ? "PASS" : "FAIL");
 
@@ -227,7 +257,6 @@ static void checkTube(const RT &s)
     fr->SetTitle(Form("%s;r [mm];z [mm]", pad[i].title));
     fr->GetYaxis()->SetTitleOffset(1.7);
     fr->GetXaxis()->SetNdivisions(506);
-    if (m0.ok) line(m0.wall, kGray + 1, 2)->Draw("L SAME");  // unmodified, dashed grey
     line(w, kAzure + 2, 1)->Draw(i ? "LP SAME" : "L SAME");   // zoomed pads show the corner points too
     if (i == 0) for (double v : {s.seamOFHC, s.seamSS}) { auto l = new TLine(pad[0].r0, v, pad[0].r1, v); l->SetLineStyle(3); l->SetLineColor(kGray + 2); l->Draw(); }
     if (i == 2)
@@ -242,7 +271,11 @@ static void checkTube(const RT &s)
 
 //-------------------------------------------------------------------------------
 //  4. One run, reduced to what a reweighting needs:
-struct Hit { Long64_t ev; float e; bool m1, lar; }; // one detector's energy in one decay; ev: the decay's slot; lar: the decay passes the argon veto
+struct Hit // one detector's energy in one decay; ev: the decay's slot; lar: the decay passes the LAr veto, larMap: the same with the map alone
+{
+  Long64_t ev; float e; bool m1, lar, larMap, psd;
+  bool pass(int c) const { return c == 0 || (m1 && (c == 1 || (lar && (c == 2 || psd)))); }
+};
 
 struct Run
 {
@@ -255,13 +288,37 @@ struct Run
   long dN[cfg::NDB] = {0}, dH[cfg::NDB] = {0}, dW[cfg::NDB] = {0}; // per depth slab: decays, hits, window hits
   std::vector<float> depth;             // per decay WITH a Ge hit: mm below the top of the tube
   std::vector<signed char> pv;          // its section
-  std::vector<short> win[3];            // its hits in the window: no cut, M1, M1 + argon veto
+  std::vector<short> win[cfg::NC];      // its hits in the window, per cut level
   std::vector<Hit> hits;
-  long nHit[3] = {0, 0, 0};             // hits: no cut, M1, M1 + argon veto
+  long nHit[cfg::NC] = {0}, nLarMap = 0; // hits per cut level; M1 hits passing the LAr veto read off the map alone
 };
 
 static int slabOf(double dep, double L1, double L2) { return dep < L1 ? 0 : (dep < L2 ? 1 : 2); } // a design's three slabs, from the top
 static int bin(double dep, double tot, int n) { return std::min(n - 1, std::max(0, (int)(dep / tot * n))); }
+
+static void readHits(TFile *f, Long64_t n, std::vector<Hit> &hits, const std::string &file) // every decay's Ge hits, with the cuts decided
+{
+  std::vector<float> pe(n, 0), peMap(n, 0);
+  std::vector<short> nFired(n, 0);
+  std::vector<float> aoe;
+  auto tg = (TTree *)f->Get("geds"), tl = (TTree *)f->Get("lar");
+  if (!tg || !tl) { printf("ERROR: no geds or lar tree in %s\n", file.c_str()); return; }
+  scanTree(tg, {"evtid", "energy", "aoe_class"}, [&](const double *v) { // one row per detector hit, the response applied
+    if (v[0] < 0 || v[0] >= n || v[1] <= cfg::m1_keV) return;
+    nFired[(int)v[0]]++;
+    hits.push_back({(Long64_t)v[0], (float)v[1], false, false, false, false});
+    aoe.push_back(v[2]);
+  });
+  scanTree(tl, {"evtid", "pe", "pe_map"}, [&](const double *v) { if (v[0] >= 0 && v[0] < n) { pe[(int)v[0]] += v[1]; peMap[(int)v[0]] += v[2]; } });
+  for (size_t i = 0; i < hits.size(); i++)
+  {
+    Hit &h = hits[i];
+    h.m1 = nFired[h.ev] == 1;
+    h.lar = pe[h.ev] < cfg::lar_pe;
+    h.larMap = peMap[h.ev] < cfg::lar_pe;
+    h.psd = aoe[i] > cfg::psd_low; // an undefined A/E (NaN) fails
+  }
+}
 
 static Run readRun(const std::string &file, const std::string &iso, const RT &rt)
 {
@@ -269,29 +326,15 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
   r.file = file;
   r.iso = iso;
   auto f = TFile::Open(file.c_str());
-  auto d = (f && !f->IsZombie()) ? (TDirectory *)f->Get("stp") : nullptr;
-  auto vtx = d ? (TTree *)d->Get("vtx") : nullptr;
-  if (!vtx) { printf("ERROR: no stp/vtx in %s\n", file.c_str()); return r; }
+  auto vtx = (f && !f->IsZombie()) ? (TTree *)f->Get("vtx") : nullptr;
+  if (!vtx) { printf("ERROR: no vtx tree in %s\n", file.c_str()); return r; }
   const Long64_t n = r.nsim = vtx->GetEntries();
-  std::vector<float> depth(n, -1), eLAr(n, 0);
-  std::vector<short> nFired(n, 0), win[3] = {std::vector<short>(n, 0), std::vector<short>(n, 0), std::vector<short>(n, 0)};
+  std::vector<float> depth(n, -1);
+  std::vector<std::vector<short>> win(cfg::NC, std::vector<short>(n, 0));
   std::vector<signed char> pv(n, -1);
-  TIter it(d->GetListOfKeys());
-  while (TKey *k = (TKey *)it()) // each Ge detector's steps summed per decay
-  {
-    TString nm = k->GetName();
-    if (nm.Length() != 5 || nm[0] != 'V' || !TString(nm(1, 4)).IsDigit()) continue; // a Ge detector: V + 4 digits
-    auto t = (TTree *)d->Get(nm);
-    std::map<int, float> sum;
-    scanTree(t, {"evtid", "edep_in_keV"}, [&](const double *v) { sum[(int)v[0]] += v[1]; });
-    for (auto &p : sum)
-      if (p.first >= 0 && p.first < n && p.second > cfg::m1_keV) { nFired[p.first]++; r.hits.push_back({p.first, p.second, false, false}); }
-  }
-  if (auto tl = (TTree *)d->Get("undergroundlar"))
-    scanTree(tl, {"evtid", "edep_in_keV"}, [&](const double *v) { if (v[0] >= 0 && v[0] < n) eLAr[(int)v[0]] += v[1]; });
-  else printf("WARNING: no stp/undergroundlar in %s - the argon veto keeps everything\n", file.c_str());
+  readHits(f, n, r.hits, file);
   const char *matName[5] = {"EFCu", "OFHC", "SS", "LAr", "outside"};
-  scanTree(vtx, {"evtid", "xloc_in_m", "yloc_in_m", "zloc_in_m"}, [&](const double *v) {
+  scanTree(vtx, {"evtid", "xloc", "yloc", "zloc"}, [&](const double *v) { // [m]
     int ev = (int)v[0]; // rows are not in event order with -t: index by evtid
     if (ev < 0 || ev >= n) return;
     double x = v[1] * 1000, y = v[2] * 1000, z = v[3] * 1000;
@@ -305,10 +348,8 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
   const double tot = rt.zTop - rt.zBottom;
   for (auto &h : r.hits)
   {
-    h.m1 = nFired[h.ev] == 1;
-    h.lar = eLAr[h.ev] <= cfg::lar_keV;
-    bool pass[3] = {true, h.m1, h.m1 && h.lar};
-    for (int c = 0; c < 3; c++) { r.nHit[c] += pass[c]; if (pass[c] && cfg::inWindow(h.e)) win[c][h.ev]++; }
+    for (int c = 0; c < cfg::NC; c++) { r.nHit[c] += h.pass(c); if (h.pass(c) && cfg::inWindow(h.e)) win[c][h.ev]++; }
+    r.nLarMap += h.m1 && h.larMap;
   }
   for (Long64_t i = 0; i < n; i++) // every decay, as counts
   {
@@ -325,12 +366,36 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
       slot[h.ev] = r.depth.size();
       r.depth.push_back(depth[h.ev]);
       r.pv.push_back(pv[h.ev]);
-      for (int c = 0; c < 3; c++) r.win[c].push_back(win[c][h.ev]);
+      for (int c = 0; c < cfg::NC; c++) r.win[c].push_back(win[c][h.ev]);
     }
     h.ev = slot[h.ev];
   }
   delete f;
   return r;
+}
+
+struct Holders // the holder runs of one chain: every decay in the holders, so one weight serves them all
+{
+  std::string file, iso;
+  Long64_t nsim = 0;
+  long nFiles = 0, nHit[cfg::NC] = {0}, nWin[cfg::NC] = {0}; // hits and window hits per cut level
+  std::vector<Hit> hits;
+};
+
+static void readHolders(const std::string &file, Holders &h)
+{
+  auto f = TFile::Open(file.c_str());
+  auto vtx = (f && !f->IsZombie()) ? (TTree *)f->Get("vtx") : nullptr;
+  if (!vtx) { printf("ERROR: no vtx tree in %s\n", file.c_str()); return; }
+  const Long64_t n = vtx->GetEntries();
+  std::vector<Hit> hits;
+  readHits(f, n, hits, file);
+  for (auto &x : hits)
+    for (int c = 0; c < cfg::NC; c++) { h.nHit[c] += x.pass(c); h.nWin[c] += x.pass(c) && cfg::inWindow(x.e); }
+  h.hits.insert(h.hits.end(), hits.begin(), hits.end());
+  h.nsim += n;
+  h.file += (h.nFiles++ ? "+" : "") + file;
+  delete f;
 }
 
 //-------------------------------------------------------------------------------
@@ -355,7 +420,8 @@ static std::vector<std::string> expand(const std::string &pat) // "output/tl208*
   return out;
 }
 
-void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=Bi214", const char *gdml = "KSendcap_l1kGeometry.gdml")
+void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_hit.root=Bi214",
+                const char *holders = "output/holders_tl208*_hit.root=Tl208,output/holders_bi214*_hit.root=Bi214", const char *gdml = "geom/output/l1000.gdml")
 {
   gErrorIgnoreLevel = kWarning; // no "png file has been created" notices in the printout
   RT rt = loadRT(gdml);
@@ -363,7 +429,7 @@ void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=
   checkTube(rt);
   std::vector<Run> R; // one per isotope
   std::stringstream list(runs);
-  for (std::string tok; std::getline(list, tok, ',');) // "a.root=Tl208,b.root=Bi214"
+  for (std::string tok; std::getline(list, tok, ',');) // "a_hit.root=Tl208,b_hit.root=Bi214"
   {
     size_t eq = tok.find('=');
     std::string iso = eq == std::string::npos ? "Tl208" : tok.substr(eq + 1);
@@ -379,7 +445,8 @@ void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=
       for (auto h : r.hits) { h.ev += off; into->hits.push_back(h); }
       into->depth.insert(into->depth.end(), r.depth.begin(), r.depth.end());
       into->pv.insert(into->pv.end(), r.pv.begin(), r.pv.end());
-      for (int c = 0; c < 3; c++) { into->win[c].insert(into->win[c].end(), r.win[c].begin(), r.win[c].end()); into->nHit[c] += r.nHit[c]; }
+      for (int c = 0; c < cfg::NC; c++) { into->win[c].insert(into->win[c].end(), r.win[c].begin(), r.win[c].end()); into->nHit[c] += r.nHit[c]; }
+      into->nLarMap += r.nLarMap;
       for (int k = 0; k < 5; k++) into->nMat[k] += r.nMat[k];
       for (int p = 0; p < 3; p++) { into->nPv[p] += r.nPv[p]; for (int b = 0; b < cfg::NZ; b++) into->nZPv[p][b] += r.nZPv[p][b]; }
       for (int b = 0; b < cfg::NDB; b++) { into->dN[b] += r.dN[b]; into->dH[b] += r.dH[b]; into->dW[b] += r.dW[b]; }
@@ -388,19 +455,20 @@ void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=
   }
   if (R.empty()) { printf("no usable runs in '%s'\n", runs); return; }
 
-  const double depthTot = rt.zTop - rt.zBottom, L1ks = rt.zTop - rt.seamSS, L2ks = rt.zTop - rt.seamOFHC; // KS seams as depths
+  const double depthTot = rt.zTop - rt.zBottom, L1built = rt.zTop - rt.seamSS, L2built = rt.zTop - rt.seamOFHC; // the seams as built, as depths
   const double UL90 = 2.30, binW = (cfg::eHi - cfg::eLo) / cfg::eBins;
-  const char *cutName[3] = {"no cut", "M1", "M1 + argon"};
+  const int NC = cfg::NC, ALL = NC - 1;
+  const char *const *cutName = cfg::cutName;
   double physV[3]; // m^3: mother, OFHC shell, SS shell
   for (int p = 0; p < 3; p++) physV[p] = rt.physVolume(p) * 1e-9;
   for (auto &r : R) for (int p = 0; p < 3; p++) r.mcDensity[p] = r.nPv[p] / physV[p]; // remage fills the mother sparser than its daughters: measure, never assume
   // one simulated decay in section p, where material m sits = rho x A x 1 yr real decays per m^3, over the MC density, per kg of Ge
-  auto weight = [&](const Run &r, int m, int p) { return p < 0 || r.mcDensity[p] <= 0 ? 0.0 : cfg::density[m] * cfg::activity(r.iso, m) * cfg::secPerYear / (r.mcDensity[p] * cfg::geMass_kg); };
-  auto massOf = [&](double d0, double d1, int m) { return d1 > d0 ? cfg::density[m] * rt.wallVolume(rt.zTop - d1, rt.zTop - d0) * 1e-9 : 0.0; };
+  auto weight = [&](const Run &r, int m, int p) { return p < 0 || r.mcDensity[p] <= 0 ? 0.0 : rt.density[m] * cfg::activity(r.iso, m) * cfg::secPerYear / (r.mcDensity[p] * cfg::geMass_kg); };
+  auto massOf = [&](double d0, double d1, int m) { return d1 > d0 ? rt.density[m] * rt.wallVolume(rt.zTop - d1, rt.zTop - d0) * 1e-9 : 0.0; };
   auto ulN = [](long n) { const double t[11] = {2.30, 3.89, 5.32, 6.68, 7.99, 9.27, 10.53, 11.77, 12.99, 14.21, 15.41}; return n <= 10 ? t[n] : n + 1.28 * sqrt((double)n) + 1; }; // Poisson 90% upper limit
   printf("window   : %.0f-%.0f keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's BEW): %.0f keV\n", cfg::winLo, cfg::winHi, cfg::winWidth);
-  printf("cuts     : M1 (exactly one detector above %.0f keV), argon veto (UGLAr deposit <= %.0f keV). no detector model: deposited energy\n",
-         cfg::m1_keV, cfg::lar_keV);
+  printf("cuts     : M1 (exactly one detector above %.0f keV), LAr veto (the SiPMs see < %.0f photoelectrons), A/E classifier > %.1f. energies: the detector response\n",
+         cfg::m1_keV, cfg::lar_pe, cfg::psd_low);
   printf("activity : chain [uBq/kg] 232Th / 238U: steel %g / %g, Cu %g / %g, EFCu %g / %g; Tl208 is %.2f%% of 232Th, Bi214 %.0f%% of 238U\n\n",
          cfg::chain[0][0], cfg::chain[0][1], cfg::chain[1][0], cfg::chain[1][1], cfg::chain[2][0], cfg::chain[2][1], 100 * cfg::branch[0], 100 * cfg::branch[1]);
 
@@ -408,19 +476,21 @@ void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=
   {
 //-------------------------------------------------------------------------------
 //  6. Per run: the decays, the hits, the normalisation
-    long w[3] = {0, 0, 0};
-    for (int c = 0; c < 3; c++) for (auto k : r.win[c]) w[c] += k;
+    long w[NC] = {0};
+    for (int c = 0; c < NC; c++) for (auto k : r.win[c]) w[c] += k;
     printf("=== %s   (%s, %lld decays)\n", r.iso.c_str(), r.file.c_str(), r.nsim);
     printf("[6] decays: EFCu %.1f%%, OFHC %.1f%%, SS %.1f%%; in the argon %ld, outside the wall %ld%s%s\n", 100.0 * r.nMat[0] / r.nsim, 100.0 * r.nMat[1] / r.nsim,
            100.0 * r.nMat[2] / r.nsim, r.nMat[3], r.nMat[4], r.nMat[3] || r.nMat[4] ? "  <- CONFINEMENT BUG" : "", r.nFiles > 1 ? Form("   (merged from %ld files)", r.nFiles) : "");
-    printf("    hits: %ld, M1 %ld, M1 + argon %ld; in the window: %ld, %ld, %ld\n", r.nHit[0], r.nHit[1], r.nHit[2], w[0], w[1], w[2]);
+    printf("    hits: %ld, M1 %ld, + LAr %ld, + A/E %ld; in the window: %ld, %ld, %ld, %ld\n", r.nHit[0], r.nHit[1], r.nHit[2], r.nHit[3], w[0], w[1], w[2], w[3]);
+    printf("    LAr veto keeps 1 in %.0f M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in %.0f\n",
+           r.nHit[2] ? (double)r.nHit[1] / r.nHit[2] : 0.0, r.nLarMap ? (double)r.nHit[1] / r.nLarMap : 0.0);
     const int asBuilt[3] = {2, 1, 0}; // mother EFCu, OFHC shell Cu, SS shell steel
     const char *pvName[3] = {"mother", "OFHC", "SS"};
     printf("    %-7s %-6s %9s %8s %10s %9s %11s %14s\n", "section", "mat", "V [m^3]", "M [kg]", "A [Bq]", "MC dec.", "MC per m^3", "decays/yr per");
     for (int p = 0; p < 3; p++)
     {
       int m = asBuilt[p];
-      double mass = physV[p] * cfg::density[m], A = mass * cfg::activity(r.iso, m);
+      double mass = physV[p] * rt.density[m], A = mass * cfg::activity(r.iso, m);
       printf("    %-7s %-6s %9.5f %8.1f %10.3e %9ld %11.0f %14.3g\n", pvName[p], cfg::mat[m], physV[p], mass, A, r.nPv[p], r.mcDensity[p], r.nPv[p] ? A * cfg::secPerYear / r.nPv[p] : 0.0);
     }
     double dAvg = 0.5 * (r.mcDensity[1] + r.mcDensity[2]);
@@ -444,50 +514,119 @@ void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=
 //-------------------------------------------------------------------------------
 //  8. Background index as built, per chain and section:
   printf("[8] background index as built [cts/(keV kg yr)], +- MC statistics; a section with no window hit gets its 90%% limit\n");
-  printf("    %-6s %-6s %12s   %-22s %-22s %-22s\n", "chain", "sect", "win hits", cutName[0], cutName[1], cutName[2]);
-  double gB[3] = {0, 0, 0}, gV[3] = {0, 0, 0};
-  long gN[3] = {0, 0, 0}; // window hits behind each total
+  printf("    %-6s %-6s %15s   %-22s %-22s %-22s %-22s\n", "chain", "sect", "win hits", cutName[0], cutName[1], cutName[2], cutName[3]);
+  double gB[NC] = {0}, gV[NC] = {0};
+  long gN[NC] = {0}; // window hits behind each total
   auto total = [](double b, double v, long n, bool goal) -> std::string {
     if (!n) return "no window hit";
     return goal ? Form("%.2e +- %.1e (%.2g x goal)", b, sqrt(v), b / cfg::bgGoal) : Form("%.2e +- %.1e", b, sqrt(v));
   };
-  const double edgeKS[4] = {0, L1ks, L2ks, depthTot};
+  const double edgeBuilt[4] = {0, L1built, L2built, depthTot};
   for (auto &r : R)
   {
-    double tB[3] = {0, 0, 0}, tV[3] = {0, 0, 0};
-    long tN[3] = {0, 0, 0};
+    double tB[NC] = {0}, tV[NC] = {0};
+    long tN[NC] = {0};
     for (int s = 0; s < 3; s++) // the slabs as built: steel, Cu, EFCu
     {
-      double B[3] = {0, 0, 0}, V[3] = {0, 0, 0}, wbar = 0;
-      long n[3] = {0, 0, 0}, nsec = 0;
+      double B[NC] = {0}, V[NC] = {0}, wbar = 0;
+      long n[NC] = {0}, nsec = 0;
       for (int p = 0; p < 3; p++) // mean weight of a decay in this section, for the limit
-        for (int b = bin(edgeKS[s], depthTot, cfg::NZ); b < std::min(cfg::NZ, (int)ceil(edgeKS[s + 1] / depthTot * cfg::NZ)); b++)
+        for (int b = bin(edgeBuilt[s], depthTot, cfg::NZ); b < std::min(cfg::NZ, (int)ceil(edgeBuilt[s + 1] / depthTot * cfg::NZ)); b++)
         { nsec += r.nZPv[p][b]; wbar += r.nZPv[p][b] * weight(r, s, p) / cfg::winWidth; }
       wbar = nsec ? wbar / nsec : 0;
       for (size_t i = 0; i < r.depth.size(); i++)
       {
-        if (slabOf(r.depth[i], L1ks, L2ks) != s) continue;
+        if (slabOf(r.depth[i], L1built, L2built) != s) continue;
         double wt = weight(r, s, r.pv[i]) / cfg::winWidth;
-        for (int c = 0; c < 3; c++) { B[c] += r.win[c][i] * wt; V[c] += r.win[c][i] * wt * wt; n[c] += r.win[c][i]; }
+        for (int c = 0; c < NC; c++) { B[c] += r.win[c][i] * wt; V[c] += r.win[c][i] * wt * wt; n[c] += r.win[c][i]; }
       }
-      std::string cell[3];
-      for (int c = 0; c < 3; c++)
+      std::string cell[NC];
+      for (int c = 0; c < NC; c++)
       {
         cell[c] = n[c] ? Form("%.2e +- %.1e", B[c], sqrt(V[c])) : Form("< %.2e (90%%)", UL90 * wbar);
         if (n[c]) { tB[c] += B[c]; tV[c] += V[c]; tN[c] += n[c]; }
       }
-      printf("    %-6s %-6s %12s   %-22s %-22s %-22s\n", s ? "" : r.iso.c_str(), cfg::mat[s], Form("%ld/%ld/%ld", n[0], n[1], n[2]), cell[0].c_str(), cell[1].c_str(), cell[2].c_str());
+      printf("    %-6s %-6s %15s   %-22s %-22s %-22s %-22s\n", s ? "" : r.iso.c_str(), cfg::mat[s], Form("%ld/%ld/%ld/%ld", n[0], n[1], n[2], n[3]), cell[0].c_str(),
+             cell[1].c_str(), cell[2].c_str(), cell[3].c_str());
     }
-    printf("    %-6s %-6s %12s   %-22s %-22s %-22s\n", "", "tube", "", total(tB[0], tV[0], tN[0], false).c_str(), total(tB[1], tV[1], tN[1], false).c_str(),
-           total(tB[2], tV[2], tN[2], false).c_str());
-    for (int c = 0; c < 3; c++) { gB[c] += tB[c]; gV[c] += tV[c]; gN[c] += tN[c]; }
+    printf("    %-6s %-6s %15s   %-22s %-22s %-22s %-22s\n", "", "tube", "", total(tB[0], tV[0], tN[0], false).c_str(), total(tB[1], tV[1], tN[1], false).c_str(),
+           total(tB[2], tV[2], tN[2], false).c_str(), total(tB[3], tV[3], tN[3], false).c_str());
+    for (int c = 0; c < NC; c++) { gB[c] += tB[c]; gV[c] += tV[c]; gN[c] += tN[c]; }
   }
-  printf("    ALL CHAINS   %s: %s   %s: %s   %s: %s\n", cutName[0], total(gB[0], gV[0], gN[0], true).c_str(), cutName[1], total(gB[1], gV[1], gN[1], true).c_str(),
-         cutName[2], total(gB[2], gV[2], gN[2], true).c_str());
-  printf("    win hits: no cut / M1 / M1 + argon. sections with no window hit are left out of the totals\n");
+  printf("    ALL CHAINS\n");
+  for (int c = 0; c < NC; c++) printf("      %-16s %s\n", cutName[c], total(gB[c], gV[c], gN[c], true).c_str());
+  printf("    win hits: per cut level, as in the columns. sections with no window hit are left out of the totals\n");
 
 //-------------------------------------------------------------------------------
-//  9. Three-material designs: the MC alone, after all cuts, judged by its 90% upper bound
+//  9. The EFCu detector holders as built: every decay in the holders, so one weight per chain
+  std::vector<Holders> H; // one per chain
+  std::stringstream hlist(holders);
+  for (std::string tok; std::getline(hlist, tok, ',');) // "a.root=Tl208,b.root=Bi214", as for the tube
+  {
+    size_t eq = tok.find('=');
+    std::string iso = eq == std::string::npos ? "Tl208" : tok.substr(eq + 1);
+    if (iso.find("Tl") == std::string::npos && iso.find("Bi") == std::string::npos) { printf("ERROR: unknown isotope '%s'\n", iso.c_str()); continue; }
+    Holders *into = nullptr;
+    for (auto &h : H) if (h.iso == iso) into = &h;
+    if (!into) { H.push_back(Holders()); into = &H.back(); into->iso = iso; }
+    for (auto &f : expand(tok.substr(0, eq))) readHolders(f, *into);
+  }
+  H.erase(std::remove_if(H.begin(), H.end(), [](const Holders &h) { return !h.nsim; }), H.end());
+  const double holderMass = rt.holderDensity * cfg::holderVolume_m3;
+  // one simulated decay = M x A x 1 yr real decays over the decays simulated, per kg of Ge
+  auto hWeight = [&](const Holders &h) { return holderMass * cfg::activity(h.iso, 2) * cfg::secPerYear / (h.nsim * cfg::geMass_kg); };
+  double hB[NC] = {0}, hV[NC] = {0};
+  long hN[NC] = {0};
+  printf("\n[9] the EFCu detector holders as built: 1008 weldments, %.1f cm^3, %.2f kg of EFCu at %g / %g uBq/kg 232Th / 238U\n", cfg::holderVolume_m3 * 1e6, holderMass,
+         cfg::chain[2][0], cfg::chain[2][1]);
+  printf("    %-6s %9s %10s %9s %8s %15s   %-22s %-22s %-22s %-22s\n", "chain", "decays", "A [Bq]", "MC [yr]", "hits", "win hits", cutName[0], cutName[1],
+         cutName[2], cutName[3]);
+  for (auto &h : H)
+  {
+    double A = holderMass * cfg::activity(h.iso, 2), w = hWeight(h) / cfg::winWidth;
+    std::string cell[NC];
+    for (int c = 0; c < NC; c++)
+    {
+      cell[c] = h.nWin[c] ? Form("%.2e +- %.1e", h.nWin[c] * w, sqrt((double)h.nWin[c]) * w) : Form("< %.2e (90%%)", UL90 * w);
+      if (h.nWin[c]) { hB[c] += h.nWin[c] * w; hV[c] += h.nWin[c] * w * w; hN[c] += h.nWin[c]; }
+    }
+    printf("    %-6s %9lld %10.3e %9.0f %8ld %15s   %-22s %-22s %-22s %-22s%s\n", h.iso.c_str(), h.nsim, A, h.nsim / (A * cfg::secPerYear), h.nHit[0],
+           Form("%ld/%ld/%ld/%ld", h.nWin[0], h.nWin[1], h.nWin[2], h.nWin[3]), cell[0].c_str(), cell[1].c_str(), cell[2].c_str(), cell[3].c_str(),
+           h.nFiles > 1 ? Form("   (%ld files)", h.nFiles) : "");
+  }
+  if (H.empty()) printf("    no holder runs in '%s'\n", holders);
+  else
+  {
+    printf("    %-6s %9s %10s %9s %8s %15s   %-22s %-22s %-22s %-22s\n", "", "holders", "", "", "", "", total(hB[0], hV[0], hN[0], false).c_str(),
+           total(hB[1], hV[1], hN[1], false).c_str(), total(hB[2], hV[2], hN[2], false).c_str(), total(hB[3], hV[3], hN[3], false).c_str());
+    printf("    TUBE + HOLDERS\n");
+    for (int c = 0; c < NC; c++) printf("      %-16s %s\n", cutName[c], total(gB[c] + hB[c], gV[c] + hV[c], gN[c] + hN[c], true).c_str());
+    printf("    MC [yr]: the years of real decays the run stands for\n");
+    // the A/E cut on the lines a 228Th calibration measures it on, after M1: double escape (single site), single escape and full energy
+    // (multi site), and the window's continuum, against the HADES characterization of the L1000 template detector V00000A
+    const double peak[3] = {1592.5, 2103.5, 2614.5};
+    const char *peakName[4] = {"DEP 1592.5", "SEP 2103.5", "FEP 2614.5", "window"};
+    const double measured[4] = {0.90, 0.04, 0.06, 0.27};
+    for (auto &h : H)
+    {
+      if (h.iso.find("Tl") == std::string::npos) continue;
+      long nIn[4] = {0}, nOk[4] = {0};
+      for (auto &x : h.hits)
+      {
+        if (!x.m1) continue;
+        for (int k = 0; k < 4; k++)
+          if (k < 3 ? fabs(x.e - peak[k]) < 3 : cfg::inWindow(x.e)) { nIn[k]++; nOk[k] += x.psd; }
+      }
+      printf("    A/E cut on M1 hits of the holders' Tl208, kept (hits):");
+      for (int k = 0; k < 4; k++) printf("  %s %.2f (%ld)", peakName[k], nIn[k] ? (double)nOk[k] / nIn[k] : 0.0, nIn[k]);
+      printf("\n    the same measured on V00000A at HADES:                 ");
+      for (int k = 0; k < 4; k++) printf("  %s %.2f     ", peakName[k], measured[k]);
+      printf("\n");
+    }
+  }
+
+//-------------------------------------------------------------------------------
+//  10. Three-material designs: the MC alone, after all cuts, judged by its 90% upper bound
   // per slab: n window hits count UL(n) x their mean weight; none count 2.30 x the heaviest decay in the slab
   auto judge = [&](double L1, double L2, double &bi) {
     const double edge[4] = {0, L1, L2, depthTot};
@@ -504,7 +643,7 @@ void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=
           for (int b = b0; b < b1; b++)
             if (r.nZPv[p][b]) { wmax = std::max(wmax, weight(r, s, p) / cfg::winWidth); break; }
         for (size_t i = 0; i < r.depth.size(); i++)
-          if (r.win[2][i] && slabOf(r.depth[i], L1, L2) == s) { B += r.win[2][i] * weight(r, s, r.pv[i]) / cfg::winWidth; n += r.win[2][i]; }
+          if (r.win[ALL][i] && slabOf(r.depth[i], L1, L2) == s) { B += r.win[ALL][i] * weight(r, s, r.pv[i]) / cfg::winWidth; n += r.win[ALL][i]; }
       }
       bi += B;
       up += n ? ulN(n) * B / n : UL90 * wmax;
@@ -513,39 +652,37 @@ void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=
   };
   auto passes = [&](double L1, double L2) { double bi; return judge(L1, L2, bi) <= cfg::rtBudget; };
   auto deepestSteel = [&](double L2) { double l1 = -1; for (double L1 = 10; L1 <= L2 - 10 && passes(L1, L2); L1 += 10) l1 = L1; return l1; }; // 1 cm grid, always some Cu
-  printf("\n[9] designs: steel to L1, Cu to L2, EFCu below. MC alone, after M1 + argon; passes if its 90%% bound <= the budget %.0e\n", cfg::rtBudget);
+  printf("\n[10] designs of the tube: steel to L1, Cu to L2, EFCu below. MC alone, after all cuts; passes if its 90%% bound <= the budget %.0e\n", cfg::rtBudget);
   printf("    %-7s %9s %9s %10s %9s %17s %11s %11s %9s\n", "L2 [m]", "EFCu [kg]", "steel to", "steel [kg]", "Cu [kg]", "SS:Cu:EFCu mass", "BI", "90% bound", "x budget");
-  std::vector<double> rows = {L2ks};
+  std::vector<double> rows = {L2built};
   for (double L2 = 3000; L2 < depthTot; L2 += 250) rows.push_back(L2);
   std::sort(rows.begin(), rows.end());
   double L2best = -1, L1best = -1;
   for (double L2 : rows)
   {
-    double l1 = L2 == L2ks ? L1ks : deepestSteel(L2), bi = 0;
+    double l1 = L2 == L2built ? L1built : deepestSteel(L2), bi = 0;
     if (l1 < 0) { printf("    %-7.2f %9.0f %9s   no steel can be shown to pass yet\n", L2 / 1000, massOf(L2, depthTot, 2), "-"); continue; }
     double up = judge(l1, L2, bi), ms = massOf(0, l1, 0), mc = massOf(l1, L2, 1), me = massOf(L2, depthTot, 2), mt = ms + mc + me;
     printf("    %-7.2f %9.0f %7.2f m %10.0f %9.0f %17s %11.2e %11.2e %9.2f%s\n", L2 / 1000, me, l1 / 1000, ms, mc, Form("%.0f : %.0f : %.0f %%", 100 * ms / mt, 100 * mc / mt, 100 * me / mt),
-           bi, up, up / cfg::rtBudget, L2 == L2ks ? "   <- KS as built" : "");
-    if (L2 != L2ks && up <= cfg::rtBudget && L2 > L2best) { L2best = L2; L1best = l1; }
+           bi, up, up / cfg::rtBudget, L2 == L2built ? "   <- as built" : "");
+    if (L2 != L2built && up <= cfg::rtBudget && L2 > L2best) { L2best = L2; L1best = l1; }
   }
   if (L2best > 0) printf("    least EFCu on this grid, then most steel: L2 %.2f m, L1 %.2f m\n", L2best / 1000, L1best / 1000);
   else printf("    no design with steel passes on the MC alone: [7] says how many decays its slabs need\n");
   printf("    masses in kg; steel includes the lid, which sits in the top slab\n");
 
 //-------------------------------------------------------------------------------
-//  10. Draw: the spectrum as built, and the 90% bound of every design
-  TH1D *sp[3];
-  for (int c = 0; c < 3; c++) sp[c] = new TH1D(Form("sp%d", c), "RT background in the germanium, as built;energy [keV];cts / (keV kg yr)", cfg::eBins, cfg::eLo, cfg::eHi);
+//  11. Draw: the tube's spectrum as built and the 90% bound of every design; the holders' spectrum with their lines tagged
+  TH1D *sp[NC];
+  for (int c = 0; c < NC; c++) sp[c] = new TH1D(Form("sp%d", c), "RT background in the germanium, as built;energy [keV];cts / (keV kg yr)", cfg::eBins, cfg::eLo, cfg::eHi);
   for (auto &r : R)
     for (auto &h : r.hits)
     {
-      double wt = weight(r, slabOf(r.depth[h.ev], L1ks, L2ks), r.pv[h.ev]) / binW;
-      sp[0]->Fill(h.e, wt);
-      if (h.m1) sp[1]->Fill(h.e, wt);
-      if (h.m1 && h.lar) sp[2]->Fill(h.e, wt);
+      double wt = weight(r, slabOf(r.depth[h.ev], L1built, L2built), r.pv[h.ev]) / binW;
+      for (int c = 0; c < NC; c++) if (h.pass(c)) sp[c]->Fill(h.e, wt);
     }
   const int NS = 40;
-  auto hMap = new TH2D("hMap", "MC 90% bound after M1 + argon, x budget;L1 steel/Cu seam [m];L2 Cu/EFCu seam [m]", NS, 0, depthTot / 1000, NS, 0, depthTot / 1000);
+  auto hMap = new TH2D("hMap", "MC 90% bound after all cuts, x budget;L1 steel/Cu seam [m];L2 Cu/EFCu seam [m]", NS, 0, depthTot / 1000, NS, 0, depthTot / 1000);
   for (int i = 1; i <= NS; i++)
     for (int j = i; j <= NS; j++) // only L1 <= L2 is a design
     {
@@ -558,23 +695,23 @@ void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=
   c->cd(1)->SetLogy();
   gPad->SetGrid();
   gPad->SetLeftMargin(0.14);
-  auto leg = new TLegend(0.6, 0.74, 0.88, 0.88);
-  const int col[3] = {kAzure + 2, kOrange + 7, kRed + 1};
-  for (int k = 0; k < 3; k++)
+  auto leg = new TLegend(0.56, 0.7, 0.88, 0.88);
+  const int col[NC] = {kAzure + 2, kOrange + 7, kRed + 1, kViolet + 1};
+  for (int k = 0; k < NC; k++)
   {
     sp[k]->SetLineColor(col[k]);
     sp[k]->SetLineWidth(2);
     sp[k]->Draw(k ? "HIST SAME" : "HIST");
     leg->AddEntry(sp[k], cutName[k], "l");
   }
-  sp[0]->SetMinimum(0.1 * std::max(1e-12, sp[2]->GetMinimum(0)));
+  sp[0]->SetMinimum(0.1 * std::max(1e-12, sp[ALL]->GetMinimum(0) > 0 ? sp[ALL]->GetMinimum(0) : sp[2]->GetMinimum(0)));
   leg->Draw();
   c->cd(2)->SetLogz();
   gPad->SetRightMargin(0.15);
   hMap->SetMinimum(std::min(1.0, 0.5 * hMap->GetMinimum(0))); // from the budget itself, so passing designs would stand out
   hMap->GetZaxis()->SetMoreLogLabels();
   hMap->Draw("COLZ");
-  auto star = new TMarker(L1ks / 1000, L2ks / 1000, 29);
+  auto star = new TMarker(L1built / 1000, L2built / 1000, 29);
   star->SetMarkerColor(kRed + 1);
   star->SetMarkerSize(2.2);
   star->Draw();
@@ -583,4 +720,52 @@ void background(const char *runs = "output/tl208*.root=Tl208,output/bi214*.root=
   std::string png = outPath(tag + "_background.png");
   c->SaveAs(png.c_str());
   printf("\nwrote %s and output/tube.png\n", png.c_str());
+  if (H.empty()) return;
+
+  const int hBins = 600; // 5 keV
+  TH1D *hs[NC];
+  for (int k = 0; k < NC; k++) hs[k] = new TH1D(Form("hs%d", k), "EFCu detector holders in the germanium, as built;energy [keV];cts / (keV kg yr)", hBins, 0, 3000);
+  for (auto &h : H)
+  {
+    double wt = hWeight(h) / hs[0]->GetBinWidth(1);
+    for (auto &x : h.hits)
+      for (int c = 0; c < NC; c++) if (x.pass(c)) hs[c]->Fill(x.e, wt);
+  }
+  const double yHi = 30 * hs[0]->GetMaximum(), yLo = std::max(1e-7 * yHi, 0.3 * hs[ALL]->GetMinimum(0));
+  auto ch = new TCanvas("c_holders", "", 1100, 640);
+  ch->SetLogy();
+  ch->SetGrid();
+  ch->SetLeftMargin(0.11);
+  ch->SetTopMargin(0.17);
+  auto lh = new TLegend(0.11, 0.84, 0.90, 0.90); // one row, between the title and the frame, clear of the line labels
+  lh->SetNColumns(NC);
+  lh->SetBorderSize(0);
+  for (int k = 0; k < NC; k++)
+  {
+    hs[k]->SetLineColor(col[k]);
+    hs[k]->SetLineWidth(k ? 1 : 2);
+    hs[k]->SetMinimum(yLo);
+    hs[k]->SetMaximum(yHi);
+    hs[k]->Draw(k ? "HIST SAME" : "HIST");
+    lh->AddEntry(hs[k], cutName[k], "l");
+  }
+  for (int i = 0; i < 7; i++) // each line, dotted, named by its nuclide: left of it, right when the line below is close
+  {
+    double e = cfg::holderLine[i];
+    bool right = i && e - cfg::holderLine[i - 1] < 50;
+    auto l = new TLine(e, yLo, e, yHi / 3);
+    l->SetLineStyle(3);
+    l->SetLineColor(kGray + 2);
+    l->Draw();
+    auto t = new TLatex(e + (right ? 18 : -12), yHi / 2.5, Form("%.0f %s", e, cfg::holderLineName[i]));
+    t->SetTextAngle(90);
+    t->SetTextAlign(32);
+    t->SetTextSize(0.028);
+    t->SetTextColor(kGray + 3);
+    t->Draw();
+  }
+  lh->Draw();
+  std::string hpng = outPath(tag + "_holders.png");
+  ch->SaveAs(hpng.c_str());
+  printf("wrote %s\n", hpng.c_str());
 }

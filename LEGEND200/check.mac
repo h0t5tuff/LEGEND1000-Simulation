@@ -1,0 +1,5 @@
+# Does a GDML build, and does anything overlap?  (see README.md)
+/RMG/Geometry/GDMLDisableOverlapCheck {SKIP}        # true: build only; false: also scan for overlaps
+/RMG/Geometry/GDMLOverlapCheckNumPoints {NPOINTS}   # surface points per volume in the scan
+/RMG/Geometry/IncludeGDMLFile {GDML}
+/run/initialize
