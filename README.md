@@ -72,11 +72,11 @@ below. Its printout:
 | | |
 | --- | --- |
 | `[3]` | the tube, as read from the GDML: seams, endcap, wall thickness, and the densities of its materials |
-| `[5]` | the A/E cut, tuned: the classifier threshold that keeps 90% of the Tl-208 double-escape peak in M1 hits, the continuum under it subtracted, and what the production's −1.5 kept |
+| `[5]` | the A/E cut, tuned: the classifier threshold that keeps 90% of the Tl-208 double-escape peak in M1 hits, the continuum under it subtracted, and what the production's −1.5 kept; then what it keeps of the DEP, SEP, FEP (net of the continuum) and the window, against the HADES measurement |
 | `[6]` | per chain: where the decays landed (all must be in the wall), hits through the cuts, how hard the LAr veto cuts (with the optical map alone too), and per section the volume, mass, activity, simulated decays and their density |
 | `[7]` | per chain: hits by depth, and the decays each section needs to bound steel over it at 10% of the budget |
 | `[8]` | the BI as built, per chain and section, before and after each cut; a section with no hit gets its 90% limit |
-| `[9]` | the holders as built, per chain, before and after each cut, and the tube and holders together; the A/E cut on Tl-208's lines against the HADES measurement |
+| `[9]` | the holders as built, per chain, before and after each cut, and the tube and holders together |
 | `[10]` | for each `L2`, the deepest `L1` that passes after all cuts, with its masses and SS : Cu : EFCu split |
 
 | output (in `output/`) | made by | holds |
@@ -132,7 +132,7 @@ inverted-coaxial point contact (ICPC), and `V00000A`, whose drift times are used
 | photoelectrons | the summed optical map; amplitudes σ 0.3 PE; pulses within 16 ns merged; at most 100 PE per hit | `/all` of `output/merged_optmap_20260225_063750.lh5`; `tier/opt` |
 | M1 | exactly one detector above 25 keV | `tier/evt` `geds_energy_thr_kev` |
 | LAr veto | rejects a decay whose SiPMs see ≥ 4 PE in all | `tier/evt` `lar_veto_energy_sum_pe_thr` |
-| A/E cut | keeps a hit whose classifier is above the value that keeps 90% of the Tl-208 double-escape peak (DEP): __THR__ here (`[5]`); the production's −1.5 kept __KEPT__ | LEGEND's convention in data; the default from `pars/geds/psdcuts` |
+| A/E cut | keeps a hit whose classifier is above the value that keeps 90% of the Tl-208 double-escape peak (DEP): −1.19 here (`[5]`); the production's −1.5 kept 91% | LEGEND's convention in data; the default from `pars/geds/psdcuts` |
 
 - **The optical map** was made with legend-pygeom-l1000 v0.4.0 [[5]](#references). Its detectors and
   SiPMs sit where this geometry's do, but its tube is 68 mm narrower and 68 mm lower, so the outer
@@ -153,7 +153,7 @@ inverted-coaxial point contact (ICPC), and `V00000A`, whose drift times are used
   2.5 keV of it, the continuum under the peak subtracted with the sidebands 5-10 keV off it. One value
   serves all detectors, which here share one template and one set of parameters.
 - **A/E** uses the single-template model: the production's pulse-shape-library A/E needs a
-  library per detector that does not exist for L1000 yet. `[9]` checks the cut on the lines of
+  library per detector that does not exist for L1000 yet. `[5]` checks the cut on the lines of
   Tl-208 against the HADES measurement of `V00000A` [[5]](#references).
 
 ## Run
@@ -222,38 +222,38 @@ chain. While stages B and C arrive, the printout below comes from exactly these 
 
 | | no cut | M1 | M1 + LAr | M1 + LAr + A/E: all cuts |
 | --- | --- | --- | --- | --- |
-| tube | 4.72 × 10⁻⁶ (0.47) | 4.01 × 10⁻⁶ (0.40) | 1.40 ± 0.28 × 10⁻⁷ (0.014) | **1.22 ± 0.11 × 10⁻⁸ (0.0012)** |
-| holders | 1.04 × 10⁻⁶ | 5.73 × 10⁻⁷ | 2.70 ± 0.21 × 10⁻⁸ | 1.6 ± 0.5 × 10⁻⁹ |
-| tube + holders | 5.76 × 10⁻⁶ (0.58) | 4.59 × 10⁻⁶ (0.46) | 1.67 ± 0.28 × 10⁻⁷ (0.017) | **1.38 ± 0.12 × 10⁻⁸ (0.0014)** |
+| tube | 4.72 × 10⁻⁶ (0.47) | 4.01 × 10⁻⁶ (0.40) | 1.40 ± 0.28 × 10⁻⁷ (0.014) | **1.09 ± 0.10 × 10⁻⁸ (0.0011)** |
+| holders | 1.04 × 10⁻⁶ | 5.73 × 10⁻⁷ | 2.70 ± 0.21 × 10⁻⁸ | 1.2 ± 0.4 × 10⁻⁹ |
+| tube + holders | 5.76 × 10⁻⁶ (0.58) | 4.59 × 10⁻⁶ (0.46) | 1.67 ± 0.28 × 10⁻⁷ (0.017) | **1.21 ± 0.11 × 10⁻⁸ (0.0012)** |
 
 | | |
 | --- | --- |
-| behind the tube after all cuts | 125 window events, all from the EFCu: 94 Tl-208, 31 Bi-214 |
+| behind the tube after all cuts | 113 window events, all from the EFCu: 89 Tl-208, 24 Bi-214 |
 | the LAr veto, tube | keeps 1 in 41 M1 hits for Tl-208, 1 in 22 for Bi-214; read off the map alone (no light from the outer 68 mm), 1 in 14 and 1 in 10 |
-| the A/E cut, holders' Tl-208 | keeps DEP 0.73, SEP 0.08, FEP 0.06, the window 0.31; measured on `V00000A` at HADES 0.90, 0.04, 0.06, 0.27 |
+| the A/E cut, every Tl-208 run | classifier > −1.19 keeps DEP 0.90 (the tuning), SEP 0.03, FEP 0.05, the window 0.27, net of the continuum under the peaks; measured on `V00000A` at HADES 0.90, 0.04, 0.06, 0.27 |
 | SS : Cu : EFCu mass as built | 619 : 670 : 231 kg = 41 : 44 : 15 % (`[6]`, the GDML's sections) |
 | the same as a design | 669 : 672 : 175 kg = 44 : 44 : 12 % (`[10]`, by depth: the EFCu lid counts as steel) |
 | as built as a design, MC 90% bound | 25.3 × budget |
 | least EFCu, then most steel | none can be shown to pass yet |
 | decays the steel section needs | 4.5 × 10⁷ (Tl-208), 3.1 × 10⁸ (Bi-214) |
 
-The tube as built sits far below the goal before any cut (0.47 ×) and 800 × below it after all of
-them. Every cut matters: M1 removes 15%, the LAr veto 97% of what is left, and the A/E cut 90% of the
+The tube as built sits far below the goal before any cut (0.47 ×) and 900 × below it after all of
+them. Every cut matters: M1 removes 15%, the LAr veto 97% of what is left, and the A/E cut 92% of the
 rest. The LAr veto is the strongest and the least certain: 30% of the argon energy in the tube's events
 lies beyond the optical map, and reading it at the map's edge instead of seeing no light from it makes
-the veto 2-3 × stronger. After all cuts the tube's BI rests on 125 window events, ±9%; with the 3 M
-whole-tube decays alone it was 2.2 ± 1.1 × 10⁻⁸ on 4 events, 0.9 standard deviations high. Before the
-A/E cut, the OFHC's 2 window events dominate its ±20%.
+the veto 2-3 × stronger. After all cuts the tube's BI rests on 113 window events, ±9%. The tuned A/E
+cut matches the HADES measurement of the template detector within 0.01 on every line measured there
+(`[5]`). Before the A/E cut, the OFHC's 2 window events dominate its ±20%.
 
 No decay in the steel section (0-2.06 m) reached a detector: no hit came from shallower than 2.5 m.
 So every design with steel counts its steel slab at the 90% bound of a slab with no hit, mostly
 Bi-214's (2.5 × 10⁻⁴, 25 × the budget), until that section has the decays above ([NERSC](#nersc)).
 The steel is unresolved, not shown to be bad.
 
-The holders add 13% to the tube's BI after all cuts, almost all of it Bi-214: the LAr veto removes
+The holders add 11% to the tube's BI after all cuts, almost all of it Bi-214: the LAr veto removes
 their Tl-208 nearly entirely (10 of 4332 M1 window hits survive) but keeps 162 of Bi-214's 558, most
 likely its betas (up to 3.27 MeV) crossing from the holder straight into the germanium without
-touching argon; the A/E cut then keeps 9 of them.
+touching argon; the A/E cut then keeps 7 of them.
 
 ```
 [3] the tube in geom/output/l1000.gdml: z -1259.0 .. 4987.0 mm (6.246 m), 182 points, seams EFCu | 920.0 | OFHC | 2925.0 | SS
@@ -264,13 +264,18 @@ touching argon; the A/E cut then keeps 9 of them.
     densities [kg/m^3], the GDML's: steel 8000, Cu 8960, EFCu 8960, holders 8960
     tube: PASS
 
+[5] A/E cut tuned on the Tl208 DEP (1592.5 keV) in M1 hits: 1103 in +-2.5 keV, 1091 in the sidebands 5-10 keV off it, 558 net
+    classifier > -1.19 keeps 90% of it (+- 1% statistics); the production's > -1.50 kept 91%
+    kept by it, net of the continuum:  DEP 1592.5 0.90 (558 net)  SEP 2103.5 0.03 (3154 net)  FEP 2614.5 0.05 (39811 net)  window 0.27 (45593)
+    measured on V00000A at HADES:       DEP 1592.5 0.90            SEP 2103.5 0.04            FEP 2614.5 0.06            window 0.27
+
 window   : 1950-2350 keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's BEW): 360 keV
-cuts     : M1 (exactly one detector above 25 keV), LAr veto (the SiPMs see < 4 photoelectrons), A/E classifier > -1.5. energies: the detector response
+cuts     : M1 (exactly one detector above 25 keV), LAr veto (the SiPMs see < 4 photoelectrons), A/E classifier > -1.19 (90% DEP, [5]). energies: the detector response
 activity : chain [uBq/kg] 232Th / 238U: steel 1000 / 2500, Cu 1.1 / 1.3, EFCu 0.37 / 0.19; Tl208 is 35.94% of 232Th, Bi214 100% of 238U
 
 === Tl208   (output/tl208_hit.root+output/tl208_2_hit.root+output/tl208_7001_hit.root+output/tl208_7002_hit.root+output/tl208_7003_hit.root, 33000000 decays)
 [6] decays: EFCu 92.5%, OFHC 3.6%, SS 3.8%; in the argon 0, outside the wall 0   (merged from 5 files)
-    hits: 1470631, M1 1255426, + LAr 30787, + A/E 4764; in the window: 48771, 41261, 468, 94
+    hits: 1470631, M1 1255426, + LAr 30787, + A/E 4344; in the window: 48771, 41261, 468, 89
     LAr veto keeps 1 in 41 M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in 14
     section mat      V [m^3]   M [kg]     A [Bq]   MC dec.  MC per m^3  decays/yr per
     mother  EFCu     0.02583    231.4  3.077e-05  30540466  1182536983       3.18e-05
@@ -295,7 +300,7 @@ activity : chain [uBq/kg] 232Th / 238U: steel 1000 / 2500, Cu 1.1 / 1.3, EFCu 0.
 
 === Bi214   (output/bi214_hit.root+output/bi214_2_hit.root+output/bi214_8001_hit.root+output/bi214_8002_hit.root+output/bi214_8003_hit.root, 33000000 decays)
 [6] decays: EFCu 92.5%, OFHC 3.6%, SS 3.8%; in the argon 0, outside the wall 0   (merged from 5 files)
-    hits: 754204, M1 676678, + LAr 31024, + A/E 4791; in the window: 2310, 2147, 473, 31
+    hits: 754204, M1 676678, + LAr 31024, + A/E 4389; in the window: 2310, 2147, 473, 24
     LAr veto keeps 1 in 22 M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in 10
     section mat      V [m^3]   M [kg]     A [Bq]   MC dec.  MC per m^3  decays/yr per
     mother  EFCu     0.02583    231.4  4.397e-05  30539893  1182514796       4.54e-05
@@ -322,32 +327,30 @@ activity : chain [uBq/kg] 232Th / 238U: steel 1000 / 2500, Cu 1.1 / 1.3, EFCu 0.
     chain  sect          win hits   no cut                 M1                     M1 + LAr               M1 + LAr + A/E        
     Tl208  steel          0/0/0/0   < 3.62e-05 (90%)       < 3.62e-05 (90%)       < 3.62e-05 (90%)       < 3.62e-05 (90%)      
            Cu           20/16/2/0   1.20e-07 +- 4.7e-08    9.97e-08 +- 4.3e-08    3.87e-08 +- 2.7e-08    < 4.45e-08 (90%)      
-           EFCu   48751/41245/466/94   4.31e-06 +- 2.0e-08    3.64e-06 +- 1.8e-08    4.12e-08 +- 1.9e-09    8.30e-09 +- 8.6e-10   
-           tube                     4.43e-06 +- 5.1e-08    3.74e-06 +- 4.7e-08    7.99e-08 +- 2.7e-08    8.30e-09 +- 8.6e-10   
+           EFCu   48751/41245/466/89   4.31e-06 +- 2.0e-08    3.64e-06 +- 1.8e-08    4.12e-08 +- 1.9e-09    7.86e-09 +- 8.3e-10   
+           tube                     4.43e-06 +- 5.1e-08    3.74e-06 +- 4.7e-08    7.99e-08 +- 2.7e-08    7.86e-09 +- 8.3e-10   
     Bi214  steel          0/0/0/0   < 2.52e-04 (90%)       < 2.52e-04 (90%)       < 2.52e-04 (90%)       < 2.52e-04 (90%)      
            Cu             0/0/0/0   < 1.46e-07 (90%)       < 1.46e-07 (90%)       < 1.46e-07 (90%)       < 1.46e-07 (90%)      
-           EFCu   2310/2147/473/31   2.92e-07 +- 6.1e-09    2.71e-07 +- 5.8e-09    5.97e-08 +- 2.7e-09    3.91e-09 +- 7.0e-10   
-           tube                     2.92e-07 +- 6.1e-09    2.71e-07 +- 5.8e-09    5.97e-08 +- 2.7e-09    3.91e-09 +- 7.0e-10   
+           EFCu   2310/2147/473/24   2.92e-07 +- 6.1e-09    2.71e-07 +- 5.8e-09    5.97e-08 +- 2.7e-09    3.03e-09 +- 6.2e-10   
+           tube                     2.92e-07 +- 6.1e-09    2.71e-07 +- 5.8e-09    5.97e-08 +- 2.7e-09    3.03e-09 +- 6.2e-10   
     ALL CHAINS
       no cut           4.72e-06 +- 5.2e-08 (0.47 x goal)
       M1               4.01e-06 +- 4.7e-08 (0.4 x goal)
       M1 + LAr         1.40e-07 +- 2.8e-08 (0.014 x goal)
-      M1 + LAr + A/E   1.22e-08 +- 1.1e-09 (0.0012 x goal)
+      M1 + LAr + A/E   1.09e-08 +- 1.0e-09 (0.0011 x goal)
     win hits: per cut level, as in the columns. sections with no window hit are left out of the totals
 
 [9] the EFCu detector holders as built: 1008 weldments, 213.7 cm^3, 1.92 kg of EFCu at 0.37 / 0.19 uBq/kg 232Th / 238U
     chain     decays     A [Bq]   MC [yr]     hits        win hits   no cut                 M1                     M1 + LAr               M1 + LAr + A/E        
     Tl208     200000  2.547e-07     24886   189614  8391/4332/10/1   9.37e-07 +- 1.0e-08    4.84e-07 +- 7.3e-09    1.12e-09 +- 3.5e-10    1.12e-10 +- 1.1e-10   
-    Bi214     200000  3.639e-07     17418   111835   636/558/162/9   1.01e-07 +- 4.0e-09    8.90e-08 +- 3.8e-09    2.58e-08 +- 2.0e-09    1.44e-09 +- 4.8e-10   
-             holders                                                 1.04e-06 +- 1.1e-08    5.73e-07 +- 8.3e-09    2.70e-08 +- 2.1e-09    1.55e-09 +- 4.9e-10   
+    Bi214     200000  3.639e-07     17418   111835   636/558/162/7   1.01e-07 +- 4.0e-09    8.90e-08 +- 3.8e-09    2.58e-08 +- 2.0e-09    1.12e-09 +- 4.2e-10   
+             holders                                                 1.04e-06 +- 1.1e-08    5.73e-07 +- 8.3e-09    2.70e-08 +- 2.1e-09    1.23e-09 +- 4.4e-10   
     TUBE + HOLDERS
       no cut           5.76e-06 +- 5.3e-08 (0.58 x goal)
       M1               4.59e-06 +- 4.8e-08 (0.46 x goal)
       M1 + LAr         1.67e-07 +- 2.8e-08 (0.017 x goal)
-      M1 + LAr + A/E   1.38e-08 +- 1.2e-09 (0.0014 x goal)
+      M1 + LAr + A/E   1.21e-08 +- 1.1e-09 (0.0012 x goal)
     MC [yr]: the years of real decays the run stands for
-    A/E cut on M1 hits of the holders' Tl208, kept (hits):  DEP 1592.5 0.73 (108)  SEP 2103.5 0.08 (412)  FEP 2614.5 0.06 (4396)  window 0.31 (4332)
-    the same measured on V00000A at HADES:                   DEP 1592.5 0.90       SEP 2103.5 0.04       FEP 2614.5 0.06       window 0.27     
 
 [10] designs of the tube: steel to L1, Cu to L2, EFCu below. MC alone, after all cuts; passes if its 90% bound <= the budget 1e-05
     L2 [m]  EFCu [kg]  steel to steel [kg]   Cu [kg]   SS:Cu:EFCu mass          BI   90% bound  x budget
@@ -356,7 +359,7 @@ activity : chain [uBq/kg] 232Th / 238U: steel 1000 / 2500, Cu 1.1 / 1.3, EFCu 0.
     3.50          363         -   no steel can be shown to pass yet
     3.75          278         -   no steel can be shown to pass yet
     4.00          194         -   no steel can be shown to pass yet
-    4.07          175    2.06 m        669       672    44 : 44 : 12 %    1.22e-08    2.53e-04     25.30   <- as built
+    4.07          175    2.06 m        669       672    44 : 44 : 12 %    1.09e-08    2.53e-04     25.29   <- as built
     4.25          158         -   no steel can be shown to pass yet
     4.50          137         -   no steel can be shown to pass yet
     4.75          116         -   no steel can be shown to pass yet

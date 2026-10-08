@@ -428,10 +428,13 @@ static std::vector<std::string> expand(const std::string &pat) // "output/tl208*
 
 // the A/E cut as LEGEND sets it: the classifier threshold that keeps cfg::depKeep of the DEP of Tl208, in M1 hits of every
 // Tl208 run (tube and holders), the continuum under the peak subtracted with the sidebands. one value for all detectors: they
-// share one template and one set of parameters
+// share one template and one set of parameters. then the cut on the other lines a 228Th calibration measures it on, and on
+// the window's continuum, against the HADES characterization of the L1000 template detector V00000A
 static void tuneAoE(const std::vector<std::string> &files)
 {
-  std::vector<float> peak, side; // A/E classifier of the M1 hits in the peak and in the sidebands
+  struct Line { const char *name; double e; std::vector<float> peak, side; double measured; }; // A/E classifier of M1 hits in the peak, the sidebands
+  Line line[3] = {{"DEP", cfg::depE, {}, {}, 0.90}, {"SEP", 2103.5, {}, {}, 0.04}, {"FEP", 2614.5, {}, {}, 0.06}};
+  std::vector<float> win; // ...and in the window
   for (auto &file : files)
   {
     auto f = TFile::Open(file.c_str());
@@ -440,34 +443,38 @@ static void tuneAoE(const std::vector<std::string> &files)
     std::unordered_map<Long64_t, short> nFired;
     scanTree(t, {"evtid", "energy"}, [&](const double *v) { if (v[1] > cfg::m1_keV) nFired[(Long64_t)v[0]]++; });
     scanTree(t, {"evtid", "energy", "aoe_class"}, [&](const double *v) {
-      double d = fabs(v[1] - cfg::depE);
-      if (v[1] <= cfg::m1_keV || nFired[(Long64_t)v[0]] != 1 || d > cfg::sideHi) return;
-      if (d < cfg::depHalf) peak.push_back(std::isnan(v[2]) ? -1e30 : v[2]); // an undefined A/E fails
-      else if (d > cfg::sideLo) side.push_back(std::isnan(v[2]) ? -1e30 : v[2]);
+      if (v[1] <= cfg::m1_keV || nFired[(Long64_t)v[0]] != 1) return;
+      float a = std::isnan(v[2]) ? -1e30 : v[2]; // an undefined A/E fails
+      if (cfg::inWindow(v[1])) win.push_back(a);
+      for (auto &l : line)
+      {
+        double d = fabs(v[1] - l.e);
+        if (d < cfg::depHalf) l.peak.push_back(a);
+        else if (d > cfg::sideLo && d < cfg::sideHi) l.side.push_back(a);
+      }
     });
     delete f;
   }
   const double k = 2 * cfg::depHalf / (2 * (cfg::sideHi - cfg::sideLo)); // sideband counts per peak width
-  const double net = peak.size() - k * side.size();
-  std::sort(peak.begin(), peak.end());
-  std::sort(side.begin(), side.end());
-  auto kept = [&](double thr) { // net DEP fraction above thr
-    double p = peak.end() - std::upper_bound(peak.begin(), peak.end(), (float)thr), q = side.end() - std::upper_bound(side.begin(), side.end(), (float)thr);
-    return (p - k * q) / net;
-  };
-  if (net < 30) { printf("[5] A/E cut: only %.0f DEP events net, kept at the production's %.2f
-
-", net, cfg::psd_low); return; }
+  auto above = [](std::vector<float> &x, double thr) { return (double)(x.end() - std::upper_bound(x.begin(), x.end(), (float)thr)); };
+  for (auto &l : line) { std::sort(l.peak.begin(), l.peak.end()); std::sort(l.side.begin(), l.side.end()); }
+  std::sort(win.begin(), win.end());
+  auto net = [&](Line &l) { return l.peak.size() - k * l.side.size(); };
+  auto kept = [&](Line &l, double thr) { return (above(l.peak, thr) - k * above(l.side, thr)) / net(l); }; // net fraction above thr
+  Line &dep = line[0];
+  if (net(dep) < 30) { printf("[5] A/E cut: only %.0f DEP events net, kept at the production's %.2f\n\n", net(dep), cfg::psd_low); return; }
   double thr = 0;
-  while (thr > -50 && kept(thr) < cfg::depKeep) thr -= 0.005;
+  while (thr > -50 && kept(dep, thr) < cfg::depKeep) thr -= 0.005;
   gPsdLow = thr;
-  printf("[5] A/E cut tuned on the Tl208 DEP (%.1f keV) in M1 hits: %zu in +-%.1f keV, %zu in the sidebands %.0f-%.0f keV off it, %.0f net
-",
-         cfg::depE, peak.size(), cfg::depHalf, side.size(), cfg::sideLo, cfg::sideHi, net);
-  printf("    classifier > %.2f keeps %.0f%% of it (+- %.0f%% statistics); the production's > %.2f kept %.0f%%
-
-", gPsdLow, 100 * kept(gPsdLow),
-         100 * sqrt(cfg::depKeep * (1 - cfg::depKeep) / net), cfg::psd_low, 100 * kept(cfg::psd_low));
+  printf("[5] A/E cut tuned on the Tl208 DEP (%.1f keV) in M1 hits: %zu in +-%.1f keV, %zu in the sidebands %.0f-%.0f keV off it, %.0f net\n",
+         cfg::depE, dep.peak.size(), cfg::depHalf, dep.side.size(), cfg::sideLo, cfg::sideHi, net(dep));
+  printf("    classifier > %.2f keeps %.0f%% of it (+- %.0f%% statistics); the production's > %.2f kept %.0f%%\n", gPsdLow, 100 * kept(dep, gPsdLow),
+         100 * sqrt(cfg::depKeep * (1 - cfg::depKeep) / net(dep)), cfg::psd_low, 100 * kept(dep, cfg::psd_low));
+  printf("    kept by it, net of the continuum:");
+  for (auto &l : line) printf("  %s %.1f %.2f (%.0f net)", l.name, l.e, kept(l, gPsdLow), net(l));
+  printf("  window %.2f (%zu)\n    measured on V00000A at HADES:     ", win.empty() ? 0.0 : above(win, gPsdLow) / win.size(), win.size());
+  for (auto &l : line) printf("  %s %.1f %.2f          ", l.name, l.e, l.measured);
+  printf("  window 0.27\n\n");
 }
 
 void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_hit.root=Bi214",
@@ -663,27 +670,6 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
     printf("    TUBE + HOLDERS\n");
     for (int c = 0; c < NC; c++) printf("      %-16s %s\n", cutName[c], total(gB[c] + hB[c], gV[c] + hV[c], gN[c] + hN[c], true).c_str());
     printf("    MC [yr]: the years of real decays the run stands for\n");
-    // the A/E cut on the lines a 228Th calibration measures it on, after M1: double escape (single site), single escape and full energy
-    // (multi site), and the window's continuum, against the HADES characterization of the L1000 template detector V00000A
-    const double peak[3] = {1592.5, 2103.5, 2614.5};
-    const char *peakName[4] = {"DEP 1592.5", "SEP 2103.5", "FEP 2614.5", "window"};
-    const double measured[4] = {0.90, 0.04, 0.06, 0.27};
-    for (auto &h : H)
-    {
-      if (h.iso.find("Tl") == std::string::npos) continue;
-      long nIn[4] = {0}, nOk[4] = {0};
-      for (auto &x : h.hits)
-      {
-        if (!x.m1) continue;
-        for (int k = 0; k < 4; k++)
-          if (k < 3 ? fabs(x.e - peak[k]) < 3 : cfg::inWindow(x.e)) { nIn[k]++; nOk[k] += x.psd; }
-      }
-      printf("    A/E cut on M1 hits of the holders' Tl208, kept (hits):");
-      for (int k = 0; k < 4; k++) printf("  %s %.2f (%ld)", peakName[k], nIn[k] ? (double)nOk[k] / nIn[k] : 0.0, nIn[k]);
-      printf("\n    the same measured on V00000A at HADES:                 ");
-      for (int k = 0; k < 4; k++) printf("  %s %.2f     ", peakName[k], measured[k]);
-      printf("\n");
-    }
   }
 
 //-------------------------------------------------------------------------------
