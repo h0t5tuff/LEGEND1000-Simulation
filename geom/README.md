@@ -32,8 +32,8 @@ remage --ignore-warnings -s GDML=output/l1000.gdml -s SKIP=false -s NPOINTS=1000
 - **The tube's SS : Cu : EFCu as built:** 619.0 : 669.9 : 231.3 kg, seams at z 920 and 2925 mm.
 - **Autopeel:** space play/pause · ← → step · ↑ ↓ speed · 0 restart · c start view · r fit · f fly to cursor ·
   q quit. The first run meshes the GDML (~20 s), later runs start in a second. The peel order is
-  `LAYERS`: 18 layers, the 336 detectors stay. Double-clicking `/Applications/l1000.app` runs it too, its
-  printout in `$TMPDIR/l1000-autopeel.log`; `geom/apps/make_app.py l1000` builds that app (see `geom/apps/README.md`).
+  `LAYERS`: 18 layers, the 336 detectors stay. Double-clicking `/Applications/l1000.app` runs a standalone
+  copy of it, geometry included, that runs on any Mac; `geom/apps/make_app.py l1000` builds it (see `geom/apps/README.md`).
 - **Geant4 viewer:** `/vis/geometry/set/visibility <LV> 0 false` hides a volume, `/control/execute
   toggles/pen.mac` shows a material, `/vis/geometry/set/visibility world -1 true` shows everything.
 - **Overlap check:** prints nothing when nothing overlaps: none on 7 Oct 2026, in 83 s. `SKIP=true` only

@@ -31,8 +31,8 @@ remage --ignore-warnings -s GDML=l200.gdml -s SKIP=false -s NPOINTS=1000 -- chec
 - **Autopeel:** space play/pause · ← → step · ↑ ↓ speed · 0 restart · c start view · r fit · f fly to cursor ·
   q quit. The first run meshes the GDML (~10 s), later runs start in a second. The peel order is `LAYERS`
   (19 layers, the 101 detectors stay); the last layers (LMFE chips, springs) sit under the detectors, so
-  look from below. Double-clicking `/Applications/l200.app` runs it too, its printout in
-  `$TMPDIR/l200-autopeel.log`; `geom/apps/make_app.py l200` builds that app (see `geom/apps/README.md`).
+  look from below. Double-clicking `/Applications/l200.app` runs a standalone copy of it, geometry
+  included, that runs on any Mac; `geom/apps/make_app.py l200` builds it (see `geom/apps/README.md`).
 - **Geant4 viewer:** `/vis/geometry/set/visibility <LV> 0 false` hides a volume, `/control/execute
   toggles/pen.mac` shows a material, `/vis/geometry/set/visibility world -1 true` shows everything.
 - **Overlap check:** prints nothing when nothing overlaps: none on 8 Oct 2026, in 11 s. `SKIP=true` only
