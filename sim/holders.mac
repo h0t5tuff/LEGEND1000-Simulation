@@ -1,0 +1,28 @@
+#  1. Before init:
+/RMG/Geometry/RegisterDetectorsFromGDML Germanium              # the 336 HPGe detectors, from the map inside the GDML
+/RMG/Output/NtuplePerDetector false                            # one table for all of them, with det_uid
+/RMG/Processes/EnableGammaAngularCorrelation
+/RMG/Geometry/GDMLDisableOverlapCheck true
+/RMG/Geometry/IncludeGDMLFile {GDML}
+/run/initialize
+
+#-------------------------------------------------------------------------------
+#  2. Output and decay physics:
+/geometry/navigator/check_mode false
+/RMG/Output/Germanium/DiscardZeroEnergyHits true
+/RMG/Output/Germanium/StoreSinglePrecisionEnergy
+/RMG/Output/Germanium/StoreSinglePrecisionPosition
+/process/had/rdm/thresholdForVeryLongDecayTime 1.0e+60 year    # Geant4 >= 11.2 skips decays later than 1 year: U-234, Th-230, Ra-226, Pb-210 need it
+/RMG/Processes/Stepping/DaughterNucleusMaxLifetime -1          # no daughter is stopped: the chain runs to Pb-208 / Pb-206, every member once
+
+#-------------------------------------------------------------------------------
+#  3. The source:
+/RMG/Manager/Randomization/Seed {SEED}
+/RMG/Generator/Confine Volume
+/RMG/Generator/Confinement/MaxSamplingTrials 100000
+/RMG/Generator/Confinement/Physical/AddVolume hpge_string_support_weldment_copper_.*
+/RMG/Generator/Select GPS
+/gps/particle ion
+/gps/energy 0 eV
+/gps/ion {Z} {A}
+/run/beamOn {NEV}

@@ -2,10 +2,15 @@
 """Peel the LEGEND-1000 geometry layer by layer on a timer while you rotate it (see README.md).
 
     ~/venvs/v/bin/python l1000-autopeel.py
+    ~/venvs/v/bin/python l1000-autopeel.py --holders ../output/holders_geometry.png    (the detector holders alone, no window)
+    ~/venvs/v/bin/python l1000-autopeel.py --tube ../output/tube_geometry.png          (the re-entrant tube, the decay source)
+    ~/venvs/v/bin/python l1000-autopeel.py --uglar ../output/uglar_geometry.png        (the underground argon, the veto)
+    ~/venvs/v/bin/python l1000-autopeel.py --hpge ../output/hpge_geometry.png          (the HPGe detectors)
 """
 
 import itertools
 import re
+import sys
 import time
 from pathlib import Path
 
@@ -27,9 +32,9 @@ from vtkmodules.vtkRenderingCore import (
 )
 
 HERE = Path(__file__).resolve().parent
-GDML = HERE / "output" / "l1000.gdml"
+GDML = HERE / "l1000.gdml"
 COLOURS = HERE / "l1000-colors.mac"
-CACHE = HERE / "output" / "autopeel-cache.npz"
+CACHE = HERE / "autopeel-cache.npz"
 DWELL = 3.0  # s per layer at start (up/down change it)
 FADE = 0.5  # s a layer takes to fade out or back in
 START_THETA_PHI = (70, 20)  # deg, z up: the start view of l1000-vis.mac
@@ -164,13 +169,15 @@ def load_geometry():
     return g
 
 
-def placed(g, i):
-    """LV i's surface at all of its placements, in world coordinates."""
+def placed(g, i, keep=None):
+    """LV i's surface at all of its placements (or those `keep` selects), in world coordinates."""
     p = g["pts"][g["o_pts"][i]:g["o_pts"][i + 1]]
     n = g["nrm"][g["o_pts"][i]:g["o_pts"][i + 1]]
     t = g["tri"][g["o_tri"][i]:g["o_tri"][i + 1]]
     rot = g["rot"][g["o_pl"][i]:g["o_pl"][i + 1]]
     tra = g["tra"][g["o_pl"][i]:g["o_pl"][i + 1]]
+    if keep is not None:
+        rot, tra = rot[keep], tra[keep]
     pts = np.einsum("kij,nj->kni", rot, p) + tra[:, None, :]
     nrm = np.einsum("kij,nj->kni", np.linalg.inv(rot).transpose(0, 2, 1), n)  # normals: inverse transpose
     nrm /= np.maximum(np.linalg.norm(nrm, axis=2, keepdims=True), 1e-12)
@@ -189,7 +196,9 @@ def read_colours():
     return rgba
 
 
-def make_actor(parts, rgba, depth):
+def make_actor(parts, rgba, depth, clip=None, cap=False):
+    """One actor of the given parts. clip: a vtkPlane that cuts away the half its normal points from;
+    cap: close the cut faces (for a closed solid, e.g. a detector), else leave the cut open (thin walls)."""
     n_pts = np.cumsum([0] + [len(p) for p, _, _ in parts])
     pts = np.concatenate([p for p, _, _ in parts])
     nrm = np.concatenate([n for _, n, _ in parts])
@@ -204,7 +213,26 @@ def make_actor(parts, rgba, depth):
     pd.GetPointData().SetNormals(normals)
 
     mapper = vtkPolyDataMapper()
-    mapper.SetInputData(pd)
+    if clip is not None and cap:
+        from vtkmodules.vtkCommonDataModel import vtkPlaneCollection
+        from vtkmodules.vtkFiltersCore import vtkPolyDataNormals
+        from vtkmodules.vtkFiltersGeneral import vtkClipClosedSurface
+
+        planes = vtkPlaneCollection()
+        planes.AddItem(clip)
+        cut = vtkClipClosedSurface()
+        cut.SetInputData(pd)
+        cut.SetClippingPlanes(planes)
+        nrm_f = vtkPolyDataNormals()  # the caps need normals of their own
+        nrm_f.SetInputConnection(cut.GetOutputPort())
+        nrm_f.SetFeatureAngle(30)
+        nrm_f.SplittingOn()
+        nrm_f.Update()
+        mapper.SetInputConnection(nrm_f.GetOutputPort())
+    else:
+        mapper.SetInputData(pd)
+        if clip is not None:
+            mapper.AddClippingPlane(clip)
     mapper.ScalarVisibilityOff()
     mapper.StaticOn()  # geometry never changes: upload once
     # a daughter that shares a face with its mother (e.g. the OFHC and SS layers on the re-entrant
@@ -364,7 +392,247 @@ def text_actor(size, colour, x, y):
     return t
 
 
+# ── the detector holders alone, offscreen to a PNG (--holders) ──────────────────────────
+
+HOLDERS = "hpge_string_support_weldment_copper"  # legend-pygeom-l1000: "the copper weldment holding a detector unit to the support rods"
+UNIT = "V00101Z"  # the close-up's detector
+
+
+def holders_png(out):
+    """Left: every detector holder alone. Right: one detector unit, its holders solid, the detector and PEN plate ghosted."""
+    g = load_geometry()
+    names = [str(n) for n in g["names"]]
+    h, d = names.index(HOLDERS), names.index(UNIT)
+    tra_h = g["tra"][g["o_pl"][h]:g["o_pl"][h + 1]]
+    c = g["tra"][g["o_pl"][d]]  # the detector's origin, at its bottom
+    near = (np.abs(tra_h[:, 2] - c[2]) < 30) & (np.hypot(*(tra_h[:, :2] - c[:2]).T) < 150)  # mm: this unit's holders
+    pen = [i for i, n in enumerate(names) if n.startswith("hpge_assembly_plate_pen")]
+    pen_keep = {i: np.linalg.norm(g["tra"][g["o_pl"][i]:g["o_pl"][i + 1]] - c, axis=1) < 30 for i in pen}
+
+    try:
+        import yaml
+        part = next(p for p in yaml.safe_load((HERE / "l1000-parts.yaml").read_text())["parts"] if p["name"] == HOLDERS)
+        what = f"{part['material']}, {part['unit_volume'] * 1e3:.0f} mm3 each, {part['total_mass'] / 1e3:.2f} kg in all"
+    except (OSError, StopIteration):
+        what = "(no l1000-parts.yaml)"
+    print(f"the detector holders: {HOLDERS}, {int(g['n_pl'][h])} placements, 3 per detector ({int(g['n_pl'][h]) // 3} detectors); {what}")
+    print(f"close-up: {UNIT} at ({c[0]:.0f}, {c[1]:.0f}, {c[2]:.0f}) mm, its {int(near.sum())} holders "
+          f"{c[2] - tra_h[near, 2].max():.1f} mm below the detector's base")
+
+    copper = (0.85, 0.50, 0.25, 1.0)
+    write_panels(out, [
+        (f"all {int(g['n_pl'][h])} EFCu detector holders, alone", [make_actor([placed(g, h)], copper, 0)[0]], (*START_THETA_PHI, 1.35)),
+        (f"one detector unit ({UNIT}): its 3 holders; the detector and its PEN plate ghosted",
+         [make_actor([placed(g, h, near)], copper, 0)[0], make_actor([placed(g, d)], (0.75, 0.80, 0.85, 0.25), 0)[0],
+          make_actor([placed(g, i, m) for i, m in pen_keep.items() if m.any()], (0.55, 0.75, 0.95, 0.25), 0)[0]],
+         (*START_THETA_PHI, 1.0)),
+    ])
+
+
+def write_panels(out, panels):
+    """Two panels side by side, offscreen, to a 2400 x 1200 PNG. Each panel: (label, actors, (theta, phi, zoom)
+    or (theta, phi, zoom, bounds)); the camera looks from theta/phi (deg, z up) and frames the bounds (default: its actors)."""
+    vtkMapper.SetResolveCoincidentTopologyToPolygonOffset()
+    win = vtkRenderWindow()
+    win.SetOffScreenRendering(1)
+    win.SetSize(2400, 1200)
+    for k, (label, actors, view) in enumerate(panels):
+        ren = vtkRenderer()
+        ren.SetViewport(0.5 * k, 0, 0.5 * k + 0.5, 1)
+        ren.GradientBackgroundOn()
+        ren.SetBackground(0.05, 0.05, 0.07)
+        ren.SetBackground2(0.20, 0.22, 0.26)
+        ren.SetUseDepthPeeling(True)
+        for a in actors:
+            ren.AddActor(a)
+        th, ph = np.radians(view[:2])
+        cam = ren.GetActiveCamera()
+        cam.SetFocalPoint(0, 0, 0)
+        cam.SetPosition(np.sin(th) * np.cos(ph), np.sin(th) * np.sin(ph), np.cos(th))
+        cam.SetViewUp(0, 0, 1)
+        ren.ResetCamera(view[3] if len(view) > 3 else ren.ComputeVisiblePropBounds())
+        cam.Zoom(view[2])
+        ren.ResetCameraClippingRange()
+        t = text_actor(28, (0.95, 0.95, 0.95), 0.02, 0.97)
+        t.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()  # this panel's corner, not the window's
+        t.SetInput(label)
+        ren.AddViewProp(t)
+        win.AddRenderer(ren)
+    win.Render()
+
+    from vtkmodules.vtkIOImage import vtkPNGWriter
+    from vtkmodules.vtkRenderingCore import vtkWindowToImageFilter
+    grab = vtkWindowToImageFilter()
+    grab.SetInput(win)
+    grab.Update()
+    png = vtkPNGWriter()
+    png.SetFileName(str(out))
+    png.SetInputConnection(grab.GetOutputPort())
+    png.Write()
+    print(f"wrote {out}")
+
+
+# ── the tube, the UGLAr and the HPGe detectors of sim/run.mac, offscreen to PNGs (--tube, --uglar, --hpge) ──
+
+TUBE = ("reentrance_tube_layer_steel_316L", "reentrance_tube_layer_copper_ofhc", "reentrance_tube_copper")  # top to bottom
+UGLAR = "liquid_argon_underground"
+GHOST = (0.75, 0.80, 0.85, 0.25)
+
+
+def parts_info(names):
+    """name -> its line of l1000-parts.yaml (material, placements, volume, mass), if the manifest is there."""
+    try:
+        import yaml
+        return {p["name"]: p for p in yaml.safe_load((HERE / "l1000-parts.yaml").read_text())["parts"] if p["name"] in names}
+    except OSError:
+        return {}
+
+
+def plane(origin, normal):
+    from vtkmodules.vtkCommonDataModel import vtkPlane
+    p = vtkPlane()
+    p.SetOrigin(*origin)
+    p.SetNormal(*normal)
+    return p
+
+
+def facing(phi, origin=(0, 0, 0)):
+    """The vertical plane through `origin` facing the camera at azimuth phi: it cuts away the half nearer the camera."""
+    return plane(origin, (-np.cos(np.radians(phi)), -np.sin(np.radians(phi)), 0))
+
+
+def _bounds(pts, zmax=None):
+    if zmax is not None:
+        pts = pts[pts[:, 2] < zmax]
+    lo, hi = pts.min(axis=0), pts.max(axis=0)
+    return [lo[0], hi[0], lo[1], hi[1], lo[2], hi[2]]
+
+
+def half_solid(name, origin, phi, rgba):
+    """A GDML polycone (a detector) as a solid half: its exact (r, z) profile swept 180 deg about its axis, both cut
+    faces closed, the half towards the camera at azimuth phi left out; placed at origin (the detectors are not rotated)."""
+    from vtkmodules.vtkFiltersCore import vtkPolyDataNormals, vtkTriangleFilter
+    from vtkmodules.vtkFiltersModeling import vtkRotationalExtrusionFilter
+
+    block = re.search(rf'<genericPolycone name="{name}"[^>]*>(.*?)</genericPolycone>', GDML.read_text(), re.S).group(1)
+    rz = [(float(r), float(z)) for r, z in re.findall(r'<rzpoint r="([^"]+)" z="([^"]+)"', block)]
+    a0 = np.radians(phi) + np.pi / 2  # the half kept spans phi + 90 .. phi + 270 deg, away from the camera
+    pts, cell = vtkPoints(), vtkCellArray()
+    cell.InsertNextCell(len(rz))
+    for k, (r, z) in enumerate(rz):
+        pts.InsertNextPoint(r * np.cos(a0), r * np.sin(a0), z)
+        cell.InsertCellPoint(k)
+    pd = vtkPolyData()
+    pd.SetPoints(pts)
+    pd.SetPolys(cell)
+    sweep = vtkRotationalExtrusionFilter()
+    sweep.SetInputData(pd)
+    sweep.SetAngle(180)
+    sweep.SetResolution(90)
+    sweep.CappingOn()  # the two cut faces: copies of the profile
+    tri = vtkTriangleFilter()
+    tri.SetInputConnection(sweep.GetOutputPort())
+    nrm = vtkPolyDataNormals()
+    nrm.SetInputConnection(tri.GetOutputPort())
+    nrm.SetFeatureAngle(30)
+    nrm.SplittingOn()
+    mapper = vtkPolyDataMapper()
+    mapper.SetInputConnection(nrm.GetOutputPort())
+    mapper.ScalarVisibilityOff()
+    actor = vtkActor()
+    actor.SetMapper(mapper)
+    actor.SetPosition(*origin)
+    prop = actor.GetProperty()
+    prop.SetColor(*rgba[:3])
+    prop.SetAmbient(0.15)
+    prop.SetDiffuse(0.85)
+    prop.SetSpecular(0.15)
+    prop.SetSpecularPower(25)
+    return actor
+
+
+def tube_png(out):
+    """Left: the tube's three sections, the decay sources. Right: its bottom cut along the axis, the detectors ghosted inside."""
+    g, colours = load_geometry(), read_colours()
+    names = [str(n) for n in g["names"]]
+    idx = [names.index(n) for n in TUBE]
+    dets = [i for i, n in enumerate(names) if re.fullmatch(r"V\d{5}Z", n)]
+    info = parts_info(TUBE)
+    pts = np.concatenate([placed(g, i)[0] for i in idx])
+    seams = [placed(g, i)[0][:, 2].min() for i in idx[:2]]
+    for n in TUBE:
+        p = info.get(n, {})
+        print(f"{n}: {p.get('material', '?')}, {p.get('total_mass', 0) / 1e3:.1f} kg")
+    print(f"z {pts[:, 2].min():.0f} .. {pts[:, 2].max():.0f} mm; seams: steel above z {seams[0]:.0f}, OFHC above z {seams[1]:.0f}; "
+          f"the detectors at z {min(placed(g, i)[0][:, 2].min() for i in dets):.0f} .. {max(placed(g, i)[0][:, 2].max() for i in dets):.0f}")
+    tube = lambda clip=None: [make_actor([placed(g, i)], colours[n], int(g["depth"][i]), clip)[0] for i, n in zip(idx, TUBE)]
+    th, ph = START_THETA_PHI
+    write_panels(out, [
+        ("the re-entrant tube, sim/run.mac's decay source: steel, OFHC Cu, EFCu", tube(), (th, ph, 0.9)),
+        ("its bottom cut along the axis: the 336 detectors (ghosted) sit in the EFCu section",
+         tube(facing(ph)) + [make_actor([placed(g, i) for i in dets], GHOST, 0)[0]], (th, ph, 1.0, _bounds(pts, zmax=1500))),
+    ])
+
+
+def uglar_png(out):
+    """Left: the underground argon alone. Right: its bottom, ghosted, with what sits in it: detectors, fibres, SiPMs."""
+    g, colours = load_geometry(), read_colours()
+    names = [str(n) for n in g["names"]]
+    u = names.index(UGLAR)
+    dets = [i for i, n in enumerate(names) if re.fullmatch(r"V\d{5}Z", n)]
+    fibres = [i for i, n in enumerate(names) if n.startswith("fiber_core")]
+    sipms = [i for i, n in enumerate(names) if re.fullmatch(r"larinstr_.*_sipm_silicon_.*", n)]
+    mounts = [i for i, n in enumerate(names) if re.fullmatch(r"larinstr_.*_sipm_wrap_copper_.*", n)]
+    p = parts_info([UGLAR]).get(UGLAR, {})
+    print(f"{UGLAR}: {p.get('material', '?')}, {p.get('unit_volume', 0) / 1e6:.2f} m3, {p.get('total_mass', 0) / 1e6:.2f} t; "
+          f"inside it {len(dets)} detectors, {int(sum(g['n_pl'][i] for i in fibres))} fibres, {int(sum(g['n_pl'][i] for i in sipms))} SiPMs")
+    inner = np.concatenate([placed(g, i)[0] for i in dets + fibres])
+    th, ph = START_THETA_PHI
+    write_panels(out, [
+        ("the underground argon (UGLAr), alone: the argon veto of sim/run.mac", [make_actor([placed(g, u)], colours[UGLAR], 0)[0]],
+         (th, ph, 0.9)),
+        ("its bottom, ghosted: the 336 detectors, and the fibres whose SiPMs see its light",
+         [make_actor([placed(g, u)], (0.55, 0.8, 1.0, 0.18), 0)[0], make_actor([placed(g, i) for i in dets], colours[names[dets[0]]], 0)[0],
+          make_actor([placed(g, i) for i in fibres], (*colours[names[fibres[0]]][:3], 0.22), 0)[0],  # ghosted: 12096 fibres hide all else
+          make_actor([placed(g, i) for i in sipms], colours[names[sipms[0]]], 0)[0],
+          make_actor([placed(g, i) for i in mounts], colours[names[mounts[0]]], 0)[0]],
+         (th, ph, 1.0, _bounds(inner))),
+    ])
+
+
+def hpge_png(out):
+    """Left: all the HPGe detectors alone. Right: one of them cut in half, its borehole open."""
+    g, colours = load_geometry(), read_colours()
+    names = [str(n) for n in g["names"]]
+    dets = [i for i, n in enumerate(names) if re.fullmatch(r"V\d{5}Z", n)]
+    d = names.index(UNIT)
+    p = parts_info([names[i] for i in dets])
+    mass = sum(p[names[i]]["total_mass"] for i in dets if names[i] in p)
+    one = placed(g, d)[0]
+    c = g["tra"][g["o_pl"][d]]
+    r = np.hypot(*(one[:, :2] - c[:2]).T)
+    z = one[:, 2] - c[2]
+    bore = z[(r > 0.5) & (r < 6) & (z > 1)]  # the borehole wall, near the axis, above the base
+    strings = len({names[i][1:4] for i in dets})
+    print(f"{len(dets)} detectors in {strings} strings, {p.get(UNIT, {}).get('material', '?')}, {mass / 1e3:.1f} kg; "
+          f"{UNIT}: {z.max() - z.min():.1f} mm tall, {2 * r.max():.1f} mm across, borehole {z.max() - bore.min():.0f} mm deep "
+          f"from the top, {p.get(UNIT, {}).get('total_mass', 0) / 1e3:.3f} kg")
+    blue = colours[UNIT]
+    th, ph = START_THETA_PHI
+    write_panels(out, [
+        (f"all {len(dets)} HPGe detectors, alone: {strings} strings in 7 clusters of 6",
+         [make_actor([placed(g, i) for i in dets], blue, 0)[0]], (28, 30, 1.1)),
+        (f"one detector ({UNIT}), an ICPC, cut in half: its borehole from the top",
+         [half_solid(UNIT, c, ph, blue)], (65, ph + 40, 1.0)),  # 40 deg off the cut: its face and the outside both show
+    ])
+
+
+PICTURES = {"--holders": holders_png, "--tube": tube_png, "--uglar": uglar_png, "--hpge": hpge_png}
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] in PICTURES:
+        return PICTURES[sys.argv[1]](Path(sys.argv[2]))
     t0 = time.monotonic()
     layers, n_tri = assemble(load_geometry(), read_colours())
 

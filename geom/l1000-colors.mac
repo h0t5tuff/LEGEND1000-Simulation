@@ -1,5 +1,5 @@
 # /vis/geometry/set/colour <logical-volume> <depth> R G B alpha
-# read by l1000-vis.mac (Geant4) and l1000-autopeel.py (VTK); one line per LV of output/l1000.gdml
+# read by l1000-vis.mac (Geant4) and l1000-autopeel.py (VTK); one line per LV of l1000.gdml
 
 # ── steel cryostat and supports
 /vis/geometry/set/colour cryostat_foot_steel_316L 0 0.55 0.57 0.6 1

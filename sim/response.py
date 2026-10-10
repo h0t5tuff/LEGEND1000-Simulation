@@ -1,11 +1,3 @@
-#  the detector response, with reboost: the steps of a remage run become what LEGEND-1000 would measure, one ROOT file
-#  per run for ana/background.C. the recipe and every parameter are the LEGEND-1000 simulation production's
-#  (legend-simflow's hit and opt tiers, legend1000-metadata simprod/config, experiment l1000dsg01)
-#    ~/venvs/v/bin/python sim/response.py output/tl208.lh5 output/bi214.lh5 ...      -> output/tl208_hit.root ...
-#  germanium, per hit: the active energy (FCCD, dead-layer fraction), smeared by the resolution; the A/E classifier from
-#  the drift-time map and the current-pulse template. UGLAr, per hit: the photoelectrons the SiPMs see, from the
-#  scintillation yield and the optical map
-
 import argparse
 import os
 import time
@@ -23,6 +15,7 @@ import reboost.hpge
 import reboost.math
 import reboost.spms
 import uproot
+from reboost.optmap import convolve
 from dbetto.utils import load_dict
 from legendmeta import Legend1000Metadata
 
@@ -30,7 +23,7 @@ from legendmeta import Legend1000Metadata
 #  1. Configuration:
 p = argparse.ArgumentParser(description="detector response of remage runs, with reboost")
 p.add_argument("stp", nargs="+", help="remage LH5 outputs (-m: one file per run)")
-p.add_argument("--gdml", default="geom/output/l1000.gdml")
+p.add_argument("--gdml", default="geom/l1000.gdml")
 p.add_argument("--metadata", default=os.environ.get("LEGEND1000_METADATA", os.path.expanduser("~/Documents/legend1000-metadata")))
 p.add_argument("--optmap", default="output/merged_optmap_20260225_063750.lh5", help="UGLAr optical map; its group /all, every SiPM summed, is used")
 p.add_argument("--dtmap", default="output/dtmap_V00000A.lh5", help="drift-time maps of the detector template")
@@ -84,6 +77,7 @@ R = np.hypot(*np.meshgrid(cx, cy, indexing="ij"))
 r_cov = np.array([R[has[:, :, k]].max() if has[:, :, k].any() else 0.0 for k in range(has.shape[2])]) - 0.005  # m
 print(f"inputs: {len(geds)} detectors, drift-time maps {sorted(dtmaps)} deg, optical map {optmap.weights.shape[1:]} bins "
       f"x [{ex[0]}, {ex[-1]}] y [{ey[0]}, {ey[-1]}] z [{ez[0]}, {ez[-1]}] m, read in {time.time() - t_start:.0f} s")
+SCINT = convolve._get_scint_params("lar")  # what reboost.spms's processors use; called below with our own generator
 print(f"response: FCCD from the metadata, dead-layer fraction {dlf}, resolution and A/E from simprod {EXP}; "
       f"optical map scaling {optset['optmap_scaling_factor']}, PE resolution {optset['photoelectron_resolution_sigma']}, "
       f"time resolution {optset['time_resolution_in_ns']} ns")
@@ -93,8 +87,9 @@ u = pint.UnitRegistry()
 #  3. One run:
 for stp in args.stp:
     t0 = time.time()
-    # one stream per file, from its name: a file comes out the same whatever else is processed with it. the germanium
-    # smearing draws from it; reboost samples the photons and photoelectrons with its own, unseeded generator
+    # one stream per file, from its name: a file comes out the same whatever else is processed with it, every time. every
+    # random number is drawn from it, the germanium smearing and the argon's photons and photoelectrons alike: reboost.spms's
+    # processors draw from an unseeded generator, so the argon calls the reboost.optmap.convolve functions under them
     rng = np.random.default_rng([args.seed, zlib.crc32(os.path.basename(stp).encode())])
     out = stp.removesuffix(".lh5") + "_hit.root"
     origins = lh5.read("detector_origins", stp)
@@ -137,13 +132,15 @@ for stp in args.stp:
         f = np.where(r > r_cov[k], r_cov[k] / np.maximum(r, 1e-9), 1.0)
         moved = ak.unflatten(f < 1, ak.num(x))
         xc, yc = ak.unflatten(ak.flatten(x) * f, ak.num(x)), ak.unflatten(ak.flatten(y) * f, ak.num(y))
-        ph = reboost.spms.emitted_scintillation_photons(a.edep, a.particle, "lar")
+        ph = convolve.iterate_stepwise_depositions_scintillate(ak.Array({"edep": a.edep, "particle": a.particle}), SCINT, rng=rng)
         pe = {}
         for key, (px, py) in (("pe", (xc, yc)), ("pe_map", (x, y))):
-            n_pe, _, stats = reboost.spms.number_of_detected_photoelectrons(
-                px, py, z, ph, optmap, "all", map_scaling=optset["optmap_scaling_factor"],
-                max_pes_per_hit=optset["max_pes_per_hit_combined"], return_stats=True)
-            tpe = ak.sort(reboost.spms.photoelectron_times(n_pe, a.particle, a.time, "lar"), axis=-1)
+            n_pe, _, stats = convolve.iterate_stepwise_depositions_numdet(
+                ak.Array({"xloc": px, "yloc": py, "zloc": z, "num_scint_ph": ph}), optmap, "all",
+                map_scaling=optset["optmap_scaling_factor"], max_pes_per_hit=optset["max_pes_per_hit_combined"], rng=rng,
+                return_stats=True)
+            tpe = ak.sort(convolve.iterate_stepwise_depositions_times(
+                ak.Array({"num_det_ph": n_pe, "particle": a.particle, "time": a.time}), SCINT, rng=rng), axis=-1)
             amp = reboost.spms.smear_photoelectrons(tpe, optset["photoelectron_resolution_sigma"], rng=rng)
             _, amp = reboost.spms.cluster_photoelectrons(tpe, amp, optset["time_resolution_in_ns"])
             pe[key] = ak.to_numpy(ak.sum(amp, axis=-1))
