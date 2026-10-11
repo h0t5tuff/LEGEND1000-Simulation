@@ -231,8 +231,8 @@ def make_actor(parts, rgba, depth, clip=None, cap=False):
         mapper.SetInputConnection(nrm_f.GetOutputPort())
     else:
         mapper.SetInputData(pd)
-        if clip is not None:
-            mapper.AddClippingPlane(clip)
+        for c in (clip if isinstance(clip, (list, tuple)) else [clip] if clip is not None else []):
+            mapper.AddClippingPlane(c)
     mapper.ScalarVisibilityOff()
     mapper.StaticOn()  # geometry never changes: upload once
     # a daughter that shares a face with its mother (e.g. the OFHC and SS layers on the re-entrant
@@ -409,12 +409,9 @@ def holders_png(out):
     pen = [i for i, n in enumerate(names) if n.startswith("hpge_assembly_plate_pen")]
     pen_keep = {i: np.linalg.norm(g["tra"][g["o_pl"][i]:g["o_pl"][i + 1]] - c, axis=1) < 30 for i in pen}
 
-    try:
-        import yaml
-        part = next(p for p in yaml.safe_load((HERE / "l1000-parts.yaml").read_text())["parts"] if p["name"] == HOLDERS)
-        what = f"{part['material']}, {part['unit_volume'] * 1e3:.0f} mm3 each, {part['total_mass'] / 1e3:.2f} kg in all"
-    except (OSError, StopIteration):
-        what = "(no l1000-parts.yaml)"
+    _, dens, vols, _ = gdml_parts()  # the volume and mass, from the GDML
+    v = solid_volume(HOLDERS)
+    what = f"{vols[HOLDERS][0]}, {v:.1f} mm3 each, {dens[vols[HOLDERS][0]] * v * 1e-6 * int(g['n_pl'][h]):.2f} kg in all"
     print(f"the detector holders: {HOLDERS}, {int(g['n_pl'][h])} placements, 3 per detector ({int(g['n_pl'][h]) // 3} detectors); {what}")
     print(f"close-up: {UNIT} at ({c[0]:.0f}, {c[1]:.0f}, {c[2]:.0f}) mm, its {int(near.sum())} holders "
           f"{c[2] - tra_h[near, 2].max():.1f} mm below the detector's base")
@@ -479,13 +476,72 @@ UGLAR = "liquid_argon_underground"
 GHOST = (0.75, 0.80, 0.85, 0.25)
 
 
-def parts_info(names):
-    """name -> its line of l1000-parts.yaml (material, placements, volume, mass), if the manifest is there."""
-    try:
-        import yaml
-        return {p["name"]: p for p in yaml.safe_load((HERE / "l1000-parts.yaml").read_text())["parts"] if p["name"] in names}
-    except OSError:
-        return {}
+_REG = None
+
+
+def solid_volume(lv):
+    """[mm3] a logical volume's solid, from the GDML: a generic polycone exactly (rz_volume); any other solid from its
+    mesh, curved faces in 512 slices: exact for boxes and tessellated solids, within 1e-4 for tubes and booleans."""
+    global _REG
+    import pyg4ometry
+
+    if _REG is None:
+        _REG = pyg4ometry.gdml.Reader(str(GDML)).getRegistry()
+    s = _REG.logicalVolumeDict[lv].solid
+    if type(s).__name__ == "GenericPolycone":
+        return rz_volume(gdml_parts()[0][s.name])
+
+    def fine(x):
+        for a in ("nslice", "nstack"):
+            if hasattr(x, a):
+                setattr(x, a, 512)
+        for b in ("obj1", "obj2"):
+            if hasattr(x, b):
+                fine(getattr(x, b))
+
+    fine(s)
+    v, polys, _ = s.mesh().toVerticesAndPolygons()
+    v = np.asarray(v, dtype=float)
+    vol = sum(np.dot(v[q[0]], np.cross(v[q[k]], v[q[k + 1]])) for q in polys for k in range(1, len(q) - 1))
+    return abs(vol) / 6
+
+
+_PARTS = None
+
+
+def gdml_parts():
+    """From the GDML, the sole source of truth: every <genericPolycone>'s (r, z) [mm], every material's density [g/cm3],
+    every logical volume's (material, solid), and how often each is placed."""
+    import collections
+    import xml.etree.ElementTree as ET
+
+    global _PARTS
+    if _PARTS is not None:
+        return _PARTS
+    root = ET.parse(GDML).getroot()
+    poly = {s.get("name"): (np.array([float(q.get("r")) for q in s.iter("rzpoint")]), np.array([float(q.get("z")) for q in s.iter("rzpoint")]))
+            for s in root.iter("genericPolycone")}
+    dens = {m.get("name"): float(m.find("D").get("value")) for m in root.iter("material") if m.find("D") is not None}
+    vols = {v.get("name"): (v.find("materialref").get("ref"), v.find("solidref").get("ref")) for v in root.iter("volume")}
+    placed = collections.Counter(pv.find("volumeref").get("ref") for pv in root.iter("physvol"))
+    _PARTS = poly, dens, vols, placed
+    return _PARTS
+
+
+def rz_volume(rz, z0=-np.inf, z1=np.inf, dz=0.5):
+    """[mm3] the solid of revolution of a closed (r, z) outline between two heights, in slices of dz: each slice's area
+    from the outline's crossings, paired into rings (as ana/background.C does)."""
+    r, z = rz
+    lo, hi = max(z.min(), z0), min(z.max(), z1)
+    j = np.roll(np.arange(len(r)), 1)
+    v = 0.0
+    for zl in np.arange(lo, hi, dz):
+        s = min(dz, hi - zl)
+        zm = zl + 0.5 * s
+        cross = (z > zm) != (z[j] > zm)
+        x = np.sort(r[cross] + (zm - z[cross]) * (r[j][cross] - r[cross]) / (z[j][cross] - z[cross]))
+        v += np.pi * np.sum(x[1::2] ** 2 - x[0::2] ** 2) * s
+    return v
 
 
 def plane(origin, normal):
@@ -557,15 +613,20 @@ def tube_png(out):
     names = [str(n) for n in g["names"]]
     idx = [names.index(n) for n in TUBE]
     dets = [i for i, n in enumerate(names) if re.fullmatch(r"V\d{5}Z", n)]
-    info = parts_info(TUBE)
     pts = np.concatenate([placed(g, i)[0] for i in idx])
     seams = [placed(g, i)[0][:, 2].min() for i in idx[:2]]
-    for n in TUBE:
-        p = info.get(n, {})
-        print(f"{n}: {p.get('material', '?')}, {p.get('total_mass', 0) / 1e3:.1f} kg")
+    poly, dens, vols, _ = gdml_parts()  # the masses, from the GDML: the shells; the EFCu below the steel seam, the lid left out
+    rho = {n: dens[vols[n][0]] for n in TUBE}
+    shell = {n: rz_volume(poly[f"{n}_outer_bound"]) - rz_volume(poly[f"{n}_inner_bound"]) for n in TUBE[:2]}
+    ss_seam = poly[f"{TUBE[0]}_outer_bound"][1].min()
+    efcu = rz_volume(poly[TUBE[2]], z1=ss_seam) - rz_volume(poly[UGLAR], z1=ss_seam) - shell[TUBE[1]]
+    print(f"SS {rho[TUBE[0]] * shell[TUBE[0]] * 1e-6:.1f} kg, Cu {rho[TUBE[1]] * shell[TUBE[1]] * 1e-6:.1f} kg, "
+          f"EFCu {rho[TUBE[2]] * efcu * 1e-6:.1f} kg (the GDML's; the EFCu lid above the SS seam is left out)")
     print(f"z {pts[:, 2].min():.0f} .. {pts[:, 2].max():.0f} mm; seams: steel above z {seams[0]:.0f}, OFHC above z {seams[1]:.0f}; "
           f"the detectors at z {min(placed(g, i)[0][:, 2].min() for i in dets):.0f} .. {max(placed(g, i)[0][:, 2].max() for i in dets):.0f}")
-    tube = lambda clip=None: [make_actor([placed(g, i)], colours[n], int(g["depth"][i]), clip)[0] for i, n in zip(idx, TUBE)]
+    no_lid = plane((0, 0, seams[0]), (0, 0, -1))  # the EFCu mother above the steel seam is the lid: not drawn
+    tube = lambda clip=None: [make_actor([placed(g, i)], colours[n], int(g["depth"][i]),
+                                         [c for c in (clip, no_lid if n == TUBE[2] else None) if c is not None])[0] for i, n in zip(idx, TUBE)]
     th, ph = START_THETA_PHI
     write_panels(out, [
         ("the re-entrant tube, sim/run.mac's decay source: steel, OFHC Cu, EFCu", tube(), (th, ph, 0.9)),
@@ -583,8 +644,13 @@ def uglar_png(out):
     fibres = [i for i, n in enumerate(names) if n.startswith("fiber_core")]
     sipms = [i for i, n in enumerate(names) if re.fullmatch(r"larinstr_.*_sipm_silicon_.*", n)]
     mounts = [i for i, n in enumerate(names) if re.fullmatch(r"larinstr_.*_sipm_wrap_copper_.*", n)]
-    p = parts_info([UGLAR]).get(UGLAR, {})
-    print(f"{UGLAR}: {p.get('material', '?')}, {p.get('unit_volume', 0) / 1e6:.2f} m3, {p.get('total_mass', 0) / 1e6:.2f} t; "
+    poly, dens, vols, _ = gdml_parts()  # its volume and mass, from the GDML: its solid minus every volume placed in it
+    import xml.etree.ElementTree as ET
+    import collections
+    inside = collections.Counter(pv.find("volumeref").get("ref") for v in ET.parse(GDML).getroot().iter("volume") if v.get("name") == UGLAR
+                                 for pv in v.findall("physvol"))
+    net = rz_volume(poly[vols[UGLAR][1]]) - sum(n * solid_volume(lv) for lv, n in inside.items())
+    print(f"{UGLAR}: {vols[UGLAR][0]}, {net * 1e-9:.2f} m3, {dens[vols[UGLAR][0]] * net * 1e-9:.2f} t (the GDML's); "
           f"inside it {len(dets)} detectors, {int(sum(g['n_pl'][i] for i in fibres))} fibres, {int(sum(g['n_pl'][i] for i in sipms))} SiPMs")
     inner = np.concatenate([placed(g, i)[0] for i in dets + fibres])
     th, ph = START_THETA_PHI
@@ -606,17 +672,18 @@ def hpge_png(out):
     names = [str(n) for n in g["names"]]
     dets = [i for i, n in enumerate(names) if re.fullmatch(r"V\d{5}Z", n)]
     d = names.index(UNIT)
-    p = parts_info([names[i] for i in dets])
-    mass = sum(p[names[i]]["total_mass"] for i in dets if names[i] in p)
+    poly, dens, vols, placed_n = gdml_parts()  # the masses, from the GDML: each detector's solid x its density x its placements
+    kg = {names[i]: dens[vols[names[i]][0]] * rz_volume(poly[vols[names[i]][1]]) * 1e-6 * placed_n[names[i]] for i in dets}
+    mass = sum(kg.values())
     one = placed(g, d)[0]
     c = g["tra"][g["o_pl"][d]]
     r = np.hypot(*(one[:, :2] - c[:2]).T)
     z = one[:, 2] - c[2]
     bore = z[(r > 0.5) & (r < 6) & (z > 1)]  # the borehole wall, near the axis, above the base
     strings = len({names[i][1:4] for i in dets})
-    print(f"{len(dets)} detectors in {strings} strings, {p.get(UNIT, {}).get('material', '?')}, {mass / 1e3:.1f} kg; "
+    print(f"{len(dets)} detectors in {strings} strings, {vols[UNIT][0]}, {mass:.1f} kg (the GDML's); "
           f"{UNIT}: {z.max() - z.min():.1f} mm tall, {2 * r.max():.1f} mm across, borehole {z.max() - bore.min():.0f} mm deep "
-          f"from the top, {p.get(UNIT, {}).get('total_mass', 0) / 1e3:.3f} kg")
+          f"from the top, {kg[UNIT]:.3f} kg")
     blue = colours[UNIT]
     th, ph = START_THETA_PHI
     write_panels(out, [

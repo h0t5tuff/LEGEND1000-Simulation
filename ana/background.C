@@ -31,7 +31,6 @@ namespace cfg
   const double depKeep = 0.90, depE = 1592.5, depHalf = 2.5, sideLo = 5.0, sideHi = 10.0; // keV: peak +-2.5, sidebands 5-10 off it
   const int NC = 4;                                                                       // cut levels: none, M1, M1 + LAr, M1 + LAr + A/E
   const char *cutName[NC] = {"no cut", "M1", "M1 + LAr", "M1 + LAr + A/E"};
-  const double geMass_kg = 1000.0; // the array the BI is per kg of
   const double bgGoal = 1e-5;      // LEGEND-1000 goal [cts/(keV kg yr)] at Qbb, for scale
   const double simTol = 0.10;      // a design passes when its BI after all cuts is at most this much above the tube's as built, at 90% CL
   const double secPerYear = 365.25 * 24 * 3600;
@@ -161,12 +160,74 @@ static std::map<std::string, double> readDensities(const std::string &file) // [
   return volume;
 }
 
+static double readGermanium(const std::string &file, int &n) // [kg]: every germanium detector's solid x its density x its placements, out of the GDML text
+{
+  std::map<std::string, double> material;                                   // kg/m^3
+  std::map<std::string, Outline> solid;                                     // every <genericPolycone>
+  std::map<std::string, std::pair<std::string, std::string>> volume;        // logical volume -> its material, its solid
+  std::map<std::string, int> placed;                                        // logical volume -> its placements
+  std::ifstream in(file.c_str());
+  auto attr = [](const std::string &line, const char *key)
+  { size_t a = line.find(key); if (a == std::string::npos) return std::string(); a += strlen(key); return line.substr(a, line.find('"', a) - a); };
+  std::string mat, vol;
+  Outline *cur = nullptr;
+  for (std::string line; std::getline(in, line);)
+  {
+    if (cur)
+    {
+      double rr, zz;
+      if (line.find("</genericPolycone>") != std::string::npos)
+      {
+        cur->rmin = *std::min_element(cur->r.begin(), cur->r.end());
+        cur->rmax = *std::max_element(cur->r.begin(), cur->r.end());
+        cur->zmin = *std::min_element(cur->z.begin(), cur->z.end());
+        cur->zmax = *std::max_element(cur->z.begin(), cur->z.end());
+        cur = nullptr;
+      }
+      else if (sscanf(line.c_str(), " <rzpoint r=\"%lf\" z=\"%lf\"", &rr, &zz) == 2)
+      {
+        cur->r.push_back(rr);
+        cur->z.push_back(zz);
+      }
+      continue;
+    }
+    if (line.find("<genericPolycone") != std::string::npos)
+      cur = &solid[attr(line, "name=\"")];
+    else if (line.find("<material ") != std::string::npos)
+      mat = attr(line, "name=\"");
+    else if (!mat.empty() && line.find("<D ") != std::string::npos)
+    {
+      material[mat] = 1000 * atof(attr(line, "value=\"").c_str()); // no unit: g/cm^3
+      mat.clear();
+    }
+    else if (line.find("<volume ") != std::string::npos)
+      vol = attr(line, "name=\"");
+    else if (!vol.empty() && line.find("<materialref ") != std::string::npos)
+      volume[vol].first = attr(line, "ref=\"");
+    else if (!vol.empty() && line.find("<solidref ") != std::string::npos)
+      volume[vol].second = attr(line, "ref=\"");
+    else if (line.find("<volumeref ") != std::string::npos)
+      placed[attr(line, "ref=\"")]++;
+  }
+  double kg = 0;
+  n = 0;
+  for (auto &v : volume)
+    if (v.second.first.find("Germanium") != std::string::npos && solid.count(v.second.second) && solid[v.second.second].size())
+    {
+      n += placed[v.first];
+      kg += placed[v.first] * material[v.second.first] * solid[v.second.second].volume() * 1e-9;
+    }
+  return kg;
+}
+
 struct RT
 {
   std::string file;
   Outline wall, argon, ofhcOuter, ofhcInner, ssOuter, ssInner;       // the tube (EFCu mother), the UGLAr inside it, the two shells
   double density[3] = {0, 0, 0};                                     // kg/m^3, the GDML's: steel, Cu, EFCu (the SS shell, the OFHC shell, the mother)
   double zBottom = 0, zTop = 0, seamOFHC = 0, seamSS = 0, zHead = 0; // zHead: the widest point, where the head meets the barrel
+  double geMass = 0;                                                 // kg: the germanium detectors, the GDML's; the BI is per kg of them
+  int nGe = 0;
   bool ok = false;
   const char *sectionAt(double zq) const { return zq < seamOFHC ? "EFCu" : (zq < seamSS ? "OFHC" : "SS"); }
   const char *materialAt(double rq, double zq, double t = 1e-3) const // 1 um of slack: a float32 vertex lands off the surface it was drawn on
@@ -184,22 +245,25 @@ struct RT
     const char *m = materialAt(rq, zq);
     return !strcmp(m, "OFHC") ? 1 : (!strcmp(m, "SS") ? 2 : (!strcmp(m, "EFCu") ? 0 : -1));
   }                                                              // 0 mother, 1 OFHC, 2 SS
-  double wallVolume(double z0, double z1, double dz = 0.5) const // [mm^3]: the tube's solid minus the argon in it
+  // [mm^3]: the tube's wall between two heights: below the steel seam the solid minus the argon in it, above it the steel
+  // shell alone. the EFCu lid, the mother above the steel seam, is left out, as if it were not there
+  double tubeVolume(double z0, double z1, double dz = 0.5) const
   {
     z0 = std::max(std::min(z0, z1), zBottom);
     z1 = std::min(std::max(z0, z1), zTop);
     double v = 0;
     for (double z = z0; z < z1; z += dz)
     {
-      double s = std::min(dz, z1 - z);
-      v += (wall.areaAt(z + 0.5 * s) - argon.areaAt(z + 0.5 * s)) * s;
+      double s = std::min(dz, z1 - z), zm = z + 0.5 * s;
+      v += (zm < seamSS ? wall.areaAt(zm) - argon.areaAt(zm) : ssOuter.areaAt(zm) - ssInner.areaAt(zm)) * s;
     }
     return v;
   }
-  double physVolume(int p) const // [mm^3]: the shells are outer minus inner bound, the mother is the rest of the wall
+  bool inLid(int p, double zq) const { return p == 0 && zq > seamSS; } // the EFCu mother above the steel seam: the lid
+  double physVolume(int p) const // [mm^3]: the shells are outer minus inner bound, the mother is the rest of the wall, without the lid
   {
     double ofhc = ofhcOuter.volume() - ofhcInner.volume(), ss = ssOuter.volume() - ssInner.volume();
-    return p == 1 ? ofhc : (p == 2 ? ss : wallVolume(zBottom, zTop) - ofhc - ss);
+    return p == 1 ? ofhc : (p == 2 ? ss : tubeVolume(zBottom, zTop) - ofhc - ss);
   }
 };
 
@@ -243,6 +307,12 @@ static RT loadRT(const std::string &gdml)
       return rt;
     }
     rt.density[k] = d;
+  }
+  rt.geMass = readGermanium(rt.file, rt.nGe);
+  if (rt.geMass <= 0)
+  {
+    printf("ERROR: no germanium detectors in %s\n", rt.file.c_str());
+    return rt;
   }
   rt.zBottom = rt.wall.zmin;
   rt.zTop = rt.wall.zmax;
@@ -322,6 +392,7 @@ static void checkTube(const RT &s)
     printf("  %s %.2f (z %.0f)", s.sectionAt(zq), w.radiusAt(zq) - s.argon.radiusAt(zq), zq);
   printf("\n");
   printf("    densities [kg/m^3], the GDML's: steel %.0f, Cu %.0f, EFCu %.0f\n", s.density[0], s.density[1], s.density[2]);
+  printf("    germanium, the GDML's: %d detectors, %.1f kg: the BI is per kg of it. the EFCu lid above the steel seam is left out\n", s.nGe, s.geMass);
   bool ok = nAxis == 2 && !nDup && !nSpike && !nCross && fabs(step) <= tol && fabs(s.ofhcOuter.rmax - rBarrel) <= tol && fabs(s.ssOuter.rmax - rBarrel) <= tol;
   printf("    tube: %s\n\n", ok ? "PASS" : "FAIL");
 
@@ -338,7 +409,7 @@ static void checkTube(const RT &s)
   const double cut[4] = {s.zBottom - 1, s.seamOFHC, s.seamSS, s.zTop + 1};
   const char *secName[3] = {"EFCu", "OFHC Cu", "SS 316L"};
   const int secCol[3] = {TColor::GetColor("#c0392b"), TColor::GetColor("#e08e0b"), TColor::GetColor("#5d6d7e")};
-  for (int i = 0; i + 1 < n; i++) // each edge of the outline, split at the seams: the barrel takes its shell's colour, the endcap and the lid EFCu's
+  for (int i = 0; i + 1 < n; i++) // each edge of the outline, split at the seams: the barrel takes its shell's colour, the endcap EFCu's; no lid
     for (int k = 0; k < 3; k++)
     {
       double z0 = z[i], z1 = z[i + 1], a = 0, b = 1;
@@ -359,6 +430,8 @@ static void checkTube(const RT &s)
         pr[e] = r[i] + t * (r[i + 1] - r[i]);
         ph[e] = std::max(hLo, z0 + t * (z1 - z0) - s.zBottom);
       }
+      if (std::min(pr[0], pr[1]) < rBarrel - 1 && std::min(ph[0], ph[1]) > s.seamSS - s.zBottom)
+        continue; // the EFCu lid: left out
       const int m = std::min(pr[0], pr[1]) >= rBarrel - 1 ? k : 0;
       auto g = new TGraph(2, pr, ph);
       g->SetLineColor(secCol[m]);
@@ -375,12 +448,6 @@ static void checkTube(const RT &s)
     t->SetTextAlign(12);
     t->Draw();
   }
-  auto lid = new TLatex(w.rmax * 0.5, hTop + 60, "EFCu lid");
-  lid->SetTextColor(secCol[0]);
-  lid->SetTextFont(62);
-  lid->SetTextSize(0.03);
-  lid->SetTextAlign(21);
-  lid->Draw();
   for (double v : {s.seamOFHC, s.seamSS})
   {
     auto l = new TLine(0, v - s.zBottom, w.rmax * 1.08, v - s.zBottom);
@@ -410,7 +477,7 @@ struct Run
 {
   std::string file, iso;
   Long64_t nsim = 0;
-  long nFiles = 1, nMat[5] = {0, 0, 0, 0, 0};                                            // decays in EFCu, OFHC, SS, the argon, outside the wall
+  long nFiles = 1, nMat[5] = {0, 0, 0, 0, 0}, nLid = 0;                                  // decays in EFCu, OFHC, SS, the argon, outside the wall; in the EFCu lid, left out
   long nPv[3] = {0, 0, 0};                                                               // decays per section: 0 mother (EFCu), 1 OFHC, 2 SS
   long nZPv[3][cfg::NZ] = {{0}};                                                         // the same, per ~1 cm of depth
   double mcDensity[3] = {0, 0, 0};                                                       // simulated decays per m^3 in each section, measured
@@ -486,6 +553,11 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
     int k = 0;
     while (k < 4 && strcmp(m, matName[k]))
       k++;
+    if (rt.inLid(k, z)) // the EFCu lid: left out, as if it were not there
+    {
+      r.nLid++;
+      return;
+    }
     r.nMat[k]++;
     depth[ev] = rt.zTop - z;
     pv[ev] = k < 3 ? k : -1; // EFCu is the mother (0), OFHC 1, SS 2
@@ -506,6 +578,8 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
   }
   for (Long64_t i = 0; i < n; i++) // every decay, as counts
   {
+    if (depth[i] < 0) // the lid's
+      continue;
     r.dN[bin(depth[i], tot, cfg::NDB)]++;
     r.dW1[bin(depth[i], tot, cfg::NDB)] += win[1][i];
     r.dWA[bin(depth[i], tot, cfg::NDB)] += win[cfg::NC - 1][i];
@@ -699,6 +773,7 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
         into->winMap[k].insert(into->winMap[k].end(), r.winMap[k].begin(), r.winMap[k].end());
       for (int k = 0; k < 5; k++)
         into->nMat[k] += r.nMat[k];
+      into->nLid += r.nLid;
       for (int p = 0; p < 3; p++)
       {
         into->nPv[p] += r.nPv[p];
@@ -736,9 +811,9 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
       r.mcDensity[p] = r.nPv[p] / physV[p]; // remage fills the mother sparser than its daughters: measure, never assume
   // one simulated decay in section p, where material m sits = rho x A x 1 yr real decays per m^3, over the MC density, per kg of Ge
   auto weight = [&](const Run &r, int m, int p)
-  { return p < 0 || r.mcDensity[p] <= 0 ? 0.0 : rt.density[m] * cfg::activity(r.iso, m) * cfg::secPerYear / (r.mcDensity[p] * cfg::geMass_kg); };
+  { return p < 0 || r.mcDensity[p] <= 0 ? 0.0 : rt.density[m] * cfg::activity(r.iso, m) * cfg::secPerYear / (r.mcDensity[p] * rt.geMass); };
   auto massOf = [&](double d0, double d1, int m)
-  { return d1 > d0 ? rt.density[m] * rt.wallVolume(rt.zTop - d1, rt.zTop - d0) * 1e-9 : 0.0; };
+  { return d1 > d0 ? rt.density[m] * rt.tubeVolume(rt.zTop - d1, rt.zTop - d0) * 1e-9 : 0.0; };
   auto ulN = [](long n)
   { const double t[11] = {2.30, 3.89, 5.32, 6.68, 7.99, 9.27, 10.53, 11.77, 12.99, 14.21, 15.41}; return n <= 10 ? t[n] : n + 1.28 * sqrt((double)n) + 1; }; // Poisson 90% upper limit
   printf("window   : %.0f-%.0f keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's BEW): %.0f keV\n", cfg::winLo, cfg::winHi, cfg::winWidth);
@@ -756,8 +831,8 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
       for (auto k : r.win[c])
         w[c] += k;
     printf("=== %s   (%s, %lld decays)\n", r.iso.c_str(), r.file.c_str(), r.nsim);
-    printf("[6] decays: EFCu %.1f%%, OFHC %.1f%%, SS %.1f%%; in the argon %ld, outside the wall %ld%s%s\n", 100.0 * r.nMat[0] / r.nsim, 100.0 * r.nMat[1] / r.nsim,
-           100.0 * r.nMat[2] / r.nsim, r.nMat[3], r.nMat[4], r.nMat[3] || r.nMat[4] ? "  <- CONFINEMENT BUG" : "", r.nFiles > 1 ? Form("   (merged from %ld files)", r.nFiles) : "");
+    printf("[6] decays: EFCu %.1f%%, OFHC %.1f%%, SS %.1f%%; in the argon %ld, outside the wall %ld; in the EFCu lid %ld, left out%s%s\n", 100.0 * r.nMat[0] / r.nsim, 100.0 * r.nMat[1] / r.nsim,
+           100.0 * r.nMat[2] / r.nsim, r.nMat[3], r.nMat[4], r.nLid, r.nMat[3] || r.nMat[4] ? "  <- CONFINEMENT BUG" : "", r.nFiles > 1 ? Form("   (merged from %ld files)", r.nFiles) : "");
     printf("    hits: %ld, M1 %ld, + LAr %ld, + A/E %ld; in the window: %ld, %ld, %ld, %ld\n", r.nHit[0], r.nHit[1], r.nHit[2], r.nHit[3], w[0], w[1], w[2], w[3]);
     printf("    LAr veto keeps 1 in %.0f M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in %.0f\n",
            r.nHit[2] ? (double)r.nHit[1] / r.nHit[2] : 0.0, r.nLarMap ? (double)r.nHit[1] / r.nLarMap : 0.0);
