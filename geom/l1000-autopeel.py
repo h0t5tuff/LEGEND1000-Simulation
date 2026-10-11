@@ -615,18 +615,18 @@ def tube_png(out):
     dets = [i for i, n in enumerate(names) if re.fullmatch(r"V\d{5}Z", n)]
     pts = np.concatenate([placed(g, i)[0] for i in idx])
     seams = [placed(g, i)[0][:, 2].min() for i in idx[:2]]
-    poly, dens, vols, _ = gdml_parts()  # the masses, from the GDML: the shells; the EFCu below the steel seam, the lid left out
+    poly, dens, vols, _ = gdml_parts()  # the masses, from the GDML: each section is the tube's wall between its seams
     rho = {n: dens[vols[n][0]] for n in TUBE}
-    shell = {n: rz_volume(poly[f"{n}_outer_bound"]) - rz_volume(poly[f"{n}_inner_bound"]) for n in TUBE[:2]}
-    ss_seam = poly[f"{TUBE[0]}_outer_bound"][1].min()
-    efcu = rz_volume(poly[TUBE[2]], z1=ss_seam) - rz_volume(poly[UGLAR], z1=ss_seam) - shell[TUBE[1]]
-    print(f"SS {rho[TUBE[0]] * shell[TUBE[0]] * 1e-6:.1f} kg, Cu {rho[TUBE[1]] * shell[TUBE[1]] * 1e-6:.1f} kg, "
-          f"EFCu {rho[TUBE[2]] * efcu * 1e-6:.1f} kg (the GDML's; the EFCu lid above the SS seam is left out)")
+    ss_seam, cu_seam = poly[f"{TUBE[0]}_outer_bound"][1].min(), poly[f"{TUBE[1]}_outer_bound"][1].min()
+    wall = lambda z0, z1: rz_volume(poly[TUBE[2]], z0, z1) - rz_volume(poly[UGLAR], z0, z1)  # the solid minus the argon in it
+    ss = rz_volume(poly[f"{TUBE[0]}_outer_bound"]) - rz_volume(poly[f"{TUBE[0]}_inner_bound"])  # open at the top: the shell alone
+    print(f"SS {rho[TUBE[0]] * ss * 1e-6:.1f} kg, Cu {rho[TUBE[1]] * wall(cu_seam, ss_seam) * 1e-6:.1f} kg, "
+          f"EFCu {rho[TUBE[2]] * wall(-np.inf, cu_seam) * 1e-6:.1f} kg (the GDML's: SS above the SS seam, Cu between the seams, EFCu below)")
     print(f"z {pts[:, 2].min():.0f} .. {pts[:, 2].max():.0f} mm; seams: steel above z {seams[0]:.0f}, OFHC above z {seams[1]:.0f}; "
           f"the detectors at z {min(placed(g, i)[0][:, 2].min() for i in dets):.0f} .. {max(placed(g, i)[0][:, 2].max() for i in dets):.0f}")
-    no_lid = plane((0, 0, seams[0]), (0, 0, -1))  # the EFCu mother above the steel seam is the lid: not drawn
+    top = plane((0, 0, seams[1]), (0, 0, -1))  # the EFCu ends at the Cu seam
     tube = lambda clip=None: [make_actor([placed(g, i)], colours[n], int(g["depth"][i]),
-                                         [c for c in (clip, no_lid if n == TUBE[2] else None) if c is not None])[0] for i, n in zip(idx, TUBE)]
+                                         [c for c in (clip, top if n == TUBE[2] else None) if c is not None])[0] for i, n in zip(idx, TUBE)]
     th, ph = START_THETA_PHI
     write_panels(out, [
         ("the re-entrant tube, sim/run.mac's decay source: steel, OFHC Cu, EFCu", tube(), (th, ph, 0.9)),

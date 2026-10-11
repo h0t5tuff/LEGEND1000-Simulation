@@ -24,6 +24,13 @@
 /RMG/Generator/Confine Volume
 /RMG/Generator/Confinement/MaxSamplingTrials 100000     # thin or small volumes: the wall needs ~560 tries per vertex
 /RMG/Generator/Confinement/Physical/AddVolume {VOLS}
+/RMG/Generator/Confinement/SamplingMode SubtractGeometrical
+/RMG/Generator/Confinement/Geometrical/AddExcludedSolid Cylinder    # the tube has no top: nothing decays above the argon inside the SS shell
+/RMG/Generator/Confinement/Geometrical/CenterPositionX 0 m
+/RMG/Generator/Confinement/Geometrical/CenterPositionY 0 m
+/RMG/Generator/Confinement/Geometrical/CenterPositionZ 4.985 m
+/RMG/Generator/Confinement/Geometrical/Cylinder/OuterRadius 0.993 m
+/RMG/Generator/Confinement/Geometrical/Cylinder/Height 0.02 m
 /RMG/Generator/Select GPS
 /gps/particle ion
 /gps/energy 0 eV                                        # at rest: all the energy comes from the decay

@@ -39,7 +39,7 @@ namespace cfg
   const int NDB = 10; // depth slabs of the hit table
   const int NZ = 625; // ~1 cm depth bins: where each section's decays lie
 
-  const char *mat[3] = {"steel", "Cu", "EFCu"}; // top to bottom; their densities are the GDML's (RT::density)
+  const char *mat[3] = {"SS", "Cu", "EFCu"}; // top to bottom; their densities are the GDML's (RT::density)
   // chain activities [uBq/kg], {232Th, 238U}, from Ralph's MaterialMix slides (23 Jun 2026): steel from Bernhard (p. 5),
   // OFHC Cu from the MAJORANA assay paper (p. 15), EFCu from M. Green, CD-1 (p. 5)
   const double chain[3][2] = {{1000, 2500}, {1.1, 1.3}, {0.37, 0.19}};
@@ -68,18 +68,37 @@ struct Outline // the (r, z) corners of one GDML polycone
     }
     return best;
   }
-  bool contains(double rq, double zq) const // even-odd ray cast
+  std::vector<std::vector<int>> bins; // per height bin, the edges (i-1, i) that span it: contains() tests only those
+  double bz0 = 0, bdz = 0;
+  void index(int nb = 1024)
   {
-    bool in = false;
+    bins.assign(nb, {});
+    bz0 = zmin;
+    bdz = (zmax - zmin) / nb;
     for (int i = 0, j = size() - 1; i < size(); j = i++)
+    {
+      int b0 = std::max(0, (int)((std::min(z[i], z[j]) - bz0) / bdz)), b1 = std::min(nb - 1, (int)((std::max(z[i], z[j]) - bz0) / bdz));
+      for (int b = b0; b <= b1; b++)
+        bins[b].push_back(i);
+    }
+  }
+  bool contains(double rq, double zq) const // even-odd ray cast, over the edges at that height
+  {
+    if (zq < zmin || zq >= zmax || bins.empty())
+      return false;
+    bool in = false;
+    for (int i : bins[std::min((int)bins.size() - 1, (int)((zq - bz0) / bdz))])
+    {
+      int j = i ? i - 1 : size() - 1;
       if ((z[i] > zq) != (z[j] > zq) && rq < r[i] + (zq - z[i]) / (z[j] - z[i]) * (r[j] - r[i]))
         in = !in;
+    }
     return in;
   }
-  // inside or within tol of it (near), at least tol inside (deep). nudged in r AND z: on the lid's shallow cone a float32 z error of 0.2 um is 40 um in r
+  // inside or within tol of it (near), at least tol inside (deep). nudged in r AND z: on a shallow cone a float32 z error of 0.2 um is 40 um in r
   bool near(double rq, double zq, double t) const { return contains(rq, zq) || contains(rq + t, zq) || contains(fabs(rq - t), zq) || contains(rq, zq + t) || contains(rq, zq - t); }
   bool deep(double rq, double zq, double t) const { return contains(rq, zq) && contains(rq + t, zq) && contains(fabs(rq - t), zq) && contains(rq, zq + t) && contains(rq, zq - t); }
-  double areaAt(double zq) const // cross-section [mm^2]: the crossings pair into rings, so the argon around the lid counts right
+  double areaAt(double zq) const // cross-section [mm^2]: the crossings pair into rings, so a hollow solid counts right
   {
     std::vector<double> x;
     for (int i = 0, j = size() - 1; i < size(); j = i++)
@@ -129,6 +148,7 @@ static Outline readOutline(const std::string &file, const char *solid) // one <g
     o.rmax = *std::max_element(o.r.begin(), o.r.end());
     o.zmin = *std::min_element(o.z.begin(), o.z.end());
     o.zmax = *std::max_element(o.z.begin(), o.z.end());
+    o.index();
   }
   return o;
 }
@@ -229,7 +249,7 @@ struct RT
   double geMass = 0;                                                 // kg: the germanium detectors, the GDML's; the BI is per kg of them
   int nGe = 0;
   bool ok = false;
-  const char *sectionAt(double zq) const { return zq < seamOFHC ? "EFCu" : (zq < seamSS ? "OFHC" : "SS"); }
+  const char *sectionAt(double zq) const { return zq < seamOFHC ? "EFCu" : (zq < seamSS ? "Cu" : "SS"); }
   const char *materialAt(double rq, double zq, double t = 1e-3) const // 1 um of slack: a float32 vertex lands off the surface it was drawn on
   {
     if (!wall.near(rq, zq, t))
@@ -238,7 +258,11 @@ struct RT
       return "OFHC";
     if (ssOuter.near(rq, zq, t) && !ssInner.deep(rq, zq, t))
       return "SS";
-    return argon.deep(rq, zq, t) ? "LAr" : "EFCu";
+    if (argon.deep(rq, zq, t))
+      return "LAr";
+    // the mother's copper, by the seams: EFCu only below the Cu seam; between the seams it is the Cu section's (a 1.4 kg wedge
+    // where the EFCu's tapered top meets the Cu shell's); above the steel seam the tube is open
+    return zq > seamSS ? "outside" : (zq > seamOFHC ? "OFHC" : "EFCu");
   }
   int physAt(double rq, double zq) const
   {
@@ -246,7 +270,7 @@ struct RT
     return !strcmp(m, "OFHC") ? 1 : (!strcmp(m, "SS") ? 2 : (!strcmp(m, "EFCu") ? 0 : -1));
   }                                                              // 0 mother, 1 OFHC, 2 SS
   // [mm^3]: the tube's wall between two heights: below the steel seam the solid minus the argon in it, above it the steel
-  // shell alone. the EFCu lid, the mother above the steel seam, is left out, as if it were not there
+  // shell alone: the tube is open at the top, its EFCu ends at the steel seam
   double tubeVolume(double z0, double z1, double dz = 0.5) const
   {
     z0 = std::max(std::min(z0, z1), zBottom);
@@ -259,11 +283,9 @@ struct RT
     }
     return v;
   }
-  bool inLid(int p, double zq) const { return p == 0 && zq > seamSS; } // the EFCu mother above the steel seam: the lid
-  double physVolume(int p) const // [mm^3]: the shells are outer minus inner bound, the mother is the rest of the wall, without the lid
+  double physVolume(int p) const // [mm^3]: each section is the tube's wall between its seams: EFCu (0) below the Cu seam, Cu (1), SS (2)
   {
-    double ofhc = ofhcOuter.volume() - ofhcInner.volume(), ss = ssOuter.volume() - ssInner.volume();
-    return p == 1 ? ofhc : (p == 2 ? ss : tubeVolume(zBottom, zTop) - ofhc - ss);
+    return p == 1 ? tubeVolume(seamOFHC, seamSS) : (p == 2 ? tubeVolume(seamSS, zTop) : tubeVolume(zBottom, seamOFHC));
   }
 };
 
@@ -382,17 +404,17 @@ static void checkTube(const RT &s)
     }
   }
   const double tol = 0.05, zBarrel = 0.5 * (s.seamOFHC + s.seamSS), rBarrel = w.radiusAt(zBarrel), step = w.rmax - rBarrel;
-  printf("[3] the tube in %s: z %.1f .. %.1f mm (%.3f m), %d points, seams EFCu | %.1f | OFHC | %.1f | SS\n", s.file.c_str(), s.zBottom, s.zTop,
+  printf("TUBE  read from %s: z %.1f .. %.1f mm (%.3f m), %d outline points, seams EFCu | %.1f | Cu | %.1f | SS\n", s.file.c_str(), s.zBottom, s.zTop,
          (s.zTop - s.zBottom) / 1000, n, s.seamOFHC, s.seamSS);
   printf("    clean surface: on-axis points %d (expect 2), duplicates %d, spikes %d, self-intersections %d (expect 0)\n", nAxis, nDup, nSpike, nCross);
   printf("    endcap: radius %.4f at z %.1f, barrel %.4f: step %+.4f mm%s\n", w.rmax, s.zHead, rBarrel, step, fabs(step) <= tol ? "" : "  <- NOT flush");
-  printf("    shells against the barrel: OFHC %+.4f, SS %+.4f mm\n", s.ofhcOuter.rmax - rBarrel, s.ssOuter.rmax - rBarrel);
+  printf("    shells against the barrel: Cu %+.4f, SS %+.4f mm\n", s.ofhcOuter.rmax - rBarrel, s.ssOuter.rmax - rBarrel);
   printf("    wall thickness [mm]:");
   for (double zq : {s.zHead, 0.5 * (s.zHead + s.seamOFHC), s.seamOFHC - 10, zBarrel, 0.5 * (s.seamSS + s.zTop)})
     printf("  %s %.2f (z %.0f)", s.sectionAt(zq), w.radiusAt(zq) - s.argon.radiusAt(zq), zq);
   printf("\n");
-  printf("    densities [kg/m^3], the GDML's: steel %.0f, Cu %.0f, EFCu %.0f\n", s.density[0], s.density[1], s.density[2]);
-  printf("    germanium, the GDML's: %d detectors, %.1f kg: the BI is per kg of it. the EFCu lid above the steel seam is left out\n", s.nGe, s.geMass);
+  printf("    densities [kg/m^3], the GDML's: SS %.0f, Cu %.0f, EFCu %.0f\n", s.density[0], s.density[1], s.density[2]);
+  printf("    germanium, the GDML's: %d detectors, %.1f kg: the BI is per kg of it\n", s.nGe, s.geMass);
   bool ok = nAxis == 2 && !nDup && !nSpike && !nCross && fabs(step) <= tol && fabs(s.ofhcOuter.rmax - rBarrel) <= tol && fabs(s.ssOuter.rmax - rBarrel) <= tol;
   printf("    tube: %s\n\n", ok ? "PASS" : "FAIL");
 
@@ -409,7 +431,7 @@ static void checkTube(const RT &s)
   const double cut[4] = {s.zBottom - 1, s.seamOFHC, s.seamSS, s.zTop + 1};
   const char *secName[3] = {"EFCu", "OFHC Cu", "SS 316L"};
   const int secCol[3] = {TColor::GetColor("#c0392b"), TColor::GetColor("#e08e0b"), TColor::GetColor("#5d6d7e")};
-  for (int i = 0; i + 1 < n; i++) // each edge of the outline, split at the seams: the barrel takes its shell's colour, the endcap EFCu's; no lid
+  for (int i = 0; i + 1 < n; i++) // each edge of the outline, split at the seams: the barrel takes its shell's colour, the endcap EFCu's
     for (int k = 0; k < 3; k++)
     {
       double z0 = z[i], z1 = z[i + 1], a = 0, b = 1;
@@ -431,7 +453,7 @@ static void checkTube(const RT &s)
         ph[e] = std::max(hLo, z0 + t * (z1 - z0) - s.zBottom);
       }
       if (std::min(pr[0], pr[1]) < rBarrel - 1 && std::min(ph[0], ph[1]) > s.seamSS - s.zBottom)
-        continue; // the EFCu lid: left out
+        continue; // above the steel seam the tube is its shell alone, open at the top
       const int m = std::min(pr[0], pr[1]) >= rBarrel - 1 ? k : 0;
       auto g = new TGraph(2, pr, ph);
       g->SetLineColor(secCol[m]);
@@ -477,7 +499,7 @@ struct Run
 {
   std::string file, iso;
   Long64_t nsim = 0;
-  long nFiles = 1, nMat[5] = {0, 0, 0, 0, 0}, nLid = 0;                                  // decays in EFCu, OFHC, SS, the argon, outside the wall; in the EFCu lid, left out
+  long nFiles = 1, nMat[5] = {0, 0, 0, 0, 0};                                            // decays in EFCu, OFHC, SS, the argon, outside the wall
   long nPv[3] = {0, 0, 0};                                                               // decays per section: 0 mother (EFCu), 1 OFHC, 2 SS
   long nZPv[3][cfg::NZ] = {{0}};                                                         // the same, per ~1 cm of depth
   double mcDensity[3] = {0, 0, 0};                                                       // simulated decays per m^3 in each section, measured
@@ -538,7 +560,8 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
     printf("ERROR: no vtx tree in %s\n", file.c_str());
     return r;
   }
-  const Long64_t n = r.nsim = vtx->GetEntries();
+  r.nsim = vtx->GetEntries();                                 // the decays
+  const Long64_t n = (Long64_t)vtx->GetMaximum("evtid") + 1; // the event numbers, up to it: some may have no vertex, no decay
   std::vector<float> depth(n, -1);
   std::vector<std::vector<short>> win(cfg::NC, std::vector<short>(n, 0)), winMap(2, std::vector<short>(n, 0));
   std::vector<signed char> pv(n, -1);
@@ -553,11 +576,6 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
     int k = 0;
     while (k < 4 && strcmp(m, matName[k]))
       k++;
-    if (rt.inLid(k, z)) // the EFCu lid: left out, as if it were not there
-    {
-      r.nLid++;
-      return;
-    }
     r.nMat[k]++;
     depth[ev] = rt.zTop - z;
     pv[ev] = k < 3 ? k : -1; // EFCu is the mother (0), OFHC 1, SS 2
@@ -578,7 +596,7 @@ static Run readRun(const std::string &file, const std::string &iso, const RT &rt
   }
   for (Long64_t i = 0; i < n; i++) // every decay, as counts
   {
-    if (depth[i] < 0) // the lid's
+    if (depth[i] < 0) // an event number with no decay
       continue;
     r.dN[bin(depth[i], tot, cfg::NDB)]++;
     r.dW1[bin(depth[i], tot, cfg::NDB)] += win[1][i];
@@ -691,14 +709,14 @@ static void tuneAoE(const std::vector<std::string> &files)
   Line &dep = line[0];
   if (net(dep) < 30)
   {
-    printf("[5] A/E cut: only %.0f DEP events net, kept at the production's %.2f\n\n", net(dep), cfg::psd_low);
+    printf("A/E CUT  only %.0f DEP events net, kept at the production's %.2f\n\n", net(dep), cfg::psd_low);
     return;
   }
   double thr = 0;
   while (thr > -50 && kept(dep, thr) < cfg::depKeep)
     thr -= 0.005;
   gPsdLow = thr;
-  printf("[5] A/E cut tuned on the Tl208 DEP (%.1f keV) in M1 hits: %zu in +-%.1f keV, %zu in the sidebands %.0f-%.0f keV off it, %.0f net\n",
+  printf("A/E CUT  tuned on the Tl208 DEP (%.1f keV) in M1 hits: %zu in +-%.1f keV, %zu in the sidebands %.0f-%.0f keV off it, %.0f net\n",
          cfg::depE, dep.peak.size(), cfg::depHalf, dep.side.size(), cfg::sideLo, cfg::sideHi, net(dep));
   printf("    classifier > %.2f keeps %.0f%% of it (+- %.0f%% statistics); the production's > %.2f kept %.0f%%\n", gPsdLow, 100 * kept(dep, gPsdLow),
          100 * sqrt(cfg::depKeep * (1 - cfg::depKeep) / net(dep)), cfg::psd_low, 100 * kept(dep, cfg::psd_low));
@@ -773,7 +791,6 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
         into->winMap[k].insert(into->winMap[k].end(), r.winMap[k].begin(), r.winMap[k].end());
       for (int k = 0; k < 5; k++)
         into->nMat[k] += r.nMat[k];
-      into->nLid += r.nLid;
       for (int p = 0; p < 3; p++)
       {
         into->nPv[p] += r.nPv[p];
@@ -816,10 +833,10 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
   { return d1 > d0 ? rt.density[m] * rt.tubeVolume(rt.zTop - d1, rt.zTop - d0) * 1e-9 : 0.0; };
   auto ulN = [](long n)
   { const double t[11] = {2.30, 3.89, 5.32, 6.68, 7.99, 9.27, 10.53, 11.77, 12.99, 14.21, 15.41}; return n <= 10 ? t[n] : n + 1.28 * sqrt((double)n) + 1; }; // Poisson 90% upper limit
-  printf("window   : %.0f-%.0f keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's BEW): %.0f keV\n", cfg::winLo, cfg::winHi, cfg::winWidth);
-  printf("cuts     : M1 (exactly one detector above %.0f keV), LAr veto (the SiPMs see < %.0f photoelectrons), A/E classifier > %.2f (%.0f%% DEP, [5]). energies: the detector response\n",
+  printf("INPUTS  window: %.0f-%.0f keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's BEW): %.0f keV\n", cfg::winLo, cfg::winHi, cfg::winWidth);
+  printf("        cuts: M1 (exactly one detector above %.0f keV), LAr veto (the SiPMs see < %.0f photoelectrons), A/E classifier > %.2f (%.0f%% DEP, A/E CUT)\n",
          cfg::m1_keV, cfg::lar_pe, gPsdLow, 100 * cfg::depKeep);
-  printf("activity : chain [uBq/kg] 232Th / 238U: steel %g / %g, Cu %g / %g, EFCu %g / %g; Tl208 is %.2f%% of 232Th, Bi214 %.0f%% of 238U\n\n",
+  printf("        activity: chain [uBq/kg] 232Th / 238U: SS %g / %g, Cu %g / %g, EFCu %g / %g; Tl208 is %.2f%% of 232Th, Bi214 %.0f%% of 238U\n\n",
          cfg::chain[0][0], cfg::chain[0][1], cfg::chain[1][0], cfg::chain[1][1], cfg::chain[2][0], cfg::chain[2][1], 100 * cfg::branch[0], 100 * cfg::branch[1]);
 
   for (auto &r : R)
@@ -830,27 +847,30 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
     for (int c = 0; c < NC; c++)
       for (auto k : r.win[c])
         w[c] += k;
-    printf("=== %s   (%s, %lld decays)\n", r.iso.c_str(), r.file.c_str(), r.nsim);
-    printf("[6] decays: EFCu %.1f%%, OFHC %.1f%%, SS %.1f%%; in the argon %ld, outside the wall %ld; in the EFCu lid %ld, left out%s%s\n", 100.0 * r.nMat[0] / r.nsim, 100.0 * r.nMat[1] / r.nsim,
-           100.0 * r.nMat[2] / r.nsim, r.nMat[3], r.nMat[4], r.nLid, r.nMat[3] || r.nMat[4] ? "  <- CONFINEMENT BUG" : "", r.nFiles > 1 ? Form("   (merged from %ld files)", r.nFiles) : "");
-    printf("    hits: %ld, M1 %ld, + LAr %ld, + A/E %ld; in the window: %ld, %ld, %ld, %ld\n", r.nHit[0], r.nHit[1], r.nHit[2], r.nHit[3], w[0], w[1], w[2], w[3]);
+    printf("DECAYS  %s  (%s, %lld decays%s)\n", r.iso.c_str(), r.file.c_str(), r.nsim, r.nFiles > 1 ? Form(", %ld files", r.nFiles) : "");
+    printf("    where they decayed: EFCu %.1f%%, Cu %.1f%%, SS %.1f%%; in the argon %ld, outside the tube %ld%s\n", 100.0 * r.nMat[0] / r.nsim,
+           100.0 * r.nMat[1] / r.nsim, 100.0 * r.nMat[2] / r.nsim, r.nMat[3], r.nMat[4], r.nMat[3] || r.nMat[4] ? "  <- CONFINEMENT BUG" : "");
+    printf("    germanium hits: %ld, after M1 %ld, + LAr veto %ld, + A/E %ld; of these in the window: %ld, %ld, %ld, %ld\n", r.nHit[0], r.nHit[1], r.nHit[2], r.nHit[3],
+           w[0], w[1], w[2], w[3]);
     printf("    LAr veto keeps 1 in %.0f M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in %.0f\n",
            r.nHit[2] ? (double)r.nHit[1] / r.nHit[2] : 0.0, r.nLarMap ? (double)r.nHit[1] / r.nLarMap : 0.0);
     const int asBuilt[3] = {2, 1, 0}; // mother EFCu, OFHC shell Cu, SS shell steel
-    const char *pvName[3] = {"mother", "OFHC", "SS"};
-    printf("    %-7s %-6s %9s %8s %10s %9s %11s %14s\n", "section", "mat", "V [m^3]", "M [kg]", "A [Bq]", "MC dec.", "MC per m^3", "decays/yr per");
+    printf("    the normalisation, per section: volume, mass, activity, simulated decays (and per m^3), weight = real decays a year per simulated one\n");
+    printf("    %-7s %9s %8s %10s %10s %11s %8s\n", "section", "V [m^3]", "M [kg]", "A [Bq]", "simulated", "per m^3", "weight");
     for (int p = 0; p < 3; p++)
     {
       int m = asBuilt[p];
       double mass = physV[p] * rt.density[m], A = mass * cfg::activity(r.iso, m);
-      printf("    %-7s %-6s %9.5f %8.1f %10.3e %9ld %11.0f %14.3g\n", pvName[p], cfg::mat[m], physV[p], mass, A, r.nPv[p], r.mcDensity[p], r.nPv[p] ? A * cfg::secPerYear / r.nPv[p] : 0.0);
+      printf("    %-7s %9.5f %8.1f %10.3e %10ld %11.0f %8.3g\n", cfg::mat[m], physV[p], mass, A, r.nPv[p], r.mcDensity[p], r.nPv[p] ? A * cfg::secPerYear / r.nPv[p] : 0.0);
     }
     double dAvg = 0.5 * (r.mcDensity[1] + r.mcDensity[2]);
-    printf("    sampling density mother / shells = %.3f   (1.000 would be uniform; the weights use the measured density)\n", dAvg > 0 ? r.mcDensity[0] / dAvg : 0.0);
+    printf("    the runs sampled the EFCu %.3f x as densely as the shells (1 = evenly): each section's weight uses its own density\n", dAvg > 0 ? r.mcDensity[0] / dAvg : 0.0);
 
     //-------------------------------------------------------------------------------
     //  7. Per run: where the hits come from, by depth; and the share of the M1 window hits all cuts keep there
-    printf("[7] depth [m]          decays   hits/decay   window: M1   all cuts   kept\n");
+    printf("DEPTH  %s  by depth below the tube's top: decays, germanium hits per decay, window events after M1 and after all cuts,\n", r.iso.c_str());
+    printf("       and the cut survival = window events after all cuts / after M1\n");
+    printf("    depth [m]            decays   hits/decay   window: M1   all cuts   survival\n");
     for (int b = 0; b < cfg::NDB; b++)
       printf("    %5.2f..%-8.2f %10ld %12.2e %12ld %10ld %6s%s\n", depthTot * b / cfg::NDB / 1000, depthTot * (b + 1) / cfg::NDB / 1000, r.dN[b],
              r.dN[b] ? (double)r.dH[b] / r.dN[b] : 0.0, r.dW1[b], r.dWA[b], r.dW1[b] ? Form("%.4f", (double)r.dWA[b] / r.dW1[b]) : "-",
@@ -860,7 +880,7 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
 
   //-------------------------------------------------------------------------------
   //  8. Background index as built, per chain and section:
-  printf("[8] background index as built [cts/(keV kg yr)], +- MC statistics; a section with no window hit gets its 90%% limit, 2.30 x its heaviest decay\n");
+  printf("BI AS BUILT  [cts/(keV kg yr)], +- simulation statistics; a section with no window event gets its 90%% limit, 2.30 x its heaviest decay\n");
   printf("    %-6s %-6s %15s   %-22s %-22s %-22s %-22s\n", "chain", "sect", "win hits", cutName[0], cutName[1], cutName[2], cutName[3]);
   double gB[NC] = {0}, gV[NC] = {0};
   long gN[NC] = {0};               // window hits behind each total
@@ -1009,9 +1029,9 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
     double ms = massOf(0, l1, 0), mc = massOf(l1, L2, 1), me = massOf(L2, depthTot, 2), mt = ms + mc + me;
     return std::string(Form("%4.0f : %3.0f : %3.0f kg = %2.0f : %2.0f : %2.0f %%", ms, mc, me, 100 * ms / mt, 100 * mc / mt, 100 * me / mt));
   };
-  printf("\n[9] designs against the tube as built, BI %.2e after all cuts: steel to L1, Cu to L2, EFCu below. a design passes when its BI\n", biBuilt);
+  printf("\nDESIGNS  against the tube as built (BI %.2e after all cuts): SS down to L1, Cu down to L2, EFCu below. a design passes when its BI\n", biBuilt);
   printf("    rises by at most %.0f%%: at 90%% confidence (bound), or on the central value (central). L1 from %.2f m down, 1 cm at a time\n", 100 * cfg::simTol, L1built / 1000);
-  printf("    the change counts M1 window hits x S, the share all cuts keep: below %.2f m", farEdge / 1000);
+  printf("    a design's change is counted on window events after M1 x the cut survival (see DEPTH): below %.2f m", farEdge / 1000);
   for (auto &r : R)
     printf(" %s %.2e", r.iso.c_str(), r.S);
   printf("; above it, both chains, %ld of %ld = %.2e (90%% bound %.2e)\n", fA, fM, sFar, sFarUp);
@@ -1046,17 +1066,18 @@ void background(const char *runs = "output/tl208*_hit.root=Tl208,output/bi214*_h
   }
   for (int k = 0; k < 2; k++)
     if (best[k][0] > 0)
-      printf("    least EFCu, then most steel, %s: L2 %.2f m, L1 %.2f m: %s\n", k ? "on the central value" : "at 90% confidence", best[k][1] / 1000,
+      printf("    least EFCu, then most SS, %s: L2 %.2f m, L1 %.2f m: %s\n", k ? "on the central value" : "at 90% confidence", best[k][1] / 1000,
              best[k][0] / 1000, split(best[k][0], best[k][1]).c_str());
-  printf("    as built: %s. rise: the 90%% bound on dB (bound) or dB (central), over the BI as built\n", split(L1built, L2built).c_str());
+  printf("    as built: %s. rise: over the BI as built, the 90%% bound on the change (bound) or the change itself (central)\n", split(L1built, L2built).c_str());
   // the statistics a bound needs: a slab with no M1 window hit bounds steel there at UL(0) x S x its weight change, which falls
   // as more decays are simulated in it
-  printf("    a slab with no M1 window hit bounds what steel there adds (x S above %.2f m); to bring that under %.0f%% of the BI as built per chain:\n", farEdge / 1000, 50 * cfg::simTol);
+  printf("    a depth range with no window event after M1 still bounds what SS there would add, at 2.30 x the cut survival x its weight;\n");
+  printf("    the decays that bring that bound under %.0f%% of the BI as built, per chain:\n", 50 * cfg::simTol);
   for (auto &r : R)
     for (int p : {1, 2}) // steel added on the OFHC shell's depths; the steel as built, on the SS shell's
     {
       const double dw = (weight(r, 0, p) - (p == 1 ? weight(r, 1, p) : 0.0)) / cfg::winWidth, b = UL90 * sFar * dw;
-      printf("      %-6s %-30s %10ld decays now: bound %5.0f%%; %.1e decays would bring it to %.0f%%\n", r.iso.c_str(), p == 1 ? "steel added in the OFHC shell" : "the steel as built, SS shell",
+      printf("      %-6s %-30s %10ld decays now: bound %5.0f%%; %.1e decays would bring it to %.0f%%\n", r.iso.c_str(), p == 1 ? "SS added in the Cu section" : "the SS as built",
              r.nPv[p], 100 * b / biBuilt, r.nPv[p] * b / (0.5 * maxRise), 50 * cfg::simTol);
     }
 
