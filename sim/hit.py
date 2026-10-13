@@ -22,7 +22,8 @@ from legendmeta import Legend1000Metadata
 # -------------------------------------------------------------------------------
 #  1. Configuration:
 p = argparse.ArgumentParser(description="detector response of remage runs, with reboost")
-p.add_argument("stp", nargs="+", help="remage LH5 outputs (-m: one file per run)")
+p.add_argument("stp", nargs="+", help="remage LH5 outputs (-m: one file per run); the NERSC ones are in output/output_lh5")
+p.add_argument("--outdir", default="output", help="where each <run>_hit.root goes")
 p.add_argument("--gdml", default="geom/l1000.gdml")
 p.add_argument("--metadata", default=os.environ.get("LEGEND1000_METADATA", os.path.expanduser("~/Documents/legend1000-metadata")))
 p.add_argument("--optmap", default="output/merged_optmap_20260225_063750.lh5", help="UGLAr optical map; its group /all, every SiPM summed, is used")
@@ -91,7 +92,7 @@ for stp in args.stp:
     # random number is drawn from it, the germanium smearing and the argon's photons and photoelectrons alike: reboost.spms's
     # processors draw from an unseeded generator, so the argon calls the reboost.optmap.convolve functions under them
     rng = np.random.default_rng([args.seed, zlib.crc32(os.path.basename(stp).encode())])
-    out = stp.removesuffix(".lh5") + "_hit.root"
+    out = os.path.join(args.outdir, os.path.basename(stp).removesuffix(".lh5") + "_hit.root")
     origins = lh5.read("detector_origins", stp)
     on_disk = set(lh5.ls(stp, "stp/"))
     vtx = lh5.read("vtx", stp).view_as("ak")

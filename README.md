@@ -7,9 +7,9 @@ This study calculates the Background Index (BI) before and after cuts, and asks 
 
 | result                          |                                                                                                                                     |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| as built                        | BI(before-cuts) = 4.60 × 10⁻⁶ cts/(keV·kg·yr), BI(after-cuts) = 1.11 ± 0.12 × 10⁻⁸. **Ratios: 619 : 672 : 175 kg = 42 : 46 : 12 %** |
-| 0.23m less EFCu                 | BI +6%. **Ratios: 619 : 692 : 154 kg = 42 : 47 : 11 %**                                                                             |
-| 0.43m less EFCu & 0.60m more SS | BI +8%. **Ratios: 800 : 507 : 137 kg = 55 : 35 : 10 %**                                                                             |
+| as built                        | BI(before-cuts) = 4.60 × 10⁻⁶ cts/(keV·kg·yr), BI(after-cuts) = 1.03 ± 0.10 × 10⁻⁸. **Ratios: 619 : 672 : 175 kg = 42 : 46 : 12 %** |
+| 0.33m less EFCu                 | BI +10%. **Ratios: 619 : 701 : 146 kg = 42 : 48 : 10 %**                                                                            |
+| 0.43m less EFCu & 0.22m more SS | BI +10%. **Ratios: 685 : 635 : 137 kg = 47 : 44 : 9 %**                                                                             |
 |                                 |
 
 [how radioactive is EFCu?](#how-radioactive-is-efcu) · [Method](#method) ·
@@ -107,27 +107,27 @@ The printout's DECAYS part, per chain: where the decays fell, the germanium hits
 the window), and the normalisation (`simulated` is N_sim, `weight` is N_real / N_sim):
 
 ```
-DECAYS  Tl208  (output/tl208*_hit.root, 125680279 decays, 15 files)
-    where they decayed: EFCu 18.3%, Cu 40.9%, SS 40.8%; in the argon 0, outside the tube 0
-    germanium hits: 1477398, after M1 1261435, + LAr veto 31109, + A/E 4330; of these in the window: 48973, 41447, 494, 86
-    LAr veto keeps 1 in 41 M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in 14
+DECAYS  Tl208  (output/tl208*_hit.root, 1155680279 decays, 118 files)
+    where they decayed: EFCu 2.0%, Cu 39.9%, SS 58.1%; in the argon 0, outside the tube 0
+    germanium hits: 1534079, after M1 1311073, + LAr veto 32663, + A/E 4406; of these in the window: 50695, 43001, 646, 95
+    LAr veto keeps 1 in 40 M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in 14
     the normalisation, per section: volume, mass, activity, simulated decays (and per m^3), weight = real decays a year per simulated one
     section   V [m^3]   M [kg]     A [Bq]  simulated     per m^3   weight
     EFCu      0.01948    174.6  2.322e-05   23040358  1182487533 3.18e-05
-    Cu        0.07497    671.7  2.656e-04   51383783   685374882 0.000163
-    SS        0.07742    619.4  2.226e-01   51256138   662015579    0.137
-    the runs sampled the EFCu 1.755 x as densely as the shells (1 = evenly): each section's weight uses its own density
+    Cu        0.07497    671.7  2.656e-04  461384081  6154102355 1.82e-05
+    SS        0.07742    619.4  2.226e-01  671255840  8669826504   0.0105
+    the runs sampled the EFCu 0.160 x as densely as the shells (1 = evenly): each section's weight uses its own density
 
-DECAYS  Bi214  (output/bi214*_hit.root, 635672115 decays, 66 files)
-    where they decayed: EFCu 3.6%, Cu 47.4%, SS 49.0%; in the argon 0, outside the tube 0
-    germanium hits: 763353, after M1 685024, + LAr veto 31387, + A/E 4346; of these in the window: 2350, 2185, 488, 21
+DECAYS  Bi214  (output/bi214*_hit.root, 7925672115 decays, 795 files)
+    where they decayed: EFCu 0.3%, Cu 40.4%, SS 59.3%; in the argon 0, outside the tube 0
+    germanium hits: 851490, after M1 765253, + LAr veto 34763, + A/E 4670; of these in the window: 2724, 2543, 607, 25
     LAr veto keeps 1 in 22 M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in 10
     the normalisation, per section: volume, mass, activity, simulated decays (and per m^3), weight = real decays a year per simulated one
     section   V [m^3]   M [kg]     A [Bq]  simulated     per m^3   weight
     EFCu      0.01948    174.6  3.317e-05   23030232  1181967842 4.55e-05
-    Cu        0.07497    671.7  8.733e-04  301384853  4019976653 9.14e-05
-    SS        0.07742    619.4  1.548e+00  311257030  4020142973    0.157
-    the runs sampled the EFCu 0.294 x as densely as the shells (1 = evenly): each section's weight uses its own density
+    Cu        0.07497    671.7  8.733e-04 3201387003 42701220320 8.61e-06
+    SS        0.07742    619.4  1.548e+00 4701254880 60720610131   0.0104
+    the runs sampled the EFCu 0.023 x as densely as the shells (1 = evenly): each section's weight uses its own density
 ```
 
 ### 3. Inputs
@@ -145,7 +145,7 @@ Bi-214 is 100% of the ²³⁸U chain; Tl-208 35.94% of the ²³²Th chain [[8]](
 
 ```
 INPUTS  window: 1950-2350 keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's BEW): 360 keV
-        cuts: M1 (exactly one detector above 25 keV), LAr veto (the SiPMs see < 4 photoelectrons), A/E classifier > -1.10 (90% DEP, A/E CUT)
+        cuts: M1 (exactly one detector above 25 keV), LAr veto (the SiPMs see < 4 photoelectrons), A/E classifier > -1.07 (90% DEP, A/E CUT)
         activity: chain [uBq/kg] 232Th / 238U: SS 1000 / 2500, Cu 1.1 / 1.3, EFCu 0.37 / 0.19; Tl208 is 35.94% of 232Th, Bi214 100% of 238U
 ```
 
@@ -159,7 +159,7 @@ experiment `l1000dsg01`) [[6]](#references), applied with reboost [[7]](#referen
 | A/E            | A: max of one template current pulse per step, at its drift time; σ_A/E = 0.01                   | `pars/geds/currmod`, `aoeresmod`; `output/dtmap_V00000A.lh5` |
 | photoelectrons | LAr scintillation × the summed optical map; σ 0.3 PE, 16 ns merging, ≤ 100 PE per hit            | `/all` of the optical map; `tier/opt`                        |
 | M1, LAr veto   | one detector above 25 keV; rejects ≥ 4 PE summed                                                 | `tier/evt`                                                   |
-| A/E cut        | classifier > −1.10, tuned to keep 90% of the Tl-208 DEP; the production's −1.5 keeps 91%         | LEGEND's convention                                          |
+| A/E cut        | classifier > −1.07, tuned to keep 90% of the Tl-208 DEP; the production's −1.5 keeps 92%         | LEGEND's convention                                          |
 
 - **A/E** is the amplitude of the current-pulse over the energy. A gamma that scatters several times
   in the crystal spreads its charge out in time, giving a broad, low pulse: A/E << 1.
@@ -169,9 +169,9 @@ experiment `l1000dsg01`) [[6]](#references), applied with reboost [[7]](#referen
   window, next to `V00000A`'s measurement at HADES:
 
   ```
-  A/E CUT  tuned on the Tl208 DEP (1592.5 keV) in M1 hits: 1000 in +-2.5 keV, 1026 in the sidebands 5-10 keV off it, 487 net
-      classifier > -1.10 keeps 90% of it (+- 1% statistics); the production's > -1.50 kept 91%
-      kept by it, net of the continuum:  DEP 1592.5 0.90 (487 net)  SEP 2103.5 0.02 (2798 net)  FEP 2614.5 0.04 (35540 net)  window 0.26 (41447)
+  A/E CUT  tuned on the Tl208 DEP (1592.5 keV) in M1 hits: 1045 in +-2.5 keV, 1089 in the sidebands 5-10 keV off it, 500 net
+      classifier > -1.07 keeps 90% of it (+- 1% statistics); the production's > -1.50 kept 92%
+      kept by it, net of the continuum:  DEP 1592.5 0.90 (500 net)  SEP 2103.5 0.02 (2862 net)  FEP 2614.5 0.04 (36212 net)  window 0.25 (43001)
       measured on V00000A at HADES:       DEP 1592.5 0.90            SEP 2103.5 0.04            FEP 2614.5 0.06            window 0.27
   ```
 - **Optical map** (M. Neuberger [[5]](#references)): for every 5 mm cell of the UGLAr, the probability that a
@@ -184,39 +184,39 @@ A designs BI is the as-built's plus the change. Too few events survive all cuts 
 them, so it is counted on the window events that pass M1, 100-500 times more, times the **cut survival**: the fraction of
 them that also pass the LAr veto and A/E (window events after all cuts / after M1). It is measured where the change is:
 
-- near the detectors (below 4.37 m), per chain: 2.0 × 10⁻³ (Tl-208), 9.9 × 10⁻³ (Bi-214);
-- higher up, both chains together: 4 of 662 = 6.0 × 10⁻³ (90% bound 1.2 × 10⁻²). Tl-208's events survive
-  ~3 × more often there, partly because the optical map gives no light above z = 1.375 m.
+- near the detectors (below 4.37 m), per chain: 1.9 × 10⁻³ (Tl-208), 9.9 × 10⁻³ (Bi-214);
+- higher up, both chains together: 20 of 2574 = 7.8 × 10⁻³ (90% bound 1.0 × 10⁻²). Tl-208's events survive
+  ~4 × more often there, partly because the optical map gives no light above z = 1.375 m.
 
 Both come from the printout's DEPTH part, per chain and 0.62 m slab below the tube's top: near, the rows below
-4.37 m summed; higher up, the rows above summed over both chains (Tl-208 2 + 41 + 566, Bi-214 8 + 45 = 662
-events after M1, 4 after all cuts):
+4.37 m summed; higher up, the rows above summed over both chains (Tl-208 1 + 13 + 324 + 1825, Bi-214 2 + 64 + 345 = 2574
+events after M1, 20 after all cuts):
 
 ```
 DEPTH  Tl208  by depth below the tube's top: decays, germanium hits per decay, window events after M1 and after all cuts,
        and the cut survival = window events after all cuts / after M1
     depth [m]            decays   hits/decay   window: M1   all cuts   survival
-     0.00..0.62       15527714     0.00e+00            0          0      -
-     0.62..1.25       15520616     0.00e+00            0          0      -
-     1.25..1.87       15528133     0.00e+00            0          0      -
-     1.87..2.50       15896343     6.29e-08            0          0      -
-     2.50..3.12       16043166     3.43e-06            2          0 0.0000
-     3.12..3.75       16051397     8.74e-05           41          2 0.0488
-     3.75..4.37       11560446     1.74e-03          566          2 0.0035
+     0.00..0.62      203333344     0.00e+00            0          0      -
+     0.62..1.25      203322352     0.00e+00            0          0      -
+     1.25..1.87      203326079     9.84e-09            0          0      -
+     1.87..2.50      162294983     1.48e-07            1          0 0.0000
+     2.50..3.12      144561683     3.94e-06           13          0 0.0000
+     3.12..3.75      144567606     8.79e-05          324          6 0.0185
+     3.75..4.37       74721768     8.70e-04         1825         10 0.0055
      4.37..5.00        6949906     4.53e-02         8960         19 0.0021
-     5.00..5.62        6947684     1.07e-01        20651         45 0.0022
-     5.62..6.25        5654874     6.98e-02        11227         18 0.0016   <- nearest the detectors
+     5.00..5.62        6947684     1.07e-01        20651         44 0.0021
+     5.62..6.25        5654874     6.98e-02        11227         16 0.0014   <- nearest the detectors
 
 DEPTH  Bi214  by depth below the tube's top: decays, germanium hits per decay, window events after M1 and after all cuts,
        and the cut survival = window events after all cuts / after M1
     depth [m]            decays   hits/decay   window: M1   all cuts   survival
-     0.00..0.62       94273410     0.00e+00            0          0      -
-     0.62..1.25       94293221     0.00e+00            0          0      -
-     1.25..1.87       94290361     0.00e+00            0          0      -
-     1.87..2.50       94371578     2.12e-08            0          0      -
-     2.50..3.12       94424017     3.71e-07            0          0      -
-     3.12..3.75       94410451     1.40e-05            8          0 0.0000
-     3.75..4.37       50064866     2.51e-04           45          0 0.0000
+     0.00..0.62     1424091422     0.00e+00            0          0      -
+     0.62..1.25     1424081353     0.00e+00            0          0      -
+     1.25..1.87     1424033087     0.00e+00            0          0      -
+     1.87..2.50     1130168048     5.31e-09            0          0      -
+     2.50..3.12     1003529040     4.19e-07            2          0 0.0000
+     3.12..3.75     1003487464     1.44e-05           64          1 0.0156
+     3.75..4.37      496737490     1.75e-04          345          3 0.0087
      4.37..5.00        6943838     2.28e-02          454          5 0.0110
      5.00..5.62        6943493     5.59e-02         1099         10 0.0091
      5.62..6.25        5656880     3.59e-02          579          6 0.0104   <- nearest the detectors
@@ -230,16 +230,16 @@ is shown too.
 
 ## Results
 
-761 M tube decays = Tl-208 / Bi-214 --> 2.9M / 2.9M whole tube, 22.8M / 22.8M EFCu, 50M / 300M Cu, 50M / 310M SS;
+9081 M tube decays = Tl-208 / Bi-214 --> 2.9M / 2.9M whole tube, 22.8M / 22.8M EFCu, 460M / 3200M Cu, 670M / 4700M SS;
 
-After all cuts: 107
-window events (±11%), 104 from the EFCu (83 Tl-208, 21 Bi-214), 3 from the Cu, none from the SS.
+After all cuts: 120
+window events (±10%), 101 from the EFCu (80 Tl-208, 21 Bi-214), 19 from the Cu, none from the SS.
 
 **The BI as-built: (10⁻⁵ budget)**
 
 |     | no cut                   | M1                                   | M1 + LAr                                                 | all (M1+LAr+A/E)                                                |
 | --- | ------------------------ | ------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------------- |
-|     | 4.60 × 10⁻⁶ (46% budget) | 3.92 × 10⁻⁶ (39% budget) removes 15% | 1.14 ± 0.04 × 10⁻⁷ (1% budget) LAr vetos 97% of the rest | **1.11 ± 0.12 × 10⁻⁸ (0.1% budget)** A/E is 90% of what is left |
+|     | 4.60 × 10⁻⁶ (46% budget) | 3.92 × 10⁻⁶ (39% budget) removes 15% | 1.11 ± 0.03 × 10⁻⁷ (1% budget) LAr vetos 97% of the rest | **1.03 ± 0.10 × 10⁻⁸ (0.1% budget)** A/E is 91% of what is left |
 
 The printout's BI AS BUILT part, per chain and section; `win hits` counts the window events at each cut level
 (no cut / M1 / + LAr / + A/E):
@@ -247,22 +247,22 @@ The printout's BI AS BUILT part, per chain and section; `win hits` counts the wi
 ```
 BI AS BUILT  [cts/(keV kg yr)], +- simulation statistics; a section with no window event gets its 90% limit, 2.30 x its heaviest decay
     chain  sect          win hits   no cut                 M1                     M1 + LAr               M1 + LAr + A/E
-    Tl208  SS             0/0/0/0   < 8.56e-07 (90%)       < 8.56e-07 (90%)       < 8.56e-07 (90%)       < 8.56e-07 (90%)
-           Cu        222/202/26/3   9.83e-08 +- 6.6e-09    8.94e-08 +- 6.3e-09    1.15e-08 +- 2.3e-09    1.33e-09 +- 7.7e-10
-           EFCu   48751/41245/468/83   4.21e-06 +- 1.9e-08    3.56e-06 +- 1.8e-08    4.04e-08 +- 1.9e-09    7.16e-09 +- 7.9e-10
-           tube                     4.31e-06 +- 2.0e-08    3.65e-06 +- 1.9e-08    5.19e-08 +- 2.9e-09    8.49e-09 +- 1.1e-09
-    Bi214  SS             0/0/0/0   < 9.80e-07 (90%)       < 9.80e-07 (90%)       < 9.80e-07 (90%)       < 9.80e-07 (90%)
-           Cu          40/38/12/0   9.93e-09 +- 1.6e-09    9.43e-09 +- 1.5e-09    2.98e-09 +- 8.6e-10    < 1.94e-09 (90%)
+    Tl208  SS             0/0/0/0   < 9.20e-08 (90%)       < 9.20e-08 (90%)       < 9.20e-08 (90%)       < 9.20e-08 (90%)
+           Cu     1944/1756/178/15   9.58e-08 +- 2.2e-09    8.66e-08 +- 2.1e-09    8.78e-09 +- 6.6e-10    7.40e-10 +- 1.9e-10
+           EFCu   48751/41245/468/80   4.21e-06 +- 1.9e-08    3.56e-06 +- 1.8e-08    4.04e-08 +- 1.9e-09    6.90e-09 +- 7.7e-10
+           tube                     4.30e-06 +- 1.9e-08    3.65e-06 +- 1.8e-08    4.92e-08 +- 2.0e-09    7.64e-09 +- 8.0e-10
+    Bi214  SS             0/0/0/0   < 9.23e-08 (90%)       < 9.23e-08 (90%)       < 9.23e-08 (90%)       < 9.23e-08 (90%)
+           Cu       414/396/131/4   9.67e-09 +- 4.8e-10    9.25e-09 +- 4.6e-10    3.06e-09 +- 2.7e-10    9.35e-11 +- 4.7e-11
            EFCu   2310/2147/476/21   2.85e-07 +- 5.9e-09    2.65e-07 +- 5.7e-09    5.87e-08 +- 2.7e-09    2.59e-09 +- 5.7e-10
-           tube                     2.95e-07 +- 6.1e-09    2.74e-07 +- 5.9e-09    6.17e-08 +- 2.8e-09    2.59e-09 +- 5.7e-10
+           tube                     2.95e-07 +- 5.9e-09    2.74e-07 +- 5.7e-09    6.18e-08 +- 2.7e-09    2.68e-09 +- 5.7e-10
     ALL CHAINS
-      no cut           4.60e-06 +- 2.1e-08 (0.46 x goal)
-      M1               3.92e-06 +- 2.0e-08 (0.39 x goal)
-      M1 + LAr         1.14e-07 +- 4.1e-09 (0.011 x goal)
-      M1 + LAr + A/E   1.11e-08 +- 1.2e-09 (0.0011 x goal)
+      no cut           4.60e-06 +- 2.0e-08 (0.46 x goal)
+      M1               3.92e-06 +- 1.9e-08 (0.39 x goal)
+      M1 + LAr         1.11e-07 +- 3.4e-09 (0.011 x goal)
+      M1 + LAr + A/E   1.03e-08 +- 9.8e-10 (0.001 x goal)
     ...with the LAr veto read off the optical map alone, no light from the argon beyond its edge:
-      M1 + LAr         2.79e-07 +- 5.7e-09 (0.028 x goal)
-      M1 + LAr + A/E   3.28e-08 +- 1.9e-09 (0.0033 x goal)
+      M1 + LAr         2.76e-07 +- 5.1e-09 (0.028 x goal)
+      M1 + LAr + A/E   3.25e-08 +- 1.7e-09 (0.0033 x goal)
     win hits: per cut level, as in the columns. sections with no window hit are left out of the totals
 ```
 
@@ -270,26 +270,27 @@ BI AS BUILT  [cts/(keV kg yr)], +- simulation statistics; a section with no wind
 
 | EFCu from (`L2`)  | EFCu       | at 90%: SS to | SS : Cu : EFCu         | BI rise | central: SS to | SS : Cu : EFCu         | BI rise |
 | ----------------- | ---------- | ------------- | ---------------------- | ------- | -------------- | ---------------------- | ------- |
-| 4.07 m, as built  | 175 kg     | 2.06 m        | 619 : 672 : 175 kg     | 0%      | 2.66 m         | 800 : 470 : 175 kg     | 0%      |
-| 4.20 m            | 163 kg     | 2.06 m        | 619 : 684 : 163 kg     | 3%      | 2.66 m         | 800 : 482 : 163 kg     | 1%      |
-| **4.30 m**        | **154 kg** | **2.06 m**    | **619 : 692 : 154 kg** | **6%**  | 2.66 m         | 800 : 490 : 154 kg     | 3%      |
-| **4.50 m**        | **137 kg** | fails         |                        |         | **2.66 m**     | **800 : 507 : 137 kg** | **8%**  |
+| 4.07 m, as built  | 175 kg     | 2.06 m        | 619 : 672 : 175 kg     | 0%      | 2.69 m         | 809 : 460 : 175 kg     | 6%      |
+| 4.20 m            | 163 kg     | 2.06 m        | 619 : 684 : 163 kg     | 3%      | 2.69 m         | 809 : 472 : 163 kg     | 8%      |
+| 4.30 m            | 154 kg     | 2.06 m        | 619 : 692 : 154 kg     | 6%      | 2.69 m         | 809 : 480 : 154 kg     | 10%     |
+| **4.40 m**        | **146 kg** | **2.06 m**    | **619 : 701 : 146 kg** | **10%** | 2.66 m         | 800 : 499 : 146 kg     | 9%      |
+| **4.50 m**        | **137 kg** | fails         |                        |         | **2.28 m**     | **685 : 635 : 137 kg** | **10%** |
 | 4.60 m and deeper | ≤ 129 kg   | fails         |                        |         | fails          |                        |         |
 
 The printout's DESIGNS part: for each depth `L2` where the EFCu starts, the deepest `L1` where the SS can end and
 still pass; its last lines are the decays SS still needs ([How many decays](#nersc)):
 
 ```
-DESIGNS  against the tube as built (BI 1.11e-08 after all cuts): SS down to L1, Cu down to L2, EFCu below. a design passes when its BI
+DESIGNS  against the tube as built (BI 1.03e-08 after all cuts): SS down to L1, Cu down to L2, EFCu below. a design passes when its BI
     rises by at most 10%: at 90% confidence (bound), or on the central value (central). L1 from 2.06 m down, 1 cm at a time
-    a design's change is counted on window events after M1 x the cut survival (see DEPTH): below 4.37 m Tl208 2.01e-03 Bi214 9.85e-03; above it, both chains, 4 of 662 = 6.04e-03 (90% bound 1.21e-02)
+    a design's change is counted on window events after M1 x the cut survival (see DEPTH): below 4.37 m Tl208 1.93e-03 Bi214 9.85e-03; above it, both chains, 20 of 2574 = 7.77e-03 (90% bound 1.04e-02)
     L2 [m]   EFCu | bound: L1 SS : Cu : EFCu                         rise | central L1 SS : Cu : EFCu                         rise
-    4.07   175 kg |    2.06 m  619 : 672 : 175 kg = 42 : 46 : 12 %      +0% |    2.66 m  800 : 470 : 175 kg = 55 : 33 : 12 %      +0%   <- EFCu as built
-    4.10   171 kg |    2.06 m  619 : 675 : 171 kg = 42 : 46 : 12 %      +1% |    2.66 m  800 : 473 : 171 kg = 55 : 33 : 12 %      +0%
-    4.20   163 kg |    2.06 m  619 : 684 : 163 kg = 42 : 47 : 11 %      +3% |    2.66 m  800 : 482 : 163 kg = 55 : 33 : 11 %      +1%
-    4.30   154 kg |    2.06 m  619 : 692 : 154 kg = 42 : 47 : 11 %      +6% |    2.66 m  800 : 490 : 154 kg = 55 : 34 : 11 %      +3%
-    4.40   146 kg | -         rises too much at any L1                    |    2.66 m  800 : 499 : 146 kg = 55 : 35 : 10 %      +5%
-    4.50   137 kg | -         rises too much at any L1                    |    2.66 m  800 : 507 : 137 kg = 55 : 35 : 10 %      +8%
+    4.07   175 kg |    2.06 m  619 : 672 : 175 kg = 42 : 46 : 12 %      +0% |    2.69 m  809 : 460 : 175 kg = 56 : 32 : 12 %      +6%   <- EFCu as built
+    4.10   171 kg |    2.06 m  619 : 675 : 171 kg = 42 : 46 : 12 %      +1% |    2.69 m  809 : 463 : 171 kg = 56 : 32 : 12 %      +6%
+    4.20   163 kg |    2.06 m  619 : 684 : 163 kg = 42 : 47 : 11 %      +3% |    2.69 m  809 : 472 : 163 kg = 56 : 33 : 11 %      +8%
+    4.30   154 kg |    2.06 m  619 : 692 : 154 kg = 42 : 47 : 11 %      +6% |    2.69 m  809 : 480 : 154 kg = 56 : 33 : 11 %     +10%
+    4.40   146 kg |    2.06 m  619 : 701 : 146 kg = 42 : 48 : 10 %     +10% |    2.66 m  800 : 499 : 146 kg = 55 : 35 : 10 %      +9%
+    4.50   137 kg | -         rises too much at any L1                    |    2.28 m  685 : 635 : 137 kg = 47 : 44 :  9 %     +10%
     4.60   129 kg | -         rises too much at any L1                    | -         rises too much at any L1
     4.70   121 kg | -         rises too much at any L1                    | -         rises too much at any L1
     4.80   112 kg | -         rises too much at any L1                    | -         rises too much at any L1
@@ -299,25 +300,25 @@ DESIGNS  against the tube as built (BI 1.11e-08 after all cuts): SS down to L1, 
     5.50    53 kg | -         rises too much at any L1                    | -         rises too much at any L1
     5.75    32 kg | -         rises too much at any L1                    | -         rises too much at any L1
     6.00    11 kg | -         rises too much at any L1                    | -         rises too much at any L1
-    least EFCu, then most SS, at 90% confidence: L2 4.30 m, L1 2.06 m:  619 : 692 : 154 kg = 42 : 47 : 11 %
-    least EFCu, then most SS, on the central value: L2 4.50 m, L1 2.66 m:  800 : 507 : 137 kg = 55 : 35 : 10 %
+    least EFCu, then most SS, at 90% confidence: L2 4.40 m, L1 2.06 m:  619 : 701 : 146 kg = 42 : 48 : 10 %
+    least EFCu, then most SS, on the central value: L2 4.50 m, L1 2.28 m:  685 : 635 : 137 kg = 47 : 44 :  9 %
     as built:  619 : 672 : 175 kg = 42 : 46 : 12 %. rise: over the BI as built, the 90% bound on the change (bound) or the change itself (central)
     a depth range with no window event after M1 still bounds what SS there would add, at 2.30 x the cut survival x its weight;
     the decays that bring that bound under 5% of the BI as built, per chain:
-      Tl208  SS added in the Cu section       51383783 decays now: bound    45%; 4.6e+08 decays would bring it to 5%
-      Tl208  the SS as built                  51256138 decays now: bound    47%; 4.8e+08 decays would bring it to 5%
-      Bi214  SS added in the Cu section      301384853 decays now: bound    53%; 3.2e+09 decays would bring it to 5%
-      Bi214  the SS as built                 311257030 decays now: bound    53%; 3.3e+09 decays would bring it to 5%
+      Tl208  SS added in the Cu section      461384081 decays now: bound     7%; 6.4e+08 decays would bring it to 5%
+      Tl208  the SS as built                 671255840 decays now: bound     5%; 6.6e+08 decays would bring it to 5%
+      Bi214  SS added in the Cu section     3201387003 decays now: bound     7%; 4.4e+09 decays would bring it to 5%
+      Bi214  the SS as built                4701254880 decays now: bound     5%; 4.6e+09 decays would bring it to 5%
 ```
 
-- **EFCu** can start 23 cm lower, at 4.30 m (154 kg, −12%), shown at 90%; on the central value at 4.50 m
+- **EFCu** can start 33 cm lower, at 4.40 m (146 kg, −17%), shown at 90%; on the central value at 4.50 m
   (137 kg, −22%). Below that the Cu next to the detectors, at 3-7 × EFCu's activity, adds too much at any
   SS seam.
-- **SS** reaches 2.66 m on the central value only because no decay between 2.06 and 2.66 m put an event
-  in the window, in either chain. That is the statistics' silence, not a measurement: at 90% each empty slab
-  still allows +45% (Tl-208) and +53% (Bi-214), so no extra SS is shown yet. Below 2.66 m the first
-  events appear, and each costs ~20% of the BI.
-- **The reference itself** has the same gap: the SS as built is bounded only at +47% and +53% per chain.
+- **SS** reaches 2.69 m on the central value with the EFCu as built (+6%), and 2.28 m with the EFCu from 4.50 m.
+  At 90% no extra SS is shown yet: SS added in the Cu section is still bounded at +7% per chain, the two
+  chains together above the 10% line. About 1.8 × 10⁸ Tl-208 and 1.2 × 10⁹ Bi-214 more Cu decays would bring
+  each to 5%.
+- **The reference itself**: the SS as built is now bounded at +5% per chain (stage E).
 
 ![background](output/background.png)
 
@@ -348,22 +349,22 @@ root -l -b -q ana/background.C
 With a new optical map, no new simulation: only the response and the analysis rerun.
 
 ```bash
-~/venvs/v/bin/python sim/hit.py --optmap output/<new map>.lh5 output/tl208*.lh5 output/bi214*.lh5
+~/venvs/v/bin/python sim/hit.py --optmap output/<new map>.lh5 output/tl208*.lh5 output/bi214*.lh5 output/output_lh5/*.lh5
 root -l -b -q ana/background.C
 ```
 
 ### NERSC
 
 ```bash
-ssh nersc 'mkdir -p $SCRATCH/LEGEND1000-Simulation/sim $SCRATCH/LEGEND1000-Simulation/geom $SCRATCH/LEGEND1000-Simulation/output'
+ssh nersc 'mkdir -p $SCRATCH/LEGEND1000-Simulation/sim $SCRATCH/LEGEND1000-Simulation/geom $SCRATCH/LEGEND1000-Simulation/output/output_lh5'
 rsync -a geom/l1000.gdml nersc:'$SCRATCH/LEGEND1000-Simulation/geom/'
 rsync -a sim/run.mac nersc:'$SCRATCH/LEGEND1000-Simulation/sim/'
 ssh nersc 'shifterimg pull docker:legendexp/remage:v1.1.0'
-ssh nersc 'cd $SCRATCH/LEGEND1000-Simulation && sbatch --account=m2676 --qos=debug --constraint=cpu --nodes=1 --time=00:30:00 --output=output/rt_test.log --image=docker:legendexp/remage:v1.1.0 --job-name=rt_test --wrap "shifter --module=none remage -q --ignore-warnings -t 32 -w -m -s GDML=geom/l1000.gdml -s NEV=20000 -s SEED=9999 -o output/rt_test.lh5 -s Z=81 -s A=208 -s VOLS=reentrance_tube_copper -- sim/run.mac"'
+ssh nersc 'cd $SCRATCH/LEGEND1000-Simulation && sbatch --account=m2676 --qos=debug --constraint=cpu --nodes=1 --time=00:30:00 --output=output/rt_test.log --image=docker:legendexp/remage:v1.1.0 --job-name=rt_test --wrap "shifter --module=none remage -q --ignore-warnings -t 32 -w -m -s GDML=geom/l1000.gdml -s NEV=20000 -s SEED=9999 -o output/output_lh5/rt_test.lh5 -s Z=81 -s A=208 -s VOLS=reentrance_tube_copper -- sim/run.mac"'
 ```
 
 ```bash
-ssh nersc 'cd $SCRATCH/LEGEND1000-Simulation && sbatch --account=m2676 --qos=shared --constraint=cpu --cpus-per-task=32 --time=<TIME> --output=output/%x_%a.log --image=docker:legendexp/remage:v1.1.0 --array=<SEEDS> --job-name=<NAME> --wrap "shifter --module=none remage -q --ignore-warnings -t 32 -w -m -s GDML=geom/l1000.gdml -s NEV=10000000 -s SEED=\$SLURM_ARRAY_TASK_ID -o output/<NUCLIDE>_\$SLURM_ARRAY_TASK_ID.lh5 -s Z=<Z> -s A=<A> -s VOLS=<VOLS> -- sim/run.mac"'
+ssh nersc 'cd $SCRATCH/LEGEND1000-Simulation && sbatch --account=m2676 --qos=shared --constraint=cpu --cpus-per-task=32 --time=<TIME> --output=output/%x_%a.log --image=docker:legendexp/remage:v1.1.0 --array=<SEEDS> --job-name=<NAME> --wrap "shifter --module=none remage -q --ignore-warnings -t 32 -w -m -s GDML=geom/l1000.gdml -s NEV=10000000 -s SEED=\$SLURM_ARRAY_TASK_ID -o output/output_lh5/<NUCLIDE>_\$SLURM_ARRAY_TASK_ID.lh5 -s Z=<Z> -s A=<A> -s VOLS=<VOLS> -- sim/run.mac"'
 ```
 
 | jobs | `<SEEDS>`             | `<NAME>`                          | `<NUCLIDE>` `<Z>` `<A>`     | `<VOLS>`                            | `<TIME>` |
@@ -405,7 +406,7 @@ numbers (energy smearing, photons, photoelectrons), so a file always gives the s
 ssh nersc 'squeue --me'
 ssh nersc 'sacct -X -S today --format=JobID%18,JobName%16,State,Elapsed'
 ssh nersc 'scancel -u $USER'
-rsync -a --include='*_[0-9][0-9][0-9][0-9].lh5' --exclude='*' nersc:'$SCRATCH/LEGEND1000-Simulation/output/' output/
+rsync -a --include='*_[0-9][0-9][0-9][0-9].lh5' --exclude='*' nersc:'$SCRATCH/LEGEND1000-Simulation/output/output_lh5/' output/output_lh5/
 ssh nersc 'rm -r $SCRATCH/LEGEND1000-Simulation'
 ```
 
@@ -414,7 +415,7 @@ ssh nersc 'rm -r $SCRATCH/LEGEND1000-Simulation'
 | source                             |                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sim/run.mac`                      | the tube simulation; `-s` aliases `GDML`, `Z` `A` (Tl-208: 81 208, Bi-214: 83 214), `NEV`, `SEED`, and `VOLS`, a regex over the source volumes: `reentrance_tube_.*` (whole tube) or one section, `reentrance_tube_copper` (EFCu), `reentrance_tube_layer_copper_ofhc`, `reentrance_tube_layer_steel_316L` |
-| `sim/hit.py`                       | the detector response; takes remage outputs, plus `--optmap`, `--dtmap`, `--metadata`, `--gdml`, `--seed` (defaults: the inputs below, seed 1)                                                                                                                                                             |
+| `sim/hit.py`                       | the detector response; takes remage outputs, plus `--optmap`, `--dtmap`, `--metadata`, `--gdml`, `--seed`, `--outdir` (defaults: the inputs below, seed 1, `output/`)                                                                                                                                      |
 | `ana/background.C`                 | the analysis and its figures; takes the tube runs (`file=isotope`, wildcards merge files) and the GDML; the cuts, activities and pass line are in `cfg` (`m1_keV`, `lar_pe`, `depKeep`, `chain`, `simTol`)                                                                                                 |
 | `sim/holders.mac`, `ana/holders.C` | the [proof of concept](#how-radioactive-is-efcu): whole chains in the holders; their spectrum                                                                                                                                                                                                              |
 | `geom/l1000-autopeel.py`           | the geometry viewer; `--holders`, `--tube`, `--uglar`, `--hpge <png>` draw one part alone, offscreen, and print its numbers                                                                                                                                                                                |
@@ -428,7 +429,7 @@ ssh nersc 'rm -r $SCRATCH/LEGEND1000-Simulation'
 
 | output (`output/`)                        | from                                      | holds                                                                                                                                                                                                                                                                    |
 | ----------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tl208*.lh5`, `bi214*.lh5`                | `sim/run.mac`                             | `stp/` (336 germanium tables and `liquid_argon_underground`), `vtx` (one row per decay), `tcm`, `detector_origins`. Kept: every rerun starts here                                                                                                                        |
+| `tl208*.lh5`, `bi214*.lh5`                | `sim/run.mac`                             | `stp/` (336 germanium tables and `liquid_argon_underground`), `vtx` (one row per decay), `tcm`, `detector_origins`. Kept: every rerun starts here. The NERSC ones are in `output/output_lh5`, a link to `~/Downloads/output_lh5`                                         |
 | `<run>_hit.root`                          | `sim/hit.py`                              | TTrees `geds` (`evtid`, `det`, `edep`, `energy` [keV], `aoe_class`), `lar` (`evtid`, `edep`, `pe`, `pe_map`), `vtx` (`evtid`, `xloc`, `yloc`, `zloc` [m]). Only `ana/background.C` reads them: deleted once it has run; `sim/hit.py` rebuilds the same ones, ~7 s a file |
 | `tube.png`, `background.png`              | `ana/background.C`                        | [Method](#method), [Results](#results)                                                                                                                                                                                                                                   |
 | `holders_th232.root`, `holders_u238.root` | `sim/holders.mac`                         | `stp/germanium`, every germanium step (`evtid`, `det_uid`, `edep_in_keV`, `time_in_ns`, ...); `stp/vtx`, one row per chain                                                                                                                                               |
@@ -444,9 +445,9 @@ and `sim/RalphSim_materialMix.ipynb` are reference only, for Edgar's older-geome
 - Every detector is the dummy `V99999Z`; the A/E cut is one value tuned on simulation, from a single current
   template, not a pulse-shape library.
 - The optical map is v0.4.0's: the outer 68 mm of this UGLAr is read at its edge, and argon above
-  z = 1.375 m gives no light. The BI is a 1.1-3.3 × 10⁻⁸ range until the 0.6.0 map arrives.
+  z = 1.375 m gives no light. The BI is a 1.0-3.3 × 10⁻⁸ range until the 0.6.0 map arrives.
 - A design's change is counted on M1 window events × the cut survival, assuming it is the same across each
-  region; higher up it rests on 4 events. More SS is not shown at 90% for lack of decays.
+  region; higher up it rests on 20 events. More SS is not shown at 90% for lack of decays.
 - The SiPMs are summed: the production's second veto condition (4 SiPMs with light) is not applied; no
   random coincidences.
 - Reweighting changes activities, not geometry.
@@ -454,15 +455,15 @@ and `sim/RalphSim_materialMix.ipynb` are reference only, for Edgar's older-geome
 
 ## Future work
 
-| ‹placeholder›                               | adds                                                                                      | needs                                                                                  |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| ‹optical map for 0.6.0›                     | light from the outer 68 mm and above z = 1.375 m: one BI, and the cut survival higher up  | the collaboration's map (legend-exp/optmapper), reaching r = 1.0 m                     |
-| ‹SS statistics›                             | the SS as built, and more SS, shown at 90%                                                | the SS-section runs, stage E in [NERSC](#nersc)                                        |
-| ‹per-SiPM veto›, ‹random coincidences›      | the production's second veto condition; ³⁹Ar and dark-noise light                         | the map's 252 channels; forced-trigger SiPM data (both in legend-simflow's `evt` tier) |
-| ‹pulse-shape-library A/E›, ‹real detectors› | A/E that knows where the charge was made; each detector's own FCCD, resolution, A/E       | a library per detector (legend-simflow); characterized detectors                       |
-| ‹reach extrapolation›                       | an estimate where the MC has no hits                                                      | a validated model of the hit probability vs height                                     |
-| ‹margin›                                    | a design that survives activities being off (MAJORANA's were ~5 × low [[1]](#references)) | activities varied in `cfg::chain`                                                      |
-| ‹Hall C geometry›                           | 12-detector strings and a longer tube                                                     | `string: units: n: 12` in a legend-pygeom-l1000 config                                 |
+| ‹placeholder›                               | adds                                                                                      | needs                                                                                      |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ‹optical map for 0.6.0›                     | light from the outer 68 mm and above z = 1.375 m: one BI, and the cut survival higher up  | the collaboration's map (legend-exp/optmapper), reaching r = 1.0 m                         |
+| ‹Cu statistics›                             | more SS, shown at 90%                                                                     | ~1.8 × 10⁸ Tl-208 and 1.2 × 10⁹ Bi-214 more Cu-section decays (a stage F, [NERSC](#nersc)) |
+| ‹per-SiPM veto›, ‹random coincidences›      | the production's second veto condition; ³⁹Ar and dark-noise light                         | the map's 252 channels; forced-trigger SiPM data (both in legend-simflow's `evt` tier)     |
+| ‹pulse-shape-library A/E›, ‹real detectors› | A/E that knows where the charge was made; each detector's own FCCD, resolution, A/E       | a library per detector (legend-simflow); characterized detectors                           |
+| ‹reach extrapolation›                       | an estimate where the MC has no hits                                                      | a validated model of the hit probability vs height                                         |
+| ‹margin›                                    | a design that survives activities being off (MAJORANA's were ~5 × low [[1]](#references)) | activities varied in `cfg::chain`                                                          |
+| ‹Hall C geometry›                           | 12-detector strings and a longer tube                                                     | `string: units: n: 12` in a legend-pygeom-l1000 config                                     |
 
 ## References
 
