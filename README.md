@@ -1,7 +1,8 @@
 # LEGEND-1000 re-entrance tube
 
 The re-entrance tube (RT) holds the underground argon (UGLAr) and the detector array. It is a 6 m × 2 m cylinder of
-steel (SS) at the top, oxygen-free high-conductivity OFHC copper (Cu) in the middle and electroformed 10x less radioactive copper (EFCu) around the detectors.
+steel (SS) at the top, oxygen-free high-conductivity (OFHC) copper (Cu) in the middle and electroformed copper (EFCu),
+3-7 × less radioactive than the Cu, around the detectors.
 
 **The question:** how much of the expensive EFCu can be cut, and how much cheap SS added, without changing the
 tube's background index (BI)? "Without changing" means within 10%: that is the BI's own statistical uncertainty
@@ -59,32 +60,19 @@ rsync -a nersc:/global/cfs/cdirs/m2676/users/neuberger/L1000_optical_muon_sims/h
 root -l -b -q ana/background.C
 ```
 
-`output/output_lh5` and `output/output_root` are links to `~/Downloads/output_lh5` and `~/Downloads/output_root`,
-out of iCloud; git keeps only the PNGs in `output/`.
-
 ### 1. The geometry
 
 The full LEGEND-1000 geometry, `geom/l1000geom/l1000.gdml` (legend-pygeom-l1000 0.6.0).
 
 The tube is 6.246 m tall and 0.999 m in radius; the 336 detectors sit 4.8-5.9 m below its top, inside the
-EFCu section. Walls: EFCu 1.5 mm (2.1 mm at the Cu seam), Cu and SS 6 mm; `ana/background.C` reads and checks it,
-and its printout opens with it as TUBE: the outline, the seams at z = 920 and 2925 mm (4.07 m and 2.06 m below
-the top, the depths a design moves), the wall thicknesses, the densities and the germanium mass:
-
-```
-TUBE  read from geom/l1000geom/l1000.gdml: z -1259.0 .. 4987.0 mm (6.246 m), 182 outline points, seams EFCu | 920.0 | Cu | 2925.0 | SS
-    clean surface: on-axis points 2 (expect 2), duplicates 0, spikes 0, self-intersections 0 (expect 0)
-    endcap: radius 999.0000 at z -946.6, barrel 999.0000: step +0.0000 mm
-    shells against the barrel: Cu -0.0000, SS -0.0000 mm
-    wall thickness [mm]:  EFCu 1.50 (z -947)  EFCu 1.50 (z -13)  EFCu 2.10 (z 910)  Cu 6.00 (z 1922)  SS 6.00 (z 3956)
-    densities [kg/m^3], the GDML's: SS 8000, Cu 8960, EFCu 8960
-    germanium, the GDML's: 336 detectors, 1023.4 kg: the BI is per kg of it
-    tube: PASS
-```
+EFCu section. Walls: EFCu 1.5 mm (2.1 mm at the Cu seam), Cu and SS 6 mm; seams at z = 920 and 2925 mm (4.07 m and
+2.06 m below the top, the depths a design moves). `ana/background.C` reads all of this from the GDML, with the
+densities and the germanium mass, and checks it before using it: a clean outline, the bottom head and the Cu and SS
+layers flush with the barrel.
 
 ![the tube](output/tube.png)
 
-The tube's three sections are the decay sources (SS : Cu : EFCu = 619.4 : 671.7 : 174.6 kg).
+The tube's three sections are the decay sources.
 
 ![the tube, the decay source](output/tube_geometry.png)
 
@@ -177,31 +165,23 @@ their own dead layer, resolution and A/E).
 | resolution          | FWHM = √(0.5 + 0.001·E) keV: 1.59 keV at `Qββ`                                                                | `pars/geds/eresmod`                                          |
 | A/E                 | A: max of one template current pulse per step, at its drift time; σ_A/E = 0.01                                | `pars/geds/currmod`, `aoeresmod`; `output/dtmap_V00000A.lh5` |
 | photoelectrons (PE) | LAr scintillation × the summed optical map; σ 0.3 PE, 16 ns merging, ≤ 100 PE per hit                         | `/all` of the optical map; `tier/opt`                        |
-| M1, LAr veto        | one detector above 25 keV; rejects ≥ 4 PE summed                                                              | `tier/evt`                                                   |
-| A/E cut             | classifier > −1.06, tuned to keep 90% of the Tl-208 double-escape peak (DEP); the production's −1.5 keeps 92% | LEGEND's convention                                          |
 
 - **A/E** is the amplitude of the current-pulse over the energy. A gamma that scatters several times
   in the crystal spreads its charge out in time, giving a broad, low pulse: A/E << 1.
   0νββ puts its energy (two electrons) in one spot: A/E ≈ 1. The cut removes events with low
   A/E, and LEGEND places it so that 90% of the Tl-208 double-escape peak (1592.5 keV, single-site) survives.
-  Here it is one value, tuned on simulation from a single current template, not a pulse-shape library.
-  The printout's A/E CUT part: the DEP it is tuned on, and what the cut keeps of each Tl-208 peak (DEP; SEP, single
-  escape; FEP, full energy) and of the ROI, next to `V00000A`'s measurement at HADES:
-
-  ```
-  A/E CUT  tuned on the Tl208 DEP (1592.5 keV) in M1 hits: 1025 in +-2.5 keV, 1073 in the sidebands 5-10 keV off it, 488 net
-      classifier > -1.06 keeps 90% of it (+- 1% statistics); the production's > -1.50 kept 92%
-      kept by it, net of the continuum:  DEP 1592.5 0.90 (488 net)  SEP 2103.5 0.02 (2810 net)  FEP 2614.5 0.04 (35578 net)  ROI 0.25 (42212)
-      measured on V00000A at HADES:       DEP 1592.5 0.90            SEP 2103.5 0.04            FEP 2614.5 0.06            ROI 0.27
-  ```
+  Here it is one value, tuned on simulation from a single current template, not a pulse-shape library, on the 488
+  DEP events after M1 (net of the continuum; ±1%). It keeps 0.90 of the DEP, 0.02 of the SEP (single escape,
+  2103.5 keV), 0.04 of the FEP (full energy, 2614.5 keV) and 0.25 of the ROI; measured on `V00000A` at HADES:
+  0.90, 0.04, 0.06 and 0.27.
 
 - **Optical map** (Moritz Neuberger's, on NERSC): for every 5 mm cell of the UGLAr, the probability that a
   scintillation photon made there reaches a SiPM. `sim/hit.py` turns each argon deposit into photons,
   and these into photoelectrons with that probability; the LAr veto counts them, all SiPMs summed (the
   production's second condition, 4 SiPMs with light, and random coincidences are left out). This is the v0.4.0
   map: the outer 68 mm of this UGLAr is read at its edge, and argon above z = 1.375 m gives no light, so until
-  the 0.6.0 map arrives the BI is a 1.0-3.2 × 10⁻⁸ range (the BI AS BUILT lines read off the map alone give
-  the top).
+  the 0.6.0 map arrives the BI is a 1.0-3.2 × 10⁻⁸ range (3.2 × 10⁻⁸ with the LAr veto read off the map alone, no
+  light from the argon beyond its edge).
 
 `sim/hit.py` takes remage outputs, plus `--optmap`, `--dtmap`, `--metadata`, `--gdml`, `--seed`, `--outdir`, `--force`
 (defaults: the inputs above, seed 1, `output/output_root`). Its `--seed` is not remage's `SEED`: with each file's name it starts the response's own random
@@ -222,11 +202,10 @@ root -l -b -q ana/background.C
 
 `ana/background.C` is the analysis and its figures; it takes the tube runs (`file=isotope`, wildcards merge files)
 and the GDML; the cuts, activities and the 10% line are in `cfg` (`m1_keV`, `lar_pe`, `depKeep`, `chain`, `simTol`).
-Its printout, in order: TUBE (§1), A/E CUT (§3), INPUTS and, per chain, DECAYS (§4) and DEPTH (§5), BI AS BUILT and
-DESIGNS (Results); each part is shown in full where it is used.
 
-**Cuts**, in LEGEND's order: **M1** (exactly one detector above 25 keV), the **LAr veto** (rejects ≥ 4
-photoelectrons), **A/E** (single-site-like, at the value that keeps 90% of the Tl-208 double-escape peak).
+**Cuts**, in LEGEND's order: **M1** (exactly one detector above 25 keV) and the **LAr veto** (rejects ≥ 4
+photoelectrons), both from legend1000-metadata's `tier/evt`; **A/E** (single-site-like: classifier > −1.06, which
+keeps 90% of the Tl-208 double-escape peak, LEGEND's convention; the production's −1.5 keeps 92%).
 
 **BI** is counts in the **ROI**, MAJORANA's background region ([Haufe et al.](https://arxiv.org/abs/2209.10592),
 [MAJORANA's final result](https://arxiv.org/abs/2207.07638)): 1950-2350 keV, less ±5 keV around each of 2039.0
@@ -253,53 +232,13 @@ Bi-214 is 100% of the ²³⁸U chain; Tl-208 35.94% of the ²³²Th chain ([Nucl
 | Cu   | 1.1         | 1.3        | [MAJORANA assay](https://doi.org/10.1103/PhysRevC.110.055804) |
 | EFCu | 0.37        | 0.19       | M. Green                                                      |
 
-`ana/background.C` prints the ROI, cuts and activities it uses as INPUTS:
+The normalisation per section (the sections are sampled very unevenly on purpose, §2, so each has its own weight):
 
-```
-INPUTS  ROI: 1950-2350 keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's background region): 360 keV
-        cuts: M1 (exactly one detector above 25 keV), LAr veto (the SiPMs see < 4 photoelectrons), A/E classifier > -1.06 (90% DEP, A/E CUT)
-        activity: chain [uBq/kg] 232Th / 238U: SS 1000 / 2500, Cu 1.1 / 1.3, EFCu 0.37 / 0.19; Tl208 is 35.94% of 232Th, Bi214 100% of 238U
-```
-
-The printout's DECAYS part, per chain: where the decays fell, the germanium hits, and the normalisation (`simulated`
-is N_sim, `per m^3` how densely the runs sampled the section, `weight` is N_real / N_sim; the sections are sampled
-very unevenly on purpose, §2, so each uses its own density). The hit counts are cumulative: each row adds its cut to the ones above. They
-are counted twice, over every energy and inside the ROI; the bottom-right number, in the ROI past all three cuts, is
-what the BI is built from.
-
-```
-DECAYS  Tl208  (output/output_root/tl208*_hit.root, 532811152 decays, 54 files)
-    where they decayed: EFCu 4.2%, Cu 86.4%, SS 9.4%; in the argon 0, outside the tube 0
-    germanium hits, per cut level (each row adds its cut to the ones above), at all energies and inside the 360 keV ROI:
-    cut level          all energies         in ROI
-    no cut                  1507568          49788
-    M1                      1288342          42212
-    M1 + LAr                  32094            633
-    M1 + LAr + A/E             4302             91
-    LAr veto keeps 1 in 40 M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in 14
-    the normalisation, per section: volume, mass, activity, simulated decays (and per m^3), weight = real decays a year per simulated one
-    section   V [m^3]   M [kg]     A [Bq]  simulated     per m^3   weight
-    EFCu      0.01948    174.6  2.322e-05   22628745  1161362547 3.24e-05
-    Cu        0.07497    671.7  2.656e-04  460181326  6138059588 1.82e-05
-    SS        0.07742    619.4  2.226e-01   50001081   645805476     0.14
-    the runs sampled the EFCu 0.342 x as densely as the shells (1 = evenly): each section's weight uses its own density
-
-DECAYS  Bi214  (output/output_root/bi214*_hit.root, 3532803014 decays, 354 files)
-    where they decayed: EFCu 0.6%, Cu 90.6%, SS 8.8%; in the argon 0, outside the tube 0
-    germanium hits, per cut level (each row adds its cut to the ones above), at all energies and inside the 360 keV ROI:
-    cut level          all energies         in ROI
-    no cut                   838014           2684
-    M1                       753211           2506
-    M1 + LAr                  34223            601
-    M1 + LAr + A/E             4567             22
-    LAr veto keeps 1 in 22 M1 hits; read off the optical map alone, without the argon beyond its edge, 1 in 10
-    the normalisation, per section: volume, mass, activity, simulated decays (and per m^3), weight = real decays a year per simulated one
-    section   V [m^3]   M [kg]     A [Bq]  simulated     per m^3   weight
-    EFCu      0.01948    174.6  3.317e-05   22619347  1160880219 4.63e-05
-    Cu        0.07497    671.7  8.733e-04 3200182724 42685157225 8.61e-06
-    SS        0.07742    619.4  1.548e+00  310000943  4003919566    0.158
-    the runs sampled the EFCu 0.050 x as densely as the shells (1 = evenly): each section's weight uses its own density
-```
+| section | V [m³]  | M [kg] | simulated decays (Tl-208 / Bi-214) | weight (Tl-208 / Bi-214)  |
+| ------- | ------- | ------ | ---------------------------------- | ------------------------- |
+| EFCu    | 0.01948 | 174.6  | 22.6 M / 22.6 M                    | 3.24 × 10⁻⁵ / 4.63 × 10⁻⁵ |
+| Cu      | 0.07497 | 671.7  | 460 M / 3.20 G                     | 1.82 × 10⁻⁵ / 8.61 × 10⁻⁶ |
+| SS      | 0.07742 | 619.4  | 50.0 M / 310 M                     | 0.140 / 0.158             |
 
 ### 5. Finding the best design: reweighting
 
@@ -324,60 +263,35 @@ the EFCu runs 4.07-6.25 m. So the two ways to save money reweight different runs
 
 **Why the Cu runs decide the SS.** The SS added in a design would sit where the Cu is now, 2-3 m above the array,
 and only the Cu runs have decays there. Those decays rarely reach the detectors: one in 10⁷-10⁸ Tl-208 decays and one
-in ~10⁹ Bi-214 decays gives an ROI event after M1 (DEPTH, below). Turned into SS, each such event counts ~1000 times
+in ~10⁹ Bi-214 decays gives an ROI event after M1 (the table below). Turned into SS, each such event counts ~1000 times
 more. With 460 M / 3.2 G Cu decays, one of them adds 3.2% of the BI, so the 10% line is about three events: a
 measurement, not one chance event. With only a tenth of them, one event would add ~30%; none happened to fall
 between 2.06 and 2.66 m, and the SS looked free down to 2.66 m: the wrong answer.
 
 **Cut survival.** Too few events survive all cuts away from the detectors to count the change on them, so it is
 counted on the ROI events that pass M1, 100-500 times more, times the **cut survival**: the fraction of them that also
-pass the LAr veto and A/E. It is measured where the change is:
+pass the LAr veto and A/E. It is measured where the change is, from the ROI events per 0.62 m slab below the
+tube's top (the table):
 
 - near the detectors (below 4.37 m), per chain: 1.9 × 10⁻³ (Tl-208), 8.6 × 10⁻³ (Bi-214);
-- higher up, both chains together: 20 of 2559 = 7.8 × 10⁻³ (Tl-208 1 + 13 + 322 + 1813, Bi-214 2 + 64 + 344 = 2559
-  events after M1, 20 after all cuts). Tl-208's events survive ~4 × more often there, partly because the optical
-  map gives no light above z = 1.375 m.
+- higher up, both chains together: 20 of 2559 = 7.8 × 10⁻³. Tl-208's events survive ~4 × more often there, partly
+  because the optical map gives no light above z = 1.375 m.
 
-Both come from the printout's DEPTH part, per 0.62 m slab below the tube's top: near, the rows below 4.37 m summed;
-higher up, the rows above, both chains together:
-
-```
-DEPTH  Tl208  by depth below the tube's top: decays, germanium hits per decay, ROI events after M1 and after all cuts,
-       and the cut survival = ROI events after all cuts / after M1
-    depth [m]            decays   hits/decay      ROI: M1   all cuts   survival
-     0.00..0.62       15146809     0.00e+00            0          0      -
-     0.62..1.25       15140844     0.00e+00            0          0      -
-     1.25..1.87       15148117     0.00e+00            0          0      -
-     1.87..2.50      105323181     2.09e-07            1          0 0.0000
-     2.50..3.12      144185058     3.93e-06           13          0 0.0000
-     3.12..3.75      144192734     8.79e-05          322          6 0.0186
-     3.75..4.37       74471336     8.67e-04         1813         10 0.0055
-     4.37..5.00        6825938     4.53e-02         8796         18 0.0020
-     5.00..5.62        6823148     1.07e-01        20243         42 0.0021
-     5.62..6.25        5553987     6.98e-02        11024         15 0.0014   <- nearest the detectors
-
-DEPTH  Bi214  by depth below the tube's top: decays, germanium hits per decay, ROI events after M1 and after all cuts,
-       and the cut survival = ROI events after all cuts / after M1
-    depth [m]            decays   hits/decay      ROI: M1   all cuts   survival
-     0.00..0.62       93892792     0.00e+00            0          0      -
-     0.62..1.25       93912243     0.00e+00            0          0      -
-     1.25..1.87       93910381     0.00e+00            0          0      -
-     1.87..2.50      729140823     8.23e-09            0          0      -
-     2.50..3.12     1003152378     4.19e-07            2          0 0.0000
-     3.12..3.75     1003111516     1.44e-05           64          1 0.0156
-     3.75..4.37      496487697     1.75e-04          344          3 0.0087
-     4.37..5.00        6819575     2.28e-02          445          4 0.0090
-     5.00..5.62        6819893     5.59e-02         1077          9 0.0084
-     5.62..6.25        5555716     3.59e-02          574          5 0.0087   <- nearest the detectors
-```
+| depth [m]                        | Tl-208 decays | ROI after M1 | after all cuts | Bi-214 decays | ROI after M1 | after all cuts |
+| -------------------------------- | ------------- | ------------ | -------------- | ------------- | ------------ | -------------- |
+| 0.00-1.87                        | 45.4 M        | 0            | 0              | 282 M         | 0            | 0              |
+| 1.87-2.50                        | 105 M         | 1            | 0              | 729 M         | 0            | 0              |
+| 2.50-3.12                        | 144 M         | 13           | 0              | 1.00 G        | 2            | 0              |
+| 3.12-3.75                        | 144 M         | 322          | 6              | 1.00 G        | 64           | 1              |
+| 3.75-4.37                        | 74.5 M        | 1813         | 10             | 496 M         | 344          | 3              |
+| 4.37-5.00                        | 6.83 M        | 8796         | 18             | 6.82 M        | 445          | 4              |
+| 5.00-5.62                        | 6.82 M        | 20243        | 42             | 6.82 M        | 1077         | 9              |
+| 5.62-6.25, nearest the detectors | 5.55 M        | 11024        | 15             | 5.56 M        | 574          | 5              |
 
 **The scan.** For every L2, L1 goes down 1 cm at a time while the BI stays within 10% of the as-built's. The answer is
 the least EFCu, then, for it, the most SS.
 
 ## Results
-
-Of the 4.1 × 10⁹ tube decays (§2), 113 make an ROI event after all cuts: 94 from the EFCu (76 Tl-208, 18 Bi-214),
-19 from the Cu, none from the SS.
 
 **The BI as built** (the LEGEND-1000 goal is 10⁻⁵):
 
@@ -385,62 +299,30 @@ Of the 4.1 × 10⁹ tube decays (§2), 113 make an ROI event after all cuts: 94 
 | ----------- | --------------------------- | -------------------------------------------- | --------------------------------------------------- |
 | 4.60 × 10⁻⁶ | 3.92 × 10⁻⁶: M1 removes 15% | 1.11 ± 0.03 × 10⁻⁷: the LAr veto removes 97% | **0.98 ± 0.10 × 10⁻⁸**: A/E removes 91% of the rest |
 
-The printout's BI AS BUILT part, per chain and section; `ROI hits` counts the ROI events at each cut level (no cut /
-M1 / + LAr / + A/E):
+Per chain and section; the SS has no ROI event at any cut level:
 
-```
-BI AS BUILT  [cts/(keV kg yr)], +- simulation statistics; none: no ROI event in all its simulated decays
-    chain  sect          ROI hits   no cut                 M1                     M1 + LAr               M1 + LAr + A/E
-    Tl208  SS             0/0/0/0   none                   none                   none                   none
-           Cu     1937/1751/176/15   9.57e-08 +- 2.2e-09    8.66e-08 +- 2.1e-09    8.70e-09 +- 6.6e-10    7.41e-10 +- 1.9e-10
-           EFCu   47851/40461/457/76   4.20e-06 +- 1.9e-08    3.56e-06 +- 1.8e-08    4.02e-08 +- 1.9e-09    6.68e-09 +- 7.7e-10
-           tube                     4.30e-06 +- 1.9e-08    3.64e-06 +- 1.8e-08    4.89e-08 +- 2.0e-09    7.42e-09 +- 7.9e-10
-    Bi214  SS             0/0/0/0   none                   none                   none                   none
-           Cu       414/396/131/4   9.68e-09 +- 4.8e-10    9.26e-09 +- 4.7e-10    3.06e-09 +- 2.7e-10    9.35e-11 +- 4.7e-11
-           EFCu   2270/2110/470/18   2.85e-07 +- 6.0e-09    2.65e-07 +- 5.8e-09    5.90e-08 +- 2.7e-09    2.26e-09 +- 5.3e-10
-           tube                     2.95e-07 +- 6.0e-09    2.74e-07 +- 5.8e-09    6.21e-08 +- 2.7e-09    2.35e-09 +- 5.3e-10
-    ALL CHAINS
-      no cut           4.60e-06 +- 2.0e-08 (0.46 x goal)
-      M1               3.92e-06 +- 1.9e-08 (0.39 x goal)
-      M1 + LAr         1.11e-07 +- 3.4e-09 (0.011 x goal)
-      M1 + LAr + A/E   9.77e-09 +- 9.5e-10 (0.00098 x goal)
-    ...with the LAr veto read off the optical map alone, no light from the argon beyond its edge:
-      M1 + LAr         2.75e-07 +- 5.1e-09 (0.027 x goal)
-      M1 + LAr + A/E   3.18e-08 +- 1.7e-09 (0.0032 x goal)
-    ROI hits: per cut level, as in the columns. sections with no ROI hit are left out of the totals
-```
+| chain  | section | ROI events: no cut / M1 / + LAr / + A/E | BI after all cuts      |
+| ------ | ------- | --------------------------------------- | ---------------------- |
+| Tl-208 | EFCu    | 47851 / 40461 / 457 / 76                | 6.68 ± 0.77 × 10⁻⁹     |
+| Tl-208 | Cu      | 1937 / 1751 / 176 / 15                  | 0.74 ± 0.19 × 10⁻⁹     |
+| Bi-214 | EFCu    | 2270 / 2110 / 470 / 18                  | 2.26 ± 0.53 × 10⁻⁹     |
+| Bi-214 | Cu      | 414 / 396 / 131 / 4                     | 0.09 ± 0.05 × 10⁻⁹     |
 
 ![the spectrum](output/slide_spectrum.png)
 
 The tube's spectrum as built, through each cut: the ROI shaded light green, `Qββ` ± 2σ dark green, the BI after all
 cuts as the black line across the ROI, the 10⁻⁵ goal dashed.
 
-**The designs**, the printout's DESIGNS part: for each depth L2 where the EFCu starts, the deepest L1 where the SS
-can end:
+**The designs**: for each depth L2 where the EFCu starts, the deepest L1 where the SS can end:
 
-```
-DESIGNS  against the tube as built (BI 9.77e-09 after all cuts): SS down to L1, Cu down to L2, EFCu below. a design passes when its BI
-    stays within 10% of the as-built's, the BI's own statistical uncertainty. L1 from 2.06 m down, 1 cm at a time
-    a design's BI change is counted on ROI events after M1 x the cut survival (see DEPTH): below 4.37 m Tl208 1.87e-03 Bi214 8.59e-03; above it, both chains, 20 of 2559 = 7.82e-03
-    L2 [m]   EFCu | deepest L1 SS : Cu : EFCu                     BI change
-    4.07   175 kg |     2.69 m  809 : 460 : 175 kg = 56 : 32 : 12 %       +6%   <- EFCu as built
-    4.10   171 kg |     2.69 m  809 : 463 : 171 kg = 56 : 32 : 12 %       +7%
-    4.20   163 kg |     2.69 m  809 : 472 : 163 kg = 56 : 33 : 11 %       +8%
-    4.30   154 kg |     2.66 m  800 : 490 : 154 kg = 55 : 34 : 11 %       +7%
-    4.40   146 kg |     2.66 m  800 : 499 : 146 kg = 55 : 35 : 10 %      +10%
-    4.50   137 kg |     2.28 m  685 : 635 : 137 kg = 47 : 44 :  9 %      +10%
-    4.60   129 kg | -          the BI rises more than 10% at any L1
-    4.70   121 kg | -          the BI rises more than 10% at any L1
-    4.80   112 kg | -          the BI rises more than 10% at any L1
-    4.90   104 kg | -          the BI rises more than 10% at any L1
-    5.00    95 kg | -          the BI rises more than 10% at any L1
-    5.25    74 kg | -          the BI rises more than 10% at any L1
-    5.50    53 kg | -          the BI rises more than 10% at any L1
-    5.75    32 kg | -          the BI rises more than 10% at any L1
-    6.00    11 kg | -          the BI rises more than 10% at any L1
-    least EFCu, then most SS: L2 4.50 m, L1 2.28 m:  685 : 635 : 137 kg = 47 : 44 :  9 %, BI +10%
-    as built:  619 : 672 : 175 kg = 42 : 46 : 12 %
-```
+| EFCu from (L2)    | EFCu       | SS to (L1) | SS : Cu : EFCu         | BI change                      |
+| ----------------- | ---------- | ---------- | ---------------------- | ------------------------------ |
+| 4.07 m, as built  | 175 kg     | 2.69 m     | 809 : 460 : 175 kg     | +6%                            |
+| 4.20 m            | 163 kg     | 2.69 m     | 809 : 472 : 163 kg     | +8%                            |
+| 4.30 m            | 154 kg     | 2.66 m     | 800 : 490 : 154 kg     | +7%                            |
+| 4.40 m            | 146 kg     | 2.66 m     | 800 : 499 : 146 kg     | +10%                           |
+| **4.50 m**        | **137 kg** | **2.28 m** | **685 : 635 : 137 kg** | **+10%**                       |
+| 4.60 m and deeper | ≤ 129 kg   | none       |                        | more than 10% at any SS length |
 
 - **EFCu** can start 0.43 m lower, at 4.50 m: 137 kg instead of 175 (−22%). Deeper, the Cu that would replace it
   sits next to the detectors at 3-7 × EFCu's activity, and the BI rises more than 10% whatever the SS.
