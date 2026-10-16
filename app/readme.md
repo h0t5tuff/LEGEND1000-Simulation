@@ -14,12 +14,12 @@
 builds it, installs it and keeps `output/LEGEND.zip` to share (~30 s). Rebuild after a GDML or `output/designs.json`
 changes.
 
-| file | |
-| ---- | --- |
-| `make_app.py` | the build |
-| `legend.swift` | the choices, and what the viewers share |
-| `autopeel.swift` | l200 and l1000 |
-| `rt.swift` | rt |
+| file             |                                         |
+| ---------------- | --------------------------------------- |
+| `make_app.py`    | the build                               |
+| `legend.swift`   | the choices, and what the viewers share |
+| `autopeel.swift` | l200 and l1000                          |
+| `rt.swift`       | rt                                      |
 
 Share the zip within LEGEND only (l200's geometry is private). A downloaded copy opens after one "Open Anyway"
 in System Settings → Privacy & Security.

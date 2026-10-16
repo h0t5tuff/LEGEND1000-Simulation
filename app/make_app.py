@@ -9,7 +9,7 @@ It builds in a temporary folder: each viewer's data (l200 and l1000 the autopeel
 the design scan of output/designs.json and the tube's mesh from the GDML) with its picture for the choices; the icon
 (the l1000 picture above the label, an Icon Composer package compiled by actool); legend.swift + autopeel.swift +
 rt.swift compiled for Apple silicon and Intel; the bundle, signed ad hoc. It installs it as /Applications/LEGEND.app
-and keeps one copy to share, app/output/LEGEND.zip.
+and keeps one copy to share, output/LEGEND.zip.
 """
 
 import importlib.util
@@ -29,7 +29,6 @@ from PIL import Image, ImageDraw, ImageFont
 REPO = Path(__file__).resolve().parents[1]  # app/make_app.py -> the repository
 HERE = Path(__file__).resolve().parent
 NAME = "LEGEND"
-OUT = HERE / "output"
 VIEWS = {  # the source of each viewer's geometry, its window title, its picture's camera (theta, phi from +z, deg; zoom[; roll])
     "l200": {"peel": "geom/l200geom/l200-autopeel.py", "title": "LEGEND-200", "view": (62, 25, 1.0)},
     "l1000": {"peel": "geom/l1000geom/l1000-autopeel.py", "title": "LEGEND-1000", "view": (40, 30, 1.15)},
@@ -38,6 +37,7 @@ VIEWS = {  # the source of each viewer's geometry, its window title, its picture
 ICON = {"picture": "l1000", "label": "LEGEND", "fill": ("#1d6b6f", "#08262a")}  # background gradient (top, bottom)
 SHOW = ("string hardware", "ultem", "PEN")  # autopeel layers drawn with the HPGe detectors in the l200 and l1000 pictures
 DESIGNS = REPO / "output" / "designs.json"  # ana/background.C's design scan, which rt shows
+ZIP = REPO / "output" / f"{NAME}.zip"  # a copy to share
 STOPS = ((0.9, (38, 70, 150)), (1.0, (33, 120, 190)), (1.1, (40, 170, 150)), (1.2, (140, 200, 80)), (1.3, (250, 220, 60)))  # its colours
 SOURCES = ("legend.swift", "autopeel.swift", "rt.swift")
 FONT = "/System/Library/Fonts/SFNS.ttf"
@@ -354,16 +354,15 @@ def main():
         art(res / ICON["picture"] / "render.png", t / "art.png", ICON["label"])
         icon_package(t / "art.png", t / "AppIcon.icon", *ICON["fill"])
         build_bundle(built, t / "AppIcon.icon")
-        OUT.mkdir(exist_ok=True)
-        (OUT / f"{NAME}.zip").unlink(missing_ok=True)
-        subprocess.run(["ditto", "-c", "-k", "--keepParent", str(built), str(OUT / f"{NAME}.zip")], check=True)
+        ZIP.unlink(missing_ok=True)
+        subprocess.run(["ditto", "-c", "-k", "--keepParent", str(built), str(ZIP)], check=True)
         app = Path("/Applications") / f"{NAME}.app"
         shutil.rmtree(app, ignore_errors=True)  # a running copy keeps its open files; the new one starts next time
         subprocess.run(["ditto", str(built), str(app)], check=True)
     subprocess.run(["xattr", "-cr", str(app)], check=True)  # the copy picks up Finder info, which fails a strict check
     os.utime(app)  # Finder rereads the icon of a bundle that changed
     subprocess.run([LSREGISTER, "-f", str(app)], check=True)
-    print(f"installed {app}; to share: {OUT / f'{NAME}.zip'}")
+    print(f"installed {app}; to share: {ZIP.relative_to(REPO)}")
 
 
 if __name__ == "__main__":
