@@ -14,7 +14,7 @@ Geant4 viewer), `*-colors.mac`, `toggles/` (shows one material), `check.mac` (th
 From `l1000geom/`:
 
 ```bash
-export LEGEND1000_METADATA=~/Documents/legend1000-metadata
+export LEGEND1000_METADATA=~/Documents/legend-exp/legend1000-metadata
 ~/venvs/v/bin/legend-pygeom-l1000 -v l1000.gdml
 ~/venvs/v/bin/python l1000-autopeel.py
 ~/venvs/v/bin/python l1000-autopeel.py --tube ../../output/tube_geometry.png

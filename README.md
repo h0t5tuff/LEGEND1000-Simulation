@@ -1,7 +1,7 @@
 # LEGEND-1000 re-entrance tube
 
 The re-entrance tube (RT) holds the underground argon (UGLAr) and the detector array. It is a 6 m × 2 m cylinder of
-steel (SS) at the top, oxygen-free (OFHC) copper (Cu) in the middle and electroformed copper (EFCu) around the detectors.
+steel (SS) at the top, oxygen-free high-conductivity OFHC copper (Cu) in the middle and electroformed 10x less radioactive copper (EFCu) around the detectors.
 
 **The question:** how much of the expensive EFCu can be cut, and how much cheap SS added, without changing the
 tube's background index (BI)? "Without changing" means within 10%: that is the BI's own statistical uncertainty
@@ -26,12 +26,9 @@ What electroformed copper's own radioactivity looks like in the detectors.
 Two lines threaten `Qββ`: **Tl-208 at 2614 keV** and
 **Bi-214 at 2448 keV**, whose gammas can leave 2039 keV in a detector.
 
-Th-chain: 370000 chains, 5005703 germanium steps -> 434263 detector events
-
-U-chain: 190000 chains, 1960954 germanium steps -> 176339 detector events
-
 - **Simulated** (`sim/holders.mac`): 370 k Th-232 and 190 k U-238 chains, the ratio of EFCu's activities (0.37 : 0.19 µBq/kg), so the two spectra add as counted.
-- **The spectrum** (`ana/holders.C`): raw energy each of 336 detectors gets per event.
+- **The spectrum** (`ana/holders.C`): raw energy each of 336 detectors gets per event: 434 263 events from the
+  Th-232 chains, 176 339 from the U-238.
 
 ```bash
 ~/venvs/v/bin/python geom/l1000geom/l1000-autopeel.py --holders output/holders_geometry.png
@@ -146,7 +143,8 @@ Back to back on this MacBook (M1 Pro, 8 threads: 22.5 min for the same run) they
 Another 55 node-hours went into runs that turned out not to change the answer, and were deleted.
 
 To rerun them (`<SEEDS>`: EFCu 7001-7003 / 8001-8003, Cu 5001-5046 / 6001-6320, SS 3001-3005 / 4001-4031 for
-Tl-208 / Bi-214; `<VOLS>` the section's volume, as in `sim/run.mac` above):
+Tl-208 / Bi-214; `<NUCLIDE>` `<Z>` `<A>`: `tl208 81 208` or `bi214 83 214`; `<VOLS>` the section's volume, as in
+`sim/run.mac` above):
 
 ```bash
 ssh nersc 'mkdir -p $SCRATCH/LEGEND1000-Simulation/sim $SCRATCH/LEGEND1000-Simulation/geom/l1000geom $SCRATCH/LEGEND1000-Simulation/output/output_lh5'
@@ -161,15 +159,12 @@ ssh nersc 'rm -r $SCRATCH/LEGEND1000-Simulation'
 `SEED` starts remage's random numbers: the same seed repeats the same decays, so every run has its own, and it names
 the run's file (`tl208_<SEED>.lh5`).
 
-`sim/EdgarSim_analysis.py` and `sim/RalphSim_materialMix.ipynb` are reference only, for Edgar's older-geometry
-simulation (`output/*_EFCu_RT_nolayer_optical_map_vtx_update.parquet`).
-
 ### 3. Detector response
 
 `sim/hit.py` (reboost 1.4) gives, in the germanium, the energy through the dead
 layer, the resolution and the A/E classifier; in the UGLAr, the photoelectrons the SiPMs see, from the
 optical map. Its inputs: the response parameters of [legend1000-metadata](https://github.com/legend-exp/legend1000-metadata)
-(`~/Documents/legend1000-metadata`, `simprod/config`, experiment `l1000dsg01`, as in
+(`~/Documents/legend-exp/legend1000-metadata`, `simprod/config`, experiment `l1000dsg01`, as in
 [legend-simflow](https://github.com/legend-exp/legend-simflow)), the UGLAr optical map v0.4.0
 (`output/merged_optmap_20260225_063750.lh5`, its `/all` group, every SiPM summed) and the drift-time maps of `V00000A`
 (`output/dtmap_V00000A.lh5`, 3500 V, ⟨100⟩ and ⟨110⟩ axes: how long each step's charge takes to reach the contact,
@@ -209,7 +204,7 @@ their own dead layer, resolution and A/E).
   the top).
 
 `sim/hit.py` takes remage outputs, plus `--optmap`, `--dtmap`, `--metadata`, `--gdml`, `--seed`, `--outdir`, `--force`
-(defaults: the inputs above, seed 1, `output/output_root`). Its `--seed` (default 1) is not remage's `SEED`: with each file's name it starts the response's own random
+(defaults: the inputs above, seed 1, `output/output_root`). Its `--seed` is not remage's `SEED`: with each file's name it starts the response's own random
 numbers (energy smearing, photons, photoelectrons), so a file always gives the same hits. It writes
 `output/output_root/<run>_hit.root`: TTrees `geds` (`evtid`, `det`, `edep`, `energy` [keV], `aoe_class`), `lar`
 (`evtid`, `edep`, `pe`, `pe_map`), `vtx` (`evtid`, `xloc`, `yloc`, `zloc` [m]); ~50 GB. Only `ana/background.C`
@@ -381,8 +376,8 @@ the least EFCu, then, for it, the most SS.
 
 ## Results
 
-4066 M tube decays (Tl-208 / Bi-214): EFCu 23 M / 23 M, Cu 460 M / 3.2 G, SS 50 M / 310 M. After all cuts,
-113 ROI events: 94 from the EFCu (76 Tl-208, 18 Bi-214), 19 from the Cu, none from the SS.
+Of the 4.1 × 10⁹ tube decays (§2), 113 make an ROI event after all cuts: 94 from the EFCu (76 Tl-208, 18 Bi-214),
+19 from the Cu, none from the SS.
 
 **The BI as built** (the LEGEND-1000 goal is 10⁻⁵):
 
@@ -420,16 +415,8 @@ BI AS BUILT  [cts/(keV kg yr)], +- simulation statistics; none: no ROI event in 
 The tube's spectrum as built, through each cut: the ROI shaded light green, `Qββ` ± 2σ dark green, the BI after all
 cuts as the black line across the ROI, the 10⁻⁵ goal dashed.
 
-**The designs**, for each depth L2 where the EFCu starts, the deepest L1 where the SS can end:
-
-| EFCu from (L2)    | EFCu       | SS to (L1) | SS : Cu : EFCu         | BI change                      |
-| ----------------- | ---------- | ---------- | ---------------------- | ------------------------------ |
-| 4.07 m, as built  | 175 kg     | 2.69 m     | 809 : 460 : 175 kg     | +6%                            |
-| 4.20 m            | 163 kg     | 2.69 m     | 809 : 472 : 163 kg     | +8%                            |
-| 4.30 m            | 154 kg     | 2.66 m     | 800 : 490 : 154 kg     | +7%                            |
-| 4.40 m            | 146 kg     | 2.66 m     | 800 : 499 : 146 kg     | +10%                           |
-| **4.50 m**        | **137 kg** | **2.28 m** | **685 : 635 : 137 kg** | **+10%**                       |
-| 4.60 m and deeper | ≤ 129 kg   | none       |                        | more than 10% at any SS length |
+**The designs**, the printout's DESIGNS part: for each depth L2 where the EFCu starts, the deepest L1 where the SS
+can end:
 
 ```
 DESIGNS  against the tube as built (BI 9.77e-09 after all cuts): SS down to L1, Cu down to L2, EFCu below. a design passes when its BI
@@ -473,7 +460,7 @@ L1 and L2 recolour the tube by its BI and give the masses; `app/make_app.py` bui
 **The Hall C geometry.** Matthew Busch's string and lock update (29 Sep 2026) proposes 12-detector strings, for
 running beyond 1 t, at the same central depth in the UGLAr:
 
-- **Array**: 42 strings × 8 detectors × 3 kg = 1008 kg becomes 48 × 12 × 3 kg = 1727 kg. Each string's germanium
+- **Array**: 42 strings × 8 detectors × 3 kg = 1008 kg becomes 48 × 12 × 3 kg = 1728 kg. Each string's germanium
   grows from 1.08 to 1.64 m and its fibres from 1.36 to 1.92 m, reaching 0.28 m higher and 0.28 m deeper.
 - **Tube**: 0.2 m longer, the extra height in the Cu section, and a deeper bottom head (467 → 575 mm deep): more UGLAr.
 - **Lab**: the cleanroom floor, cryostat and water tank drop 0.2 m; the lock pipe grows from 7.54 to 7.81 m. It

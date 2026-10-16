@@ -25,7 +25,7 @@ p = argparse.ArgumentParser(description="detector response of remage runs, with 
 p.add_argument("stp", nargs="+", help="remage LH5 outputs (-m: one file per run); the NERSC ones are in output/output_lh5")
 p.add_argument("--outdir", default="output/output_root", help="where each <run>_hit.root goes (a link to ~/Downloads/output_root, out of iCloud)")
 p.add_argument("--gdml", default="geom/l1000geom/l1000.gdml")
-p.add_argument("--metadata", default=os.environ.get("LEGEND1000_METADATA", os.path.expanduser("~/Documents/legend1000-metadata")))
+p.add_argument("--metadata", default=os.environ.get("LEGEND1000_METADATA", os.path.expanduser("~/Documents/legend-exp/legend1000-metadata")))
 p.add_argument("--optmap", default="output/merged_optmap_20260225_063750.lh5", help="UGLAr optical map; its group /all, every SiPM summed, is used")
 p.add_argument("--dtmap", default="output/dtmap_V00000A.lh5", help="drift-time maps of the detector template")
 p.add_argument("--seed", type=int, default=1)
