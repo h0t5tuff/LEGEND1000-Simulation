@@ -1,6 +1,4 @@
 .DS_Store
-__pycache__/
-.ipynb_checkpoints/
 
 **/output/*
 !**/output/*.png
@@ -10,6 +8,7 @@ __pycache__/
 *.root
 *.parquet
 *.pdf
+autopeel-cache.npz
 
-*Edgars_sim
-*Ralphs_sim
+/sim/EdgarSim_analysis.py
+/sim/RalphSim_materialMix.ipynb

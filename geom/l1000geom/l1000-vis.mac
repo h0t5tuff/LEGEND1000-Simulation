@@ -1,4 +1,4 @@
-# Geant4 viewer of LEGEND-1000:  remage -i l1000-vis.mac   (see README.md)
+# Geant4 viewer of LEGEND-1000:  remage -i l1000-vis.mac   (see ../readme.md)
 /RMG/Geometry/GDMLDisableOverlapCheck true
 /RMG/Geometry/IncludeGDMLFile l1000.gdml
 /run/initialize

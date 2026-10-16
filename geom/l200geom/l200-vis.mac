@@ -1,4 +1,4 @@
-# Geant4 viewer of LEGEND-200:  remage -i l200-vis.mac   (see README.md)
+# Geant4 viewer of LEGEND-200:  remage -i l200-vis.mac   (see ../readme.md)
 /RMG/Geometry/GDMLDisableOverlapCheck true
 /RMG/Geometry/IncludeGDMLFile l200.gdml
 /run/initialize

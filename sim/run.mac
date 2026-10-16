@@ -3,7 +3,7 @@
 /RMG/Geometry/RegisterDetector Scintillator liquid_argon_underground 10001   # the UGLAr, uid as in the GDML: the argon veto
 /RMG/Output/NtupleUseVolumeName true                           # tables named V00101Z ... and liquid_argon_underground
 /RMG/Processes/EnableGammaAngularCorrelation                   # physics-list settings are PreInit-only
-/RMG/Geometry/GDMLDisableOverlapCheck true                     # overlaps are checked with the geometry, in geom/
+/RMG/Geometry/GDMLDisableOverlapCheck true                     # overlaps are checked with the geometry, in geom/l1000geom/
 /RMG/Geometry/IncludeGDMLFile {GDML}
 /run/initialize
 

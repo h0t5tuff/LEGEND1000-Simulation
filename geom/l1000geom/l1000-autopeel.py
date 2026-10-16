@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-"""Peel the LEGEND-1000 geometry layer by layer on a timer while you rotate it (see README.md).
+"""Peel the LEGEND-1000 geometry layer by layer on a timer while you rotate it (see ../readme.md).
 
     ~/venvs/v/bin/python l1000-autopeel.py
-    ~/venvs/v/bin/python l1000-autopeel.py --holders ../output/holders_geometry.png    (the detector holders alone, no window)
-    ~/venvs/v/bin/python l1000-autopeel.py --tube ../output/tube_geometry.png          (the re-entrant tube, the decay source)
-    ~/venvs/v/bin/python l1000-autopeel.py --uglar ../output/uglar_geometry.png        (the underground argon, the veto)
-    ~/venvs/v/bin/python l1000-autopeel.py --hpge ../output/hpge_geometry.png          (the HPGe detectors)
+    ~/venvs/v/bin/python l1000-autopeel.py --holders ../../output/holders_geometry.png (the detector holders alone, no window)
+    ~/venvs/v/bin/python l1000-autopeel.py --tube ../../output/tube_geometry.png       (the re-entrant tube, the decay source)
+    ~/venvs/v/bin/python l1000-autopeel.py --uglar ../../output/uglar_geometry.png     (the underground argon, the veto)
+    ~/venvs/v/bin/python l1000-autopeel.py --hpge ../../output/hpge_geometry.png       (the HPGe detectors)
 """
 
 import itertools

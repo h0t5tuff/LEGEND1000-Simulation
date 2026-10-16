@@ -1,8 +1,7 @@
-// The autopeel as a native macOS app: peels a geometry layer by layer on a timer while you rotate it, like
-// LEGEND200/l200-autopeel.py and geom/l1000-autopeel.py. It reads geometry.json + geometry.bin from its own
-// bundle (both written by make_app.py), so it needs nothing else installed. Built by make_app.py:
-//   xcrun swiftc -O -parse-as-library -swift-version 5 autopeel.swift
-// Hidden check: <app>/Contents/MacOS/<name> --snapshot out.png [--peel N] renders one frame offscreen and quits.
+// LEGEND.app's l200 and l1000: the autopeel as a native viewer, peeling a geometry layer by layer on a timer while
+// you rotate it, like geom/l200geom/l200-autopeel.py and geom/l1000geom/l1000-autopeel.py. It reads geometry.json + geometry.bin
+// from its folder of the bundle (both written by make_app.py), so it needs nothing else installed. legend.swift
+// opens it; --snapshot out.png --open l200 [--peel N] [--size WxH] renders one frame offscreen.
 
 import AppKit
 import SceneKit
@@ -171,14 +170,6 @@ final class Peel {
     var target = SCNVector3(0, 0, 0)
 }
 
-func gradient(bottom: NSColor, top: NSColor) -> NSImage {
-    let image = NSImage(size: NSSize(width: 8, height: 512))
-    image.lockFocus()
-    NSGradient(starting: bottom, ending: top)!.draw(in: NSRect(x: 0, y: 0, width: 8, height: 512), angle: 90)
-    image.unlockFocus()
-    return image
-}
-
 // ── the peel: a timer that only changes visibility and opacity ─────────────────────────────────────────
 
 final class Peeler {
@@ -251,23 +242,6 @@ final class Peeler {
 
 // ── the window ──────────────────────────────────────────────────────────────────────────────────────
 
-final class PeelView: SCNView {
-    var keys: [String: () -> Void] = [:]
-    override var acceptsFirstResponder: Bool { true }
-    override func keyDown(with event: NSEvent) {
-        let name: String
-        switch event.keyCode {
-        case 49: name = "space"
-        case 123: name = "Left"
-        case 124: name = "Right"
-        case 125: name = "Down"
-        case 126: name = "Up"
-        default: name = event.charactersIgnoringModifiers ?? ""
-        }
-        if let f = keys[name] { f() } else { super.keyDown(with: event) }
-    }
-}
-
 func label(_ size: CGFloat, _ colour: NSColor) -> NSTextField {
     let t = NSTextField(labelWithString: "")
     t.font = .systemFont(ofSize: size)
@@ -282,31 +256,25 @@ func label(_ size: CGFloat, _ colour: NSColor) -> NSTextField {
     return t
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    var window: NSWindow!
-    var peel: Peel!
-    var peeler: Peeler!
+final class PeelController: Viewer {
+    let window: NSWindow
+    let peel: Peel
+    let peeler: Peeler
+    let view: KeyView
     var timer: Timer?
 
-    func applicationDidFinishLaunching(_ note: Notification) {
-        let (geo, bin): (Geometry, Data)
-        do { (geo, bin) = try loadGeometry(Bundle.main.resourceURL!) } catch {
-            let a = NSAlert(); a.messageText = "No geometry in the app"; a.informativeText = "\(error)"; a.runModal()
-            NSApp.terminate(nil); return
-        }
+    init(_ dir: URL) throws {
+        let (geo, bin) = try loadGeometry(dir)
         let t0 = Date()
         peel = Peel(geo, bin)
         peeler = Peeler(peel)
-        let args = CommandLine.arguments
-        if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count { return snapshot(to: args[i + 1], args) }
-
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1500, height: 1000)
         let size = NSSize(width: min(1500, screen.width * 0.9), height: min(1000, screen.height * 0.9))
         window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
         window.title = "\(geo.title) autopeel"
-        window.center()
-        let view = PeelView(frame: window.contentView!.bounds)
+        view = KeyView(frame: window.contentView!.bounds)
         view.autoresizingMask = [.width, .height]
         view.scene = peel.scene
         view.pointOfView = peel.camera
@@ -328,28 +296,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keys.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 18),
             keys.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor, constant: -12),
         ])
-        peeler.onChange = { info.stringValue = self.peeler.text }
+        let (peel, peeler, view) = (self.peel, self.peeler, self.view)
+        peeler.onChange = { info.stringValue = peeler.text }
         peeler.onChange()
-
-        let aim = { view.defaultCameraController.target = self.peel.target }
+        let aim = { view.defaultCameraController.target = peel.target }
         view.keys = [
             "space": peeler.toggle, "Right": peeler.forward, "Left": peeler.back,
-            "Up": { self.peeler.speed(1 / 1.5) }, "Down": { self.peeler.speed(1.5) }, "0": peeler.restart,
-            "c": { self.peel.startView(); aim() },
-            "r": { self.peel.frame(nodes: self.peel.layerNodes); aim() },
-            "f": { self.flyToCursor(view) },
+            "Up": { peeler.speed(1 / 1.5) }, "Down": { peeler.speed(1.5) }, "0": peeler.restart,
+            "c": { peel.startView(); aim() },
+            "r": { peel.frame(nodes: peel.layerNodes); aim() },
+            "f": { [unowned self] in self.flyToCursor() },
             "q": { NSApp.terminate(nil) },
         ]
-        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in self.peeler.tick() }
-        window.makeKeyAndOrderFront(nil)
-        window.makeFirstResponder(view)
-        NSApp.activate(ignoringOtherApps: true)
-        print(String(format: "%.2f M triangles in %d layers, ready in %.1f s", Double(peel.triangles) / 1e6,
+        print(String(format: "%@: %.2f M triangles in %d layers, ready in %.1f s", geo.title, Double(peel.triangles) / 1e6,
                      peel.layerNodes.count, Date().timeIntervalSince(t0)))
     }
 
+    func show() {
+        let peeler = self.peeler
+        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in peeler.tick() }
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(view)
+    }
+
+    func close() {
+        timer?.invalidate()
+        timer = nil
+        view.keys = [:]
+        view.isPlaying = false
+    }
+
     // f: centre the view on the surface under the cursor and move a third of the way to it
-    func flyToCursor(_ view: SCNView) {
+    func flyToCursor() {
         let p = view.convert(window.mouseLocationOutsideOfEventStream, from: nil)
         guard let hit = view.hitTest(p, options: [.searchMode: SCNHitTestSearchMode.closest.rawValue, .ignoreHiddenNodes: true]).first,
               let cam = view.pointOfView else { return }
@@ -363,44 +342,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         peel.target = w
     }
 
-    // --snapshot out.png [--peel N] [--size WxH]: render one frame offscreen and quit
+    // --snapshot out.png [--peel N] [--size WxH]: one frame offscreen, N layers peeled and re-framed (as r does)
     func snapshot(to path: String, _ args: [String]) {
-        var peelN = 0, size = CGSize(width: 1500, height: 1000)
-        if let i = args.firstIndex(of: "--peel"), i + 1 < args.count { peelN = Int(args[i + 1]) ?? 0 }
-        if let i = args.firstIndex(of: "--size"), i + 1 < args.count {
-            let wh = args[i + 1].split(separator: "x").compactMap { Double($0) }
-            if wh.count == 2 { size = CGSize(width: wh[0], height: wh[1]) }
-        }
+        let peelN = argument(args, "--peel").flatMap { Int($0) } ?? 0
+        let size = argument(args, "--size").flatMap(parseSize) ?? NSSize(width: 1500, height: 1000)
         for i in 0..<min(peelN, peel.layerNodes.count - 1) { peel.layerNodes[i].isHidden = true }
-        if peelN > 0 { peel.frame(nodes: peel.layerNodes) }   // as r does
+        if peelN > 0 { peel.frame(nodes: peel.layerNodes) }
         let r = SCNRenderer(device: MTLCreateSystemDefaultDevice(), options: nil)
         r.scene = peel.scene
         r.pointOfView = peel.camera
-        let image = r.snapshot(atTime: 0, with: size, antialiasingMode: .multisampling4X)
-        if let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) {
-            try? png.write(to: URL(fileURLWithPath: path))
-            print("wrote \(path): \(peel.triangles) triangles, \(peelN) layers peeled")
-        }
-        NSApp.terminate(nil)
-    }
-
-    func applicationShouldTerminateAfterLastWindowClosed(_ app: NSApplication) -> Bool { true }
-}
-
-@main
-enum AutopeelApp {
-    static func main() {
-        let app = NSApplication.shared
-        let delegate = AppDelegate()
-        app.delegate = delegate
-        app.setActivationPolicy(.regular)
-        let menu = NSMenu(), item = NSMenuItem()
-        menu.addItem(item)
-        let appMenu = NSMenu()
-        let name = ProcessInfo.processInfo.processName
-        appMenu.addItem(withTitle: "Quit \(name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        item.submenu = appMenu
-        app.mainMenu = menu
-        app.run()
+        writePNG(r.snapshot(atTime: 0, with: size, antialiasingMode: .multisampling4X), path)
+        print("wrote \(path): \(peel.triangles) triangles, \(peelN) layers peeled")
     }
 }

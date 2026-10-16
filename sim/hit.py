@@ -23,12 +23,13 @@ from legendmeta import Legend1000Metadata
 #  1. Configuration:
 p = argparse.ArgumentParser(description="detector response of remage runs, with reboost")
 p.add_argument("stp", nargs="+", help="remage LH5 outputs (-m: one file per run); the NERSC ones are in output/output_lh5")
-p.add_argument("--outdir", default="output", help="where each <run>_hit.root goes")
-p.add_argument("--gdml", default="geom/l1000.gdml")
+p.add_argument("--outdir", default="output/output_root", help="where each <run>_hit.root goes (a link to ~/Downloads/output_root, out of iCloud)")
+p.add_argument("--gdml", default="geom/l1000geom/l1000.gdml")
 p.add_argument("--metadata", default=os.environ.get("LEGEND1000_METADATA", os.path.expanduser("~/Documents/legend1000-metadata")))
 p.add_argument("--optmap", default="output/merged_optmap_20260225_063750.lh5", help="UGLAr optical map; its group /all, every SiPM summed, is used")
 p.add_argument("--dtmap", default="output/dtmap_V00000A.lh5", help="drift-time maps of the detector template")
 p.add_argument("--seed", type=int, default=1)
+p.add_argument("--force", action="store_true", help="rebuild hit files that are already newer than their inputs")
 args = p.parse_args()
 
 EXP = "l1000dsg01"
@@ -93,6 +94,9 @@ for stp in args.stp:
     # processors draw from an unseeded generator, so the argon calls the reboost.optmap.convolve functions under them
     rng = np.random.default_rng([args.seed, zlib.crc32(os.path.basename(stp).encode())])
     out = os.path.join(args.outdir, os.path.basename(stp).removesuffix(".lh5") + "_hit.root")
+    if not args.force and os.path.exists(out) and os.path.getmtime(out) > max(os.path.getmtime(f) for f in (stp, args.optmap, args.dtmap)):
+        print(f"{stp} -> {out}: up to date, kept")  # the same seeds give the same hits: nothing to rebuild
+        continue
     origins = lh5.read("detector_origins", stp)
     on_disk = set(lh5.ls(stp, "stp/"))
     vtx = lh5.read("vtx", stp).view_as("ak")

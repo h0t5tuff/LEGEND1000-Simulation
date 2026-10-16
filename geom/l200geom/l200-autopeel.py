@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Peel the LEGEND-200 geometry layer by layer on a timer while you rotate it (see README.md).
+"""Peel the LEGEND-200 geometry layer by layer on a timer while you rotate it (see ../readme.md).
 
     ~/venvs/v/bin/python l200-autopeel.py
 """
@@ -29,7 +29,7 @@ from vtkmodules.vtkRenderingCore import (
 HERE = Path(__file__).resolve().parent
 GDML = HERE / "l200.gdml"
 COLOURS = HERE / "l200-colors.mac"
-CACHE = HERE / "output" / "autopeel-cache.npz"
+CACHE = HERE / "autopeel-cache.npz"
 DWELL = 3.0  # s per layer at start (up/down change it)
 FADE = 0.5  # s a layer takes to fade out or back in
 START_THETA_PHI = (70, 20)  # deg, z up: the start view of l200-vis.mac

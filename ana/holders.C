@@ -4,7 +4,7 @@ namespace cfg
   const double window_ns = 1e4;                                                                                    // one detector event: its steps within 10 us of the first
   const double eMax = 3000, binW = 5;                                                                              // keV
   const char *chain[2] = {"Th-232", "U-238"}, *fill[2] = {"#2f74c8", "#e8862a"}, *ink[2] = {"#1d4f91", "#b35900"}; // spectrum, label
-  // the ROI: Qbb +- 2 sigma, sigma from the resolution the tube's response uses (legend1000-metadata simprod l1000dsg01
+  // the band: Qbb +- 2 sigma, sigma from the resolution the tube's response uses (legend1000-metadata simprod l1000dsg01
   // eresmod: FWHM = sqrt(0.5 + 0.001 E) keV, 1.59 keV at Qbb)
   const double Qbb = 2039.0, roiHalf = 2 * sqrt(0.5 + 0.001 * Qbb) / 2.35482;
   struct Line
@@ -140,13 +140,13 @@ void holders(const char *files = "output/holders_th232.root,output/holders_u238.
     h[k]->Draw("hist same");
     leg->AddEntry(h[k], Form("%s chain (%.0f k)", cfg::chain[k], nCh[k] / 1e3), "f");
   }
-  // the ROI over the spectrum, and Qbb
+  // the Qbb +- 2 sigma band over the spectrum, and Qbb
   const int roiCol = TColor::GetColor("#2e7d32");
   auto b = new TBox(cfg::Qbb - cfg::roiHalf, yMin, cfg::Qbb + cfg::roiHalf, yMax);
   b->SetFillColorAlpha(roiCol, 0.8);
   b->SetLineWidth(0);
   b->Draw(); // 2.7 keV: a line at this scale
-  auto roiText = ndc(cfg::Qbb + 15, 0.62, Form("#splitline{ROI Q_{#beta#beta} #pm 2#sigma}{%.1f-%.1f keV}", cfg::Qbb - cfg::roiHalf, cfg::Qbb + cfg::roiHalf));
+  auto roiText = ndc(cfg::Qbb + 15, 0.62, Form("#splitline{Q_{#beta#beta} #pm 2#sigma}{%.1f-%.1f keV}", cfg::Qbb - cfg::roiHalf, cfg::Qbb + cfg::roiHalf));
   roiText->SetTextAlign(11);
   roiText->SetTextColor(roiCol);
   roiText->Draw();
