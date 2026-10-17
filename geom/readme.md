@@ -25,7 +25,7 @@ remage --ignore-warnings -s GDML=l1000.gdml -s SKIP=false -s NPOINTS=1000 -- che
 From `l200geom/`, the same (`--public-geom` builds a stand-in array from public test data instead):
 
 ```bash
-export LEGEND_METADATA=~/Documents/legend-metadata
+export LEGEND_METADATA=~/Documents/legend-exp/Legend-metadata
 ~/venvs/v/bin/legend-pygeom-l200 -v l200.gdml
 ~/venvs/v/bin/python l200-autopeel.py
 remage -i l200-vis.mac
