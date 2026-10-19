@@ -16,9 +16,10 @@ namespace cfg
   // the cuts of the LEGEND-1000 simulation production (legend1000-metadata simprod/config, l1000dsg01: tier/evt, pars/geds/psdcuts)
   const double m1_keV = 25.0;  // a detector fired above this; M1: exactly one did
   const double lar_pe = 4.0;   // the LAr veto rejects a decay whose SiPMs see this many photoelectrons, summed
-  const double psd_low = -1.5; // the production's A/E cut: keep a hit whose A/E classifier is above this (low side)
-  // ...but the analysis sets it as LEGEND does in data ([5]): at the classifier value that keeps this fraction of the Tl208
-  // double-escape peak (DEP, single site like 0vbb) in M1 events, net of the continuum under it
+  const double psd_low = -1.5; // the production's A/E cut, used here: keep a hit whose A/E classifier is above this (low side)
+  // LEGEND sets it in data to keep this fraction of the Tl208 double-escape peak (DEP, single site like 0vbb); here that
+  // is only checked: this one-template A/E model leaves the DEP's A/E with a long flat tail, so 90% falls far below the
+  // production's cut (-6.6 with 5x more EFCu decays), where the SEP and FEP pass 3x more than measured at HADES
   const double depKeep = 0.90, depE = 1592.5, depHalf = 2.5, sideLo = 5.0, sideHi = 10.0; // keV: peak +-2.5, sidebands 5-10 off it
   const int NC = 4;                                                                       // cut levels: none, M1, M1 + LAr, M1 + LAr + A/E
   const char *cutName[NC] = {"no cut", "M1", "M1 + LAr", "M1 + LAr + A/E"};
@@ -644,10 +645,9 @@ static std::vector<std::string> expand(const std::string &pat) // "output/tl208*
   return out;
 }
 
-// the A/E cut as LEGEND sets it: the classifier threshold that keeps cfg::depKeep of the DEP of Tl208, in M1 hits of every
-// Tl208 run of the tube, the continuum under the peak subtracted with the sidebands. one value for all detectors: they
-// share one template and one set of parameters. then the cut on the other lines a 228Th calibration measures it on, and on
-// the window's continuum, against the HADES characterization of the L1000 template detector V00000A
+// the production's A/E cut, checked: what it keeps of the DEP, SEP and FEP of Tl208 in M1 hits of every Tl208 run of the
+// tube (the continuum under each peak subtracted with the sidebands) and of the ROI, against the HADES characterization of
+// the L1000 template detector V00000A; and where LEGEND's 90%-of-the-DEP rule would put it. one value for all detectors
 static void tuneAoE(const std::vector<std::string> &files)
 {
   struct Line
@@ -703,14 +703,14 @@ static void tuneAoE(const std::vector<std::string> &files)
     printf("A/E CUT  only %.0f DEP counts net, kept at the production's %.2f\n\n", net(dep), cfg::psd_low);
     return;
   }
-  double thr = 0;
+  double thr = 0; // where the 90% rule would put it
   while (thr > -50 && kept(dep, thr) < cfg::depKeep)
     thr -= 0.005;
-  gPsdLow = thr;
-  printf("A/E CUT  tuned on the Tl208 DEP (%.1f keV) in M1 hits: %zu in +-%.1f keV, %zu in the sidebands %.0f-%.0f keV off it, %.0f net\n",
-         cfg::depE, dep.peak.size(), cfg::depHalf, dep.side.size(), cfg::sideLo, cfg::sideHi, net(dep));
-  printf("    classifier > %.2f keeps %.0f%% of it (+- %.0f%% statistics); the production's > %.2f kept %.0f%%\n", gPsdLow, 100 * kept(dep, gPsdLow),
-         100 * sqrt(cfg::depKeep * (1 - cfg::depKeep) / net(dep)), cfg::psd_low, 100 * kept(dep, cfg::psd_low));
+  gPsdLow = cfg::psd_low;
+  printf("A/E CUT  the production's classifier > %.2f, checked on the Tl208 DEP (%.1f keV) in M1 hits: %zu in +-%.1f keV, %zu in the sidebands %.0f-%.0f keV off it, %.0f net\n",
+         cfg::psd_low, cfg::depE, dep.peak.size(), cfg::depHalf, dep.side.size(), cfg::sideLo, cfg::sideHi, net(dep));
+  printf("    it keeps %.0f%% of the DEP (+- %.0f%% statistics); keeping %.0f%% would take > %.2f\n", 100 * kept(dep, gPsdLow),
+         100 * sqrt(dep.peak.size() + k * k * dep.side.size()) / net(dep), 100 * cfg::depKeep, thr);
   printf("    kept by it, net of the continuum:");
   for (auto &l : line)
     printf("  %s %.1f %.2f (%.0f net)", l.name, l.e, kept(l, gPsdLow), net(l));
@@ -823,8 +823,8 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
   auto massOf = [&](double d0, double d1, int m)
   { return d1 > d0 ? rt.density[m] * rt.tubeVolume(rt.zTop - d1, rt.zTop - d0) * 1e-9 : 0.0; };
   printf("INPUTS  ROI: Qbb +- %.0f keV = %.0f-%.0f keV, one window short of the Tl208 single escape (2103.5 keV): %.0f keV\n", cfg::roiHalf, cfg::winLo, cfg::winHi, cfg::winWidth);
-  printf("        cuts: M1 (exactly one detector above %.0f keV), LAr veto (the SiPMs see < %.0f photoelectrons), A/E classifier > %.2f (%.0f%% DEP, A/E CUT)\n",
-         cfg::m1_keV, cfg::lar_pe, gPsdLow, 100 * cfg::depKeep);
+  printf("        cuts: M1 (exactly one detector above %.0f keV), LAr veto (the SiPMs see < %.0f photoelectrons), A/E classifier > %.2f (the production's, A/E CUT)\n",
+         cfg::m1_keV, cfg::lar_pe, gPsdLow);
   printf("        activity: chain [uBq/kg] 232Th / 238U: SS %g / %g, Cu %g / %g, EFCu %g / %g; Tl208 is %.2f%% of 232Th, Bi214 %.0f%% of 238U\n\n",
          cfg::chain[0][0], cfg::chain[0][1], cfg::chain[1][0], cfg::chain[1][1], cfg::chain[2][0], cfg::chain[2][1], 100 * cfg::branch[0], 100 * cfg::branch[1]);
 
