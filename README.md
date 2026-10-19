@@ -5,15 +5,14 @@ steel (SS) at the top, oxygen-free high-conductivity (OFHC) copper (Cu) in the m
 3-7 × less radioactive than the Cu, around the detectors.
 
 **The question:** how much of the expensive EFCu can be cut, and how much cheap SS added, without changing the
-tube's background index (BI)? "Without changing" means within 10%: that is the BI's own statistical uncertainty
-(±10%), so a smaller change cannot be told apart from none.
+tube's background index (BI)? "Without changing" means within 10%.
 
 **The answer** (depths below the tube's top; as built the SS ends at 2.06 m and the EFCu starts at 4.07 m):
 
-|                                                                 | SS : Cu : EFCu     | BI after all cuts [cts/(keV·kg·yr)]          |
+|                                                                 | SS : Cu : EFCu     | BI after all cuts [counts/(keV·kg·yr)]       |
 | --------------------------------------------------------------- | ------------------ | -------------------------------------------- |
-| as built                                                        | 619 : 672 : 175 kg | 0.98 ± 0.10 × 10⁻⁸ (before cuts 4.60 × 10⁻⁶) |
-| EFCu from 4.50 m (0.43 m shorter), SS to 2.28 m (0.22 m longer) | 685 : 635 : 137 kg | +10%: within its own ±10%                    |
+| as built                                                        | 619 : 672 : 175 kg | 0.82 ± 0.17 × 10⁻⁸ (before cuts 4.30 × 10⁻⁶) |
+| EFCu from 4.40 m (0.33 m shorter), SS to 2.69 m (0.63 m longer) | 809 : 489 : 146 kg | +9%: within 10%                              |
 
 [how radioactive is EFCu?](#how-radioactive-is-efcu) · [Method](#method) · [Results](#results) ·
 [Future work](#future-work)
@@ -31,7 +30,7 @@ two spectra add as counted. Two lines threaten `Qββ` = 2039 keV, the energy of
 ![the holders' spectrum](output/holders_spectrum.png)
 
 The energy each of the 336 detectors gets, without the detector response (§3), summed over 10 µs: 434 263 such
-detector events from the Th-232 chains, 176 339 from the U-238. `sim/holders.mac` writes every germanium step (`stp/germanium`: `evtid`, `det_uid`, `edep_in_keV`,
+hits from the Th-232 chains, 176 339 from the U-238. `sim/holders.mac` writes every germanium step (`stp/germanium`: `evtid`, `det_uid`, `edep_in_keV`,
 `time_in_ns`, ...) and one row per chain (`stp/vtx`) to `output/holders_th232.root` and `holders_u238.root`;
 `ana/holders.C` draws them.
 
@@ -98,17 +97,43 @@ barely see); §5 combines them into any design:
 
 | section | runs | decays (Tl-208 / Bi-214) | real years they stand for | why that many                                                                                           |
 | ------- | ---- | ------------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------- |
-| EFCu    | 6    | 23 M / 23 M              | 31 000 / 22 000           | next to the array, they give 94 of the BI's 113 events after all cuts: the BI's ±10%                    |
-| Cu      | 366  | 460 M / 3.2 G            | 55 000 / 116 000          | they decide how far the SS can come down (§5): enough that one event, turned into SS, adds 3% of the BI |
-| SS      | 36   | 50 M / 310 M             | 7 / 6                     | 2.7-4.8 m above the array: none of their decays puts an event in the ROI (§4), at any cut level         |
+| EFCu    | 6    | 23 M / 23 M              | 31 000 / 22 000           | next to the array, they give 21 of the BI's 26 counts after all cuts: the BI's ±21%                     |
+| Cu      | 366  | 460 M / 3.2 G            | 55 000 / 116 000          | they decide how far the SS can come down (§5): one count, turned into SS, adds 14% of the BI            |
+| SS      | 36   | 50 M / 310 M             | 7 / 6                     | 2.7-4.8 m above the array: none of their decays puts a count in the ROI (§4), at any cut level          |
 | total   | 408  | 4.1 × 10⁹                |                           | 66 GB                                                                                                   |
 
 "Real years": how long the section, as built, takes to make that many decays (its activity × mass, §4). In the Cu and
-SS, Bi-214 needs ~7 × the decays of Tl-208: the SS holds ~7 × more Bi-214 than Tl-208 (2500 vs 360 µBq/kg), and an
-event turned into SS (§5) must weigh the same in both chains. On NERSC's Perlmutter the runs took 122 task-hours, 17
+SS, Bi-214 needs ~7 × the decays of Tl-208: the SS holds ~7 × more Bi-214 than Tl-208 (2500 vs 360 µBq/kg), and a
+count turned into SS (§5) must weigh the same in both chains. On NERSC's Perlmutter the runs took 122 task-hours, 17
 node-hours of the m2676 allocation (16 min for a typical Cu run); back to back on an M1 Pro MacBook (8 threads,
 22.5 min for that run) ~175 hours, about a week. Another 55 node-hours went into runs that turned out not to change
 the answer, and were deleted.
+
+**How many decays each section needs.** Measured, not guessed, per nuclide and section:
+
+1. **The count rate per decay**, p = simulated counts after all cuts ÷ simulated decays. It is set by the geometry and
+   the cuts, not by how many decays are run, so one or two runs measure it.
+2. **The counts needed.** A nuclide-section that makes a share f of the BI, with n simulated counts, adds f²/n to the
+   BI's relative uncertainty, squared: (BI uncertainty)² = Σ f²/n. For ±10%, the size of the 10% line: Σ f²/n ≤ 0.01.
+3. **The decays needed** = counts needed ÷ p.
+
+From the first 408 runs (§4's table), in the 100 keV ROI:
+
+| nuclide | section | share f of the BI | p = counts ÷ decays          | counts needed for ±10% | decays needed | decays then  |
+| ------- | ------- | ----------------- | ---------------------------- | ---------------------- | ------------- | ------------ |
+| Tl-208  | EFCu    | 58%               | 15 ÷ 22.6 M = 6.6 × 10⁻⁷     | ~80                    | ~120 M        | 22.6 M       |
+| Bi-214  | EFCu    | 33%               | 6 ÷ 22.6 M = 2.7 × 10⁻⁷      | ~28                    | ~105 M        | 22.6 M       |
+| Tl-208  | Cu      | 6.5%              | 3 ÷ 460 M = 6.5 × 10⁻⁹       | 3: enough              | 460 M         | 460 M        |
+| Bi-214  | Cu      | 2%                | 2 ÷ 3.2 G = 6.3 × 10⁻¹⁰      | 2: enough              | 3.2 G         | 3.2 G        |
+| both    | SS      | 0%                | 0 ÷ 360 M                    | none                   | —             | 50 M / 310 M |
+
+Then: 0.58²/15 + 0.33²/6 + 0.065²/3 + 0.02²/2 = 0.043, ±21%. With ~80 and ~28 EFCu counts it is 0.0098, ±10%: the
+EFCu needs ~5 × its decays, the Cu and SS none.
+
+A design adds one need. A count moved into a new material takes that material's weight, so the decays of the section
+it comes from set how big a step one count is. For the SS limit that is the Cu: one Cu count turned into SS adds 14%
+of the BI. Bringing that to ~3% would take ~4.6 × the Cu decays (~2 G Tl-208 and ~15 G Bi-214, ~50 node-hours): not
+worth it, so the SS limit stays set by a single count.
 
 To rerun them (`<SEEDS>`: EFCu 7001-7003 / 8001-8003, Cu 5001-5046 / 6001-6320, SS 3001-3005 / 4001-4031 for
 Tl-208 / Bi-214; `<NUCLIDE>` `<Z>` `<A>`: `tl208 81 208` or `bi214 83 214`; `<VOLS>` the section's volume):
@@ -150,7 +175,7 @@ bring their own dead layer, resolution and A/E.
   production's second condition, 4 SiPMs with light, and random coincidences are left out). This v0.4.0 map stops
   68 mm short of this UGLAr's outer wall (the argon there takes the light at the map's edge), and argon above
   z = 1.375 m gives no light, so until the 0.6.0 map
-  arrives the BI is a 1.0-3.2 × 10⁻⁸ range (3.2 × 10⁻⁸ with the LAr veto read off the map alone, no light from the
+  arrives the BI is a 0.8-2.4 × 10⁻⁸ range (2.4 × 10⁻⁸ with the LAr veto read off the map alone, no light from the
   argon beyond its edge).
 
 `sim/hit.py` writes `output/output_root/<nuclide>_<SEED>_hit.root` (~7 s a file, ~50 GB in all; only `ana/background.C` reads
@@ -177,7 +202,7 @@ pairs (wildcards merge files; default: the Tl-208 and Bi-214 sets in `output/out
 **Cuts**, in LEGEND's order: **M1** (exactly one detector above 25 keV) and the **LAr veto** (rejects ≥ 4 PE), both
 from legend1000-metadata's `tier/evt`; then **A/E** > −1.06, single-site-like, placed by LEGEND's convention to keep
 90% of the Tl-208 double-escape peak (DEP, 1592.5 keV, single-site; the production's −1.5 keeps 92%). It is one value
-for all detectors, tuned here on the simulation's 488 DEP events after M1 (net of the continuum; the 90% is ±1%
+for all detectors, tuned here on the simulation's 488 DEP counts after M1 (net of the continuum; the 90% is ±1%
 statistics). What it keeps of each Tl-208 peak and of the ROI, next to `V00000A`'s measurement at HADES (the
 underground lab where LEGEND characterises its detectors):
 
@@ -186,19 +211,22 @@ underground lab where LEGEND characterises its detectors):
 | this simulation    | 0.90           | 0.02                           | 0.04                         | 0.25 |
 | `V00000A` at HADES | 0.90           | 0.04                           | 0.06                         | 0.27 |
 
-**BI** is counts in the **ROI**, MAJORANA's background region ([Haufe et al.](https://arxiv.org/abs/2209.10592),
-[MAJORANA's final result](https://arxiv.org/abs/2207.07638)): 1950-2350 keV, less ±5 keV around each of 2039.0
-(`Qββ`), 2103.5 (Tl-208 single escape), 2118.5 and 2204.1 keV (Bi-214), so **360 keV** of continuum, per keV, per kg
-of germanium (1023.4 kg), per year. The wide ROI collects enough events, and the continuum there is flat, so its
-average holds at `Qββ`. A signal would sit in `Qββ` ± 2σ (2037.6-2040.4 keV, ~95% of a 0νββ peak at this
+**BI** is counts in the **ROI**, one window around `Qββ`: `Qββ` ± 50 keV (1989-2089 keV, **100 keV**), stopping
+short of Tl-208's single-escape peak at 2103.5 keV, as Ralph Massarczyk's tube study does (13 Oct 2026, ± 55 keV);
+per keV, per kg of germanium (1023.4 kg), per year: counts/(keV·kg·yr). The LEGEND-1000 goal is 1 count a year in
+10³ kg and 10² keV, 10⁻⁵ counts/(keV·kg·yr). A signal would sit in `Qββ` ± 2σ (2037.6-2040.4 keV, ~95% of a 0νββ peak at this
 resolution): the background expected there is the BI × 2.7 keV × the exposure.
 
-**Normalisation** turns simulated decays into real ones. Per section, from the GDML and the activities: M = ρV,
-A = M × a (a: the chain's µBq/kg × the nuclide's share of it), N_real = A × 1 yr. The simulation put N_sim decays
-there, so each stands for N_real / N_sim real decays a year: its weight, and an ROI event adds weight / (1023.4 kg ×
-360 keV) to the BI. Bulk activities only, chains in equilibrium. The activities (`cfg::chain`) are from Ralph
-Massarczyk's MaterialMix talk (23 Jun 2026); Bi-214 is 100% of the ²³⁸U chain, Tl-208 35.94% of the ²³²Th chain
-([Nuclear Data Sheets](https://doi.org/10.1016/j.nds.2007.07.001)):
+**From decays to counts.** Each simulated decay stands for w real decays a year, its weight:
+
+- w = real decays / simulated decays = mass (kg) × activity (µBq/kg) × 0.36 (Tl-208) or 1 (Bi-214) × 1 yr /
+  simulated decays, knowing Bq = decays/s (Tl-208 is 35.94% of the ²³²Th chain,
+  [Nuclear Data Sheets](https://doi.org/10.1016/j.nds.2007.07.001); Bi-214 all of the ²³⁸U chain);
+- Σw over the simulated decays that land in the ROI = the counts a year;
+- BI = counts a year / (1023.4 kg × 100 keV).
+
+Bulk activities only, chains in equilibrium; the mass of each section is the GDML's. The activities (`cfg::chain`)
+are from Ralph Massarczyk's MaterialMix talk (23 Jun 2026):
 
 | µBq/kg | ²³²Th chain | ²³⁸U chain | source quoted there                                           |
 | ------ | ----------- | ---------- | ------------------------------------------------------------- |
@@ -206,13 +234,17 @@ Massarczyk's MaterialMix talk (23 Jun 2026); Bi-214 is 100% of the ²³⁸U chai
 | Cu     | 1.1         | 1.3        | [MAJORANA assay](https://doi.org/10.1103/PhysRevC.110.055804) |
 | EFCu   | 0.37        | 0.19       | M. Green                                                      |
 
-and the weights they give (each section sampled at its own density, §2):
+The tube as built, from mass to BI (each section sampled at its own density, §2):
 
-| section | V [m³]  | M [kg] | simulated decays (Tl-208 / Bi-214) | weight (Tl-208 / Bi-214)  |
-| ------- | ------- | ------ | ---------------------------------- | ------------------------- |
-| EFCu    | 0.01948 | 174.6  | 22.6 M / 22.6 M                    | 3.24 × 10⁻⁵ / 4.63 × 10⁻⁵ |
-| Cu      | 0.07497 | 671.7  | 460 M / 3.20 G                     | 1.82 × 10⁻⁵ / 8.61 × 10⁻⁶ |
-| SS      | 0.07742 | 619.4  | 50.0 M / 310 M                     | 0.140 / 0.158             |
+| chain  | section | mass     | real decays a year | simulated decays | w           | simulated counts: no cut / M1 / + LAr / + A/E | counts a year, all cuts | BI, all cuts       |
+| ------ | ------- | -------- | ------------------ | ---------------- | ----------- | --------------------------------------------- | ----------------------- | ------------------ |
+| Tl-208 | EFCu    | 174.6 kg | 733                | 22.6 M           | 3.2 × 10⁻⁵  | 11955 / 9954 / 81 / 15                        | 4.9 × 10⁻⁴              | 4.75 ± 1.20 × 10⁻⁹ |
+| Tl-208 | Cu      | 671.7 kg | 8 380              | 460 M            | 1.8 × 10⁻⁵  | 542 / 490 / 34 / 3                            | 0.5 × 10⁻⁴              | 0.53 ± 0.31 × 10⁻⁹ |
+| Tl-208 | SS      | 619.4 kg | 7.0 × 10⁶          | 50.0 M           | 0.14        | 0 / 0 / 0 / 0                                 | 0                       | 0                  |
+| Bi-214 | EFCu    | 174.6 kg | 1 047              | 22.6 M           | 4.6 × 10⁻⁵  | 907 / 834 / 113 / 6                           | 2.8 × 10⁻⁴              | 2.71 ± 1.10 × 10⁻⁹ |
+| Bi-214 | Cu      | 671.7 kg | 27 560             | 3.20 G           | 8.6 × 10⁻⁶  | 169 / 159 / 42 / 2                            | 0.2 × 10⁻⁴              | 0.17 ± 0.12 × 10⁻⁹ |
+| Bi-214 | SS      | 619.4 kg | 4.9 × 10⁷          | 310 M            | 0.16        | 0 / 0 / 0 / 0                                 | 0                       | 0                  |
+| all    |         |          |                    | 4.07 G           |             | 26 after all cuts                             | 8.4 × 10⁻⁴              | 8.2 ± 1.7 × 10⁻⁹   |
 
 ```bash
 root -l -b -q ana/background.C
@@ -228,80 +260,72 @@ most SS.
 
 **Reweighting, not resimulating.** What a decay does in the detectors depends on where it happens, and very little on
 what the wall there is made of: SS and Cu stop gammas about equally (8.0 vs 9.0 g/cm³). So each simulated decay can
-stand for any material a design puts at its depth, with that material's weight (§4): its real decays a year per m³
-(density × activity) over the simulated decays per m³ of the run the decay came from. A design's BI is the sum of its
-events' weights, so any L1 and L2 can be tried without a new simulation. The decays at a depth come from the section
+stand for any material a design puts at its depth; only its w changes (§4): that material's real decays a year per m³
+(density × activity) over the simulated decays per m³ of the run the decay came from. A design's counts a year are
+Σw with the new weights, so any L1 and L2 can be tried without a new simulation. The decays at a depth come from the section
 built there (SS runs 0-2.06 m, Cu runs 2.06-4.07 m, EFCu runs 4.07-6.25 m), so the two savings reweight different
 runs:
 
-| design change                     | decays reweighted                                  | weight × (Tl-208 / Bi-214) | events there                     |
+| design change                     | decays reweighted                                  | w × (Tl-208 / Bi-214)      | simulated counts there           |
 | --------------------------------- | -------------------------------------------------- | -------------------------- | -------------------------------- |
 | EFCu starts lower (L2 deeper)     | the EFCu runs', from 4.07 m to L2: EFCu becomes Cu | 3.0 / 6.8                  | thousands: the change is precise |
-| SS comes further down (L1 deeper) | the Cu runs', from 2.06 m to L1: Cu becomes SS     | 810 / 1700                 | a handful: each one counts       |
+| SS comes further down (L1 deeper) | the Cu runs', from 2.06 m to L1: Cu becomes SS     | 810 / 1700                 | a handful: each one matters      |
 
 **Why the Cu runs decide the SS.** The SS added in a design would sit where the Cu is now, 2-3 m above the array,
-and only the Cu runs have decays there. Those decays rarely reach the detectors: one in 10⁷-10⁸ Tl-208 decays and one
-in ~10⁹ Bi-214 decays gives an ROI event after M1 (the table below). Turned into SS, each such event counts ~1000 times
-more. With 460 M / 3.2 G Cu decays, one of them adds 3.2% of the BI, so the 10% line is about three events: a
-measurement, not one chance event. With only a tenth of them, one event would add ~30%; none happened to fall
-between 2.06 and 2.66 m, and the SS looked free down to 2.66 m: the wrong answer.
+and only the Cu runs have decays there. Those decays rarely reach the detectors: there, one in ~5 × 10⁷ Tl-208
+decays gives an ROI count after M1, and none of 1.7 × 10⁹ Bi-214 decays does (the table below). Turned into SS, each
+such count weighs ~1000 times more: one adds 14% of the BI, more than the 10% line. So the SS can come down to just
+above the first such count, at 2.70 m: the step in the design map.
 
-**Cut survival.** Too few events survive all cuts away from the detectors to count the change on them, so it is
-counted on the ROI events that pass M1, 100-500 times more, times the **cut survival**: the fraction of them that also
-pass the LAr veto and A/E. It is measured where the change is, from the ROI events per 0.62 m slab below the tube's
-top (the table):
+**Cut survival.** Too few counts survive all cuts away from the detectors to measure the change on them, so it is
+measured on the ROI counts that pass M1, 100-600 times more, times the **cut survival**: the fraction of them that
+also pass the LAr veto and A/E. It is taken where the change is, from the simulated ROI counts per 0.62 m slab below
+the tube's top (the table):
 
-- near the detectors (below 4.37 m), per chain: 1.9 × 10⁻³ (Tl-208), 8.6 × 10⁻³ (Bi-214);
-- higher up, both chains together: 20 of 2559 = 7.8 × 10⁻³. Tl-208's events survive ~4 × more often there, partly
+- near the detectors (below 4.37 m), per chain: 1.4 × 10⁻³ (Tl-208), 7.3 × 10⁻³ (Bi-214);
+- higher up, both chains together: 6 of 771 = 7.8 × 10⁻³. Tl-208's counts survive ~5 × more often there, partly
   because the optical map gives no light above z = 1.375 m.
 
 | depth [m]                        | Tl-208 decays | ROI after M1 | after all cuts | Bi-214 decays | ROI after M1 | after all cuts |
 | -------------------------------- | ------------- | ------------ | -------------- | ------------- | ------------ | -------------- |
 | 0.00-1.87                        | 45.4 M        | 0            | 0              | 282 M         | 0            | 0              |
-| 1.87-2.50                        | 105 M         | 1            | 0              | 729 M         | 0            | 0              |
-| 2.50-3.12                        | 144 M         | 13           | 0              | 1.00 G        | 2            | 0              |
-| 3.12-3.75                        | 144 M         | 322          | 6              | 1.00 G        | 64           | 1              |
-| 3.75-4.37                        | 74.5 M        | 1813         | 10             | 496 M         | 344          | 3              |
-| 4.37-5.00                        | 6.83 M        | 8796         | 18             | 6.82 M        | 445          | 4              |
-| 5.00-5.62                        | 6.82 M        | 20243        | 42             | 6.82 M        | 1077         | 9              |
-| 5.62-6.25, nearest the detectors | 5.55 M        | 11024        | 15             | 5.56 M        | 574          | 5              |
+| 1.87-2.50                        | 105 M         | 0            | 0              | 729 M         | 0            | 0              |
+| 2.50-3.12                        | 144 M         | 5            | 0              | 1.00 G        | 0            | 0              |
+| 3.12-3.75                        | 144 M         | 97           | 0              | 1.00 G        | 29           | 1              |
+| 3.75-4.37                        | 74.5 M        | 503          | 4              | 496 M         | 137          | 1              |
+| 4.37-5.00                        | 6.83 M        | 2162         | 3              | 6.82 M        | 173          | 1              |
+| 5.00-5.62                        | 6.82 M        | 4910         | 7              | 6.82 M        | 432          | 3              |
+| 5.62-6.25, nearest the detectors | 5.55 M        | 2767         | 4              | 5.56 M        | 222          | 2              |
 
 ## Results
 
-**The BI as built** (the LEGEND-1000 goal is 10⁻⁵), then per chain and section (the SS has no ROI event at any cut
-level):
+**The BI as built** through the cuts, in counts/(keV·kg·yr) (the LEGEND-1000 goal is 10⁻⁵; per chain and section in
+§4's table):
 
 | no cut      | M1                          | M1 + LAr                                     | all cuts (M1 + LAr + A/E)                           |
 | ----------- | --------------------------- | -------------------------------------------- | --------------------------------------------------- |
-| 4.60 × 10⁻⁶ | 3.92 × 10⁻⁶: M1 removes 15% | 1.11 ± 0.03 × 10⁻⁷: the LAr veto removes 97% | **0.98 ± 0.10 × 10⁻⁸**: A/E removes 91% of the rest |
-
-| chain  | section | ROI events: no cut / M1 / + LAr / + A/E | BI after all cuts  |
-| ------ | ------- | --------------------------------------- | ------------------ |
-| Tl-208 | EFCu    | 47851 / 40461 / 457 / 76                | 6.68 ± 0.77 × 10⁻⁹ |
-| Tl-208 | Cu      | 1937 / 1751 / 176 / 15                  | 0.74 ± 0.19 × 10⁻⁹ |
-| Bi-214 | EFCu    | 2270 / 2110 / 470 / 18                  | 2.26 ± 0.53 × 10⁻⁹ |
-| Bi-214 | Cu      | 414 / 396 / 131 / 4                     | 0.09 ± 0.05 × 10⁻⁹ |
+| 4.30 × 10⁻⁶ | 3.63 × 10⁻⁶: M1 removes 16% | 0.86 ± 0.06 × 10⁻⁷: the LAr veto removes 98% | **0.82 ± 0.17 × 10⁻⁸**: A/E removes 91% of the rest |
 
 ![the spectrum](output/slide_spectrum.png)
 
-The tube's spectrum as built, through each cut: the ROI shaded light green, `Qββ` ± 2σ dark green, the BI after all
-cuts as the black line across the ROI, the 10⁻⁵ goal dashed.
+The tube's spectrum as built, through each cut: the ROI shaded green with `Qββ` as a line, the BI after all cuts as
+the black line across it, the 10⁻⁵ goal dashed.
 
 **The designs**: for each depth L2 where the EFCu starts, the deepest L1 where the SS can end:
 
 | EFCu from (L2)    | EFCu       | SS to (L1) | SS : Cu : EFCu         | BI change                      |
 | ----------------- | ---------- | ---------- | ---------------------- | ------------------------------ |
-| 4.07 m, as built  | 175 kg     | 2.69 m     | 809 : 460 : 175 kg     | +6%                            |
-| 4.20 m            | 163 kg     | 2.69 m     | 809 : 472 : 163 kg     | +8%                            |
-| 4.30 m            | 154 kg     | 2.66 m     | 800 : 490 : 154 kg     | +7%                            |
-| 4.40 m            | 146 kg     | 2.66 m     | 800 : 499 : 146 kg     | +10%                           |
-| **4.50 m**        | **137 kg** | **2.28 m** | **685 : 635 : 137 kg** | **+10%**                       |
-| 4.60 m and deeper | ≤ 129 kg   | none       |                        | more than 10% at any SS length |
+| 4.07 m, as built  | 175 kg     | 2.69 m     | 809 : 460 : 175 kg     | +0%                            |
+| 4.20 m            | 163 kg     | 2.69 m     | 809 : 472 : 163 kg     | +2%                            |
+| 4.30 m            | 154 kg     | 2.69 m     | 809 : 480 : 154 kg     | +5%                            |
+| **4.40 m**        | **146 kg** | **2.69 m** | **809 : 489 : 146 kg** | **+9%**                        |
+| 4.50 m and deeper | ≤ 137 kg   | none       |                        | more than 10% at any SS length |
 
-- **EFCu** can start 0.43 m lower, at 4.50 m: 137 kg instead of 175 (−22%). Deeper, the Cu that would replace it
+- **EFCu** can start 0.33 m lower, at 4.40 m: 146 kg instead of 175 (−17%). Deeper, the Cu that would replace it
   sits next to the detectors at 3-7 × EFCu's activity, and the BI rises more than 10% whatever the SS.
-- **SS** can then come down to 2.28 m: 685 kg instead of 619 (+66 kg). With the EFCu as built it could reach 2.69 m.
-- **The SS as built** never reaches the detectors: no ROI event at any cut level in its 360 M decays.
+- **SS** can come down to 2.69 m: 809 kg instead of 619 (+190 kg), whatever the EFCu, just above the first Cu count
+  that, turned into SS, would add 14% at once.
+- **The SS as built** never reaches the detectors: no ROI count at any cut level in its 360 M decays.
 
 ![the designs](output/slide_designs.png)
 

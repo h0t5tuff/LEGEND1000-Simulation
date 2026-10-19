@@ -7,21 +7,12 @@
 //  1. Configuration:
 namespace cfg
 {
-  // MAJORANA's background window [Haufe et al., arXiv:2209.10592]: 1950-2350 keV minus 10 keV around Qbb, 2103.5 (Tl208
-  // single escape), 2118.5 and 2204.1 keV (Bi214) [Arnquist et al., arXiv:2207.07638]. the BI is its counts / 360 keV
-  const double winLo = 1950, winHi = 2350, winGap[4] = {2039.0, 2103.5, 2118.5, 2204.1}, winGapHalf = 5.0;
-  bool inWindow(double e)
-  {
-    if (e < winLo || e > winHi)
-      return false;
-    for (double g : winGap)
-      if (fabs(e - g) <= winGapHalf)
-        return false;
-    return true;
-  }
-  const double winWidth = winHi - winLo - 4 * 2 * winGapHalf; // 360 keV
-  // the band shaded on the spectrum: Qbb +- 2 sigma, sigma from the response's resolution (simprod eresmod: FWHM = sqrt(0.5 + 0.001 E) keV)
-  const double Qbb = 2039.0, roiHalf = 2 * sqrt(0.5 + 0.001 * Qbb) / 2.35482;
+  // the ROI: one window around Qbb, Qbb +- 50 keV (1989-2089 keV), short of the Tl208 single-escape peak at 2103.5 keV, as
+  // in Ralph Massarczyk's tube study (13 Oct 2026: Qbb +- 55 keV). the BI is its counts / 100 keV
+  const double Qbb = 2039.0, roiHalf = 50.0;
+  const double winLo = Qbb - roiHalf, winHi = Qbb + roiHalf;
+  bool inWindow(double e) { return e >= winLo && e <= winHi; }
+  const double winWidth = winHi - winLo; // 100 keV
   // the cuts of the LEGEND-1000 simulation production (legend1000-metadata simprod/config, l1000dsg01: tier/evt, pars/geds/psdcuts)
   const double m1_keV = 25.0;  // a detector fired above this; M1: exactly one did
   const double lar_pe = 4.0;   // the LAr veto rejects a decay whose SiPMs see this many photoelectrons, summed
@@ -31,8 +22,8 @@ namespace cfg
   const double depKeep = 0.90, depE = 1592.5, depHalf = 2.5, sideLo = 5.0, sideHi = 10.0; // keV: peak +-2.5, sidebands 5-10 off it
   const int NC = 4;                                                                       // cut levels: none, M1, M1 + LAr, M1 + LAr + A/E
   const char *cutName[NC] = {"no cut", "M1", "M1 + LAr", "M1 + LAr + A/E"};
-  const double bgGoal = 1e-5;      // LEGEND-1000 goal [cts/(keV kg yr)] at Qbb, for scale
-  const double simTol = 0.10;      // a design passes when its BI after all cuts is at most this much above the tube's as built: the BI's own statistical uncertainty
+  const double bgGoal = 1e-5;      // LEGEND-1000 goal [counts/(keV kg yr)] at Qbb, for scale
+  const double simTol = 0.10;      // a design passes when its BI after all cuts is at most this much above the tube's as built
   const double secPerYear = 365.25 * 24 * 3600;
   const double eLo = 1000, eHi = 3000; // spectrum [keV]
   const int eBins = 200;
@@ -709,7 +700,7 @@ static void tuneAoE(const std::vector<std::string> &files)
   Line &dep = line[0];
   if (net(dep) < 30)
   {
-    printf("A/E CUT  only %.0f DEP events net, kept at the production's %.2f\n\n", net(dep), cfg::psd_low);
+    printf("A/E CUT  only %.0f DEP counts net, kept at the production's %.2f\n\n", net(dep), cfg::psd_low);
     return;
   }
   double thr = 0;
@@ -831,7 +822,7 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
   { return p < 0 || r.mcDensity[p] <= 0 ? 0.0 : rt.density[m] * cfg::activity(r.iso, m) * cfg::secPerYear / (r.mcDensity[p] * rt.geMass); };
   auto massOf = [&](double d0, double d1, int m)
   { return d1 > d0 ? rt.density[m] * rt.tubeVolume(rt.zTop - d1, rt.zTop - d0) * 1e-9 : 0.0; };
-  printf("INPUTS  ROI: %.0f-%.0f keV minus 10 keV around 2039, 2103.5, 2118.5, 2204.1 keV (MAJORANA's background region): %.0f keV\n", cfg::winLo, cfg::winHi, cfg::winWidth);
+  printf("INPUTS  ROI: Qbb +- %.0f keV = %.0f-%.0f keV, one window short of the Tl208 single escape (2103.5 keV): %.0f keV\n", cfg::roiHalf, cfg::winLo, cfg::winHi, cfg::winWidth);
   printf("        cuts: M1 (exactly one detector above %.0f keV), LAr veto (the SiPMs see < %.0f photoelectrons), A/E classifier > %.2f (%.0f%% DEP, A/E CUT)\n",
          cfg::m1_keV, cfg::lar_pe, gPsdLow, 100 * cfg::depKeep);
   printf("        activity: chain [uBq/kg] 232Th / 238U: SS %g / %g, Cu %g / %g, EFCu %g / %g; Tl208 is %.2f%% of 232Th, Bi214 %.0f%% of 238U\n\n",
@@ -868,8 +859,8 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
 
     //-------------------------------------------------------------------------------
     //  7. Per run: where the hits come from, by depth; and the share of the M1 window hits all cuts keep there
-    printf("DEPTH  %s  by depth below the tube's top: decays, germanium hits per decay, ROI events after M1 and after all cuts,\n", r.iso.c_str());
-    printf("       and the cut survival = ROI events after all cuts / after M1\n");
+    printf("DEPTH  %s  by depth below the tube's top: decays, germanium hits per decay, ROI counts after M1 and after all cuts,\n", r.iso.c_str());
+    printf("       and the cut survival = ROI counts after all cuts / after M1\n");
     printf("    depth [m]            decays   hits/decay      ROI: M1   all cuts   survival\n");
     for (int b = 0; b < cfg::NDB; b++)
       printf("    %5.2f..%-8.2f %10ld %12.2e %12ld %10ld %6s%s\n", depthTot * b / cfg::NDB / 1000, depthTot * (b + 1) / cfg::NDB / 1000, r.dN[b],
@@ -880,8 +871,8 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
 
   //-------------------------------------------------------------------------------
   //  8. Background index as built, per chain and section:
-  printf("BI AS BUILT  [cts/(keV kg yr)], +- simulation statistics; none: no ROI event in all its simulated decays\n");
-  printf("    %-6s %-6s %15s   %-22s %-22s %-22s %-22s\n", "chain", "sect", "ROI hits", cutName[0], cutName[1], cutName[2], cutName[3]);
+  printf("BI AS BUILT  [counts/(keV kg yr)], +- simulation statistics; none: no ROI count in all its simulated decays\n");
+  printf("    %-6s %-6s %15s   %-22s %-22s %-22s %-22s\n", "chain", "sect", "ROI counts", cutName[0], cutName[1], cutName[2], cutName[3]);
   double gB[NC] = {0}, gV[NC] = {0};
   long gN[NC] = {0};               // window hits behind each total
   double mB[2] = {0}, mV[2] = {0}; // the same after M1 + LAr and all cuts, the LAr veto off the map alone (steel and empty sections add nothing)
@@ -948,7 +939,7 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
   printf("    ...with the LAr veto read off the optical map alone, no light from the argon beyond its edge:\n");
   for (int k = 0; k < 2; k++)
     printf("      %-16s %s\n", cutName[2 + k], total(mB[k], mV[k], mN[k], true).c_str());
-  printf("    ROI hits: per cut level, as in the columns. sections with no ROI hit are left out of the totals\n");
+  printf("    ROI counts: per cut level, as in the columns. sections with no ROI count are left out of the totals\n");
 
   //-------------------------------------------------------------------------------
   //  9. Designs against the tube as built: steel to L1, Cu to L2, EFCu below, for less EFCu (L2 deeper) and more steel (L1 deeper)
@@ -956,7 +947,7 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
   // that change, dB. Too few events survive all cuts away from the detectors to count dB on them, so it is counted on the
   // changed slabs' ROI events after M1, 100-400 times more, times the cut survival (the share of them all cuts keep, see DEPTH),
   // measured where the change is: near the detectors, below farEdge, per chain; above it, both chains together.
-  // a design passes when its BI stays within 10% of the as-built's, the BI's own statistical uncertainty
+  // a design passes when its BI stays within 10% of the as-built's
   const double biBuilt = gB[ALL], maxRise = cfg::simTol * biBuilt;
   const int nFar = 7; // the slabs above 4.37 m: above the array
   const double farEdge = depthTot * nFar / cfg::NDB;
@@ -1005,8 +996,8 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
     return std::string(Form("%4.0f : %3.0f : %3.0f kg = %2.0f : %2.0f : %2.0f %%", ms, mc, me, 100 * ms / mt, 100 * mc / mt, 100 * me / mt));
   };
   printf("\nDESIGNS  against the tube as built (BI %.2e after all cuts): SS down to L1, Cu down to L2, EFCu below. a design passes when its BI\n", biBuilt);
-  printf("    stays within %.0f%% of the as-built's, the BI's own statistical uncertainty. L1 from %.2f m down, 1 cm at a time\n", 100 * cfg::simTol, L1built / 1000);
-  printf("    a design's BI change is counted on ROI events after M1 x the cut survival (see DEPTH): below %.2f m", farEdge / 1000);
+  printf("    stays within %.0f%% of the as-built's. L1 from %.2f m down, 1 cm at a time\n", 100 * cfg::simTol, L1built / 1000);
+  printf("    a design's BI change is counted on ROI counts after M1 x the cut survival (see DEPTH): below %.2f m", farEdge / 1000);
   for (auto &r : R)
     printf(" %s %.2e", r.iso.c_str(), r.S);
   printf("; above it, both chains, %ld of %ld = %.2e\n", fA, fM, sFar);
@@ -1040,7 +1031,7 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
   //  10. The tube's spectrum as built, per cut level, for the slide below
   TH1D *sp[NC];
   for (int c = 0; c < NC; c++)
-    sp[c] = new TH1D(Form("sp%d", c), "Re-entrant tube background, as built;energy [keV];cts / (keV kg yr)", cfg::eBins, cfg::eLo, cfg::eHi);
+    sp[c] = new TH1D(Form("sp%d", c), "Re-entrant tube background, as built;energy [keV];counts / (keV kg yr)", cfg::eBins, cfg::eLo, cfg::eHi);
   for (auto &r : R)
     for (auto &h : r.hits)
     {
@@ -1075,27 +1066,19 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
     cs->SetGridy();
     cs->SetMargin(0.09, 0.03, 0.11, 0.08);
     const char *what[NC] = {"no cut", "M1: one detector only", "+ LAr veto", "+ A/E: all cuts"};
-    sp[0]->SetTitle("What the as-built tube leaves in the detectors;energy [keV];cts / (keV kg yr)");
+    sp[0]->SetTitle("What the as-built tube leaves in the detectors;energy [keV];counts / (keV kg yr)");
     sp[0]->SetMaximum(5 * sp[0]->GetMaximum());
     sp[0]->Draw("HIST");
     gPad->Update();
     const double y0 = pow(10, gPad->GetUymin()), y1 = pow(10, gPad->GetUymax());
-    std::vector<double> edges = {cfg::winLo}; // the ROI: 1950-2350 keV, less +-5 keV around each line
-    for (double g : cfg::winGap)
-      edges.insert(edges.end(), {g - cfg::winGapHalf, g + cfg::winGapHalf});
-    edges.push_back(cfg::winHi);
-    std::sort(edges.begin(), edges.end());
     const int roiCol = TColor::GetColor("#2e7d32");
-    for (size_t i = 0; i + 1 < edges.size(); i += 2)
-    {
-      auto b = new TBox(edges[i], y0, edges[i + 1], y1);
-      b->SetFillColorAlpha(roiCol, 0.15);
-      b->SetLineWidth(0);
-      b->Draw();
-    }
-    auto q = new TBox(cfg::Qbb - cfg::roiHalf, y0, cfg::Qbb + cfg::roiHalf, y1);
-    q->SetFillColorAlpha(roiCol, 0.9);
-    q->SetLineWidth(0);
+    auto b = new TBox(cfg::winLo, y0, cfg::winHi, y1); // the ROI, one band
+    b->SetFillColorAlpha(roiCol, 0.2);
+    b->SetLineWidth(0);
+    b->Draw();
+    auto q = new TLine(cfg::Qbb, y0, cfg::Qbb, y1);
+    q->SetLineColor(roiCol);
+    q->SetLineWidth(2);
     q->Draw();
     auto leg = new TLegend(0.10, 0.80, 0.50, 0.91);
     leg->SetNColumns(2);
@@ -1119,9 +1102,8 @@ void background(const char *runs = "output/output_root/tl208*_hit.root=Tl208,out
     bi->SetLineWidth(4);
     bi->SetLineColor(kBlack);
     bi->Draw();
-    label(cfg::winHi + 15, 2.5 * biBuilt, "#splitline{BI = " + sci(biBuilt) + "}{purple, averaged over the ROI}", kBlack, 0.032, 11);
-    label(cfg::winLo + 5, pow(10, gPad->GetUymax() - 0.06 * (gPad->GetUymax() - gPad->GetUymin())), "ROI, 360 keV", roiCol, 0.036);
-    label(cfg::Qbb + cfg::roiHalf + 4, pow(10, gPad->GetUymax() - 0.13 * (gPad->GetUymax() - gPad->GetUymin())), "Q_{#beta#beta} #pm 2#sigma", roiCol, 0.036);
+    label(cfg::winHi + 15, biBuilt / 3, "#splitline{BI = " + sci(biBuilt) + "}{purple, averaged over the ROI}", kBlack, 0.032, 13); // below the spectra
+    label(cfg::winHi + 6, pow(10, gPad->GetUymax() - 0.06 * (gPad->GetUymax() - gPad->GetUymin())), Form("ROI: Q_{#beta#beta} #pm %.0f keV", cfg::roiHalf), roiCol, 0.036);
     label(2614.5 - 12, 0.6 * sp[0]->GetBinContent(sp[0]->FindBin(2614.5)), "Tl-208, 2614 keV", kGray + 3, 0.032, 32);
     cs->SaveAs(outPath("slide_spectrum.png").c_str());
   }
