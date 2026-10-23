@@ -5,7 +5,9 @@ steel (SS) at the top, oxygen-free high-conductivity (OFHC) copper (Cu) in the m
 3-7 × less radioactive than the Cu, around the detectors.
 
 **The question:** how much of the expensive EFCu can be cut, and how much cheap SS added, without changing the
-tube's background index (BI)? "Without changing" means within 10%.
+tube's background index (BI)? "Without changing" means within 10%: any
+material swap changes the BI a little, and the simulation cannot see changes smaller than ~10% (its BI rests on 128
+simulated counts, which vary by ±√128, ±9%).
 
 **The answer** (depths below the tube's top; as built the SS ends at 2.06 m and the EFCu starts at 4.07 m):
 
