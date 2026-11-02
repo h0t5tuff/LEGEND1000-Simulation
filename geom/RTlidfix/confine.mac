@@ -1,0 +1,14 @@
+# PR #142: vtxs sampled uniformly in RT copper 
+# vertex (vtx) = x,y,z,t position of particle
+/RMG/Geometry/RegisterDetectorsFromGDML Germanium   # remage writes output only with a detector
+/run/initialize
+/RMG/Generator/Confine Volume
+/RMG/Generator/Confinement/Physical/AddVolume reentrance_tube_copper
+/RMG/Generator/Confinement/MaxSamplingTrials 100000   # thin shell: ~750 tries per vtx
+/RMG/Generator/Select GPS
+/gps/particle geantino # virtual no physics particle, (just getting a vtx table)
+/gps/energy 1 keV
+/run/beamOn 1000
+
+
+
