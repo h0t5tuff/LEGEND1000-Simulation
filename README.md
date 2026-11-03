@@ -22,8 +22,8 @@ simulated counts, which vary by ±√128, ±9%).
 ## Getting started
 
 Getting to the first simulation took most of the work. The LEGEND-1000 geometry is generated with the collaboration's
-`legend-pygeom-l1000` package, written out as GDML, and read by remage, the collaboration's Geant4 application, which
-registers the 336 germanium detectors from a map stored in the GDML file itself. The software was first built from
+`legend-pygeom-l1000` package, written out as GDML, and read by remage, which
+registers the 336 germanium detectors from the GDML file itself. The software was first built from
 source for this work: Geant4, BxDecay0 and remage, on both Apple Silicon and Linux, through a chain in which each stage
 tests itself before passing on ([ElmikawyStack2026](https://github.com/h0t5tuff/Physics-Simulation-Stack)); on Apple
 Silicon, remage 0.26 also needed its library paths patched by hand. Over the course of this work the remage setup grew
@@ -38,27 +38,26 @@ geometry ([ElmikawyRTsim2026](https://github.com/h0t5tuff/LEGEND1000-Simulation)
 
 Three words, used throughout:
 
-- **decay:** one simulated nuclear decay of Tl-208 or Bi-214 in the tube's wall (a whole chain, for the holders);
-- **hit:** the energy one decay leaves in one detector; `sim/hit.py` makes them from the simulation's steps, and one
-  decay can leave hits in several detectors;
-- **count:** a decay whose energy in a detector lands in the ROI (the 100 keV window around `Qββ` = 2039 keV), after the
-  cuts in force. The simulation gives *simulated counts*; each stands for w real decays a year, and Σw is the
-  *counts a year* (step 4, Cuts and BI).
+- **decay:** one simulated nuclear decay of Tl-208 or Bi-214 in the tube (a whole Th-232 or U-238 chain, for the holders);
+- **hit:** the energy one decay leaves in one detector (`sim/hit.py` makes them); one decay can leave hits in several
+  detectors;
+- **count:** a decay whose hit lands in the ROI (the 100 keV window around `Qββ` = 2039 keV) after the cuts. The
+  simulation gives _simulated counts_; each stands for w real decays a year, and Σw is the _counts a year_.
 
 ## How radioactive is EFCu?
 
 What EFCu's own radioactivity looks like in the detectors. The 1008 EFCu detector holders
 (`hpge_string_support_weldment_copper`, 1.92 kg in all), clamping each detector's PEN plate to the support rods, are the source:
 370 k Th-232 chains and 190 k U-238 chains decay in them. That is the same 0.37 : 0.19 ratio as EFCu's measured
-activities (0.37 and 0.19 µBq/kg, the table in step 4), so the two spectra are in their real proportion and simply add. Two lines threaten `Qββ` = 2039 keV, the energy of neutrinoless double-beta decay
+activities (0.37 and 0.19 µBq/kg), so the two spectra simply add. Two lines threaten `Qββ` = 2039 keV, the energy of neutrinoless double-beta decay
 (0νββ): **Tl-208 at 2614 keV** and **Bi-214 at 2448 keV**, whose gammas can leave that much in a detector.
 
 ![the holders](output/holders_geometry.png)
 
 ![the holders' spectrum](output/holders_spectrum.png)
 
-The energy each of the 336 detectors gets, without the detector response (no dead layer or energy resolution), summed over 10 µs: 434 263 such
-hits from the Th-232 chains, 176 339 from the U-238. `sim/holders.mac` writes every germanium step (`stp/germanium`: `evtid`, `det_uid`, `edep_in_keV`,
+The raw energy each detector gets (no detector response), summed over 10 µs: 435 125
+hits from the Th-232 chain, 176 436 from the U-238 chain. `sim/holders.mac` writes every germanium step (`stp/germanium`: `evtid`, `det_uid`, `edep_in_keV`,
 `time_in_ns`, ...) and one row per chain (`stp/vtx`) to `output/holders_th232.root` and `holders_u238.root`;
 `ana/holders.C` draws them.
 
@@ -71,35 +70,39 @@ root -l -b -q ana/holders.C
 
 ## Method
 
-Five steps. Only the PNGs of `output/` are in git; the commands remake the rest. From the simulated decays in
-`output/output_lh5` (76 GB), the commands of step 3 (detector response) and step 4 (cuts and BI) redo everything;
-step 5 (reweighting) runs inside the same analysis, `ana/background.C`.
+Five steps. Only the PNGs of `output/` are in git; the commands in each step remake the rest.
+
+1. **Geometry:** build `geom/l1000geom/l1000.gdml` with legend-pygeom-l1000 and check it with
+   `geom/l1000geom/check.mac`.
+2. **Simulation:** `sim/run.mac` (remage) decays Tl-208 and Bi-214 in each section of the tube on NERSC, into `output/output_lh5` (76 GB).
+3. **Detector response:** `sim/hit.py` turns those decays into what the detectors and the LAr veto see, in
+   `output/output_root`.
+4. **Cuts and BI:** `ana/background.C` applies the cuts and computes the BI.
+5. **Reweighting:** `ana/background.C` also tries every design, without a new simulation.
 
 ### 1. The geometry
 
-`geom/l1000geom/l1000.gdml` (legend-pygeom-l1000 0.6.0, not in git: the first two commands below build it), the full
+`geom/l1000geom/l1000.gdml` (legend-pygeom-l1000 0.6.0) is the full
 LEGEND-1000 geometry. The tube is 6.246 m tall and 0.999 m in radius; the 336 detectors sit 4.8-5.9 m below its
 top, inside the EFCu section.
 
-Two checks run before any physics ([ElmikawyRTsim2026](https://github.com/h0t5tuff/LEGEND1000-Simulation)). The first
-builds the geometry and scans it for overlapping volumes: none (83 s). The second, at the start of
+Two checks run before any physics. The first
+builds the geometry and scans it for overlapping volumes. The second, at the start of
 `ana/background.C`, reads the tube from the GDML, with the densities and the germanium mass, and checks it: a clean
 outline, the bottom head and the Cu and SS layers flush with the barrel. It also profiles the wall: 1.5 mm of EFCu
 through the endcap and lower wall, thickening to 3 mm over the last 2 cm below the Cu seam, and 6 mm through the Cu
-and SS.
+and SS. In the GDML, the Cu and SS layers are placed inside the EFCu tube volume.
 
 Every later step reads the tube from this one file (the analysis, the pictures, the app), so a new design is just a
-new GDML file. The one exception is the lid: the GDML's EFCu also closes the tube's top with a 6 mm cap
+new GDML file. The one exception is the lid: the GDML's EFCu also closes the tube's top with a 6 mm cone, the lid
 (z = 4981-4987 mm), which this study leaves out; `sim/run.mac` keeps it out of the sampling by its position.
-Wall volumes are computed by integrating the GDML outlines; an independent integration, by sampling points in the
-solids, agrees to 0.1%.
 
 The lid is an artifact of legend-pygeom-l1000, fixed by
 [legend-exp/legend-pygeom-l1000#142](https://github.com/legend-exp/legend-pygeom-l1000/pull/142): the argon closed
 6 mm below the top on the axis but at the top at the wall, leaving a 55.51 kg EFCu cone; it now closes 1 µm below the
-top, leaving 0.03 kg (EFCu 231.54 → 176.05 kg). `geom/RTlidfix/` validates it: `before/` and `after/` hold the GDML
-built at the PR's base (`bcadda2`) and head (`5a558ec`), and 1000 remage vertices sampled uniformly in
-`reentrance_tube_copper` (`confine.mac`); `pr142.C` plots the tube's top from both. 240 of 1000 vertices fall in the
+top, leaving ~0.03 kg (EFCu 231.54 → 176.05 kg). `geom/RTlidfix/` validates it: `before/` and `after/` hold the GDML
+built at the PR's base and head, and 1000 remage vertices sampled uniformly in
+`reentrance_tube_copper` (`confine.mac`); `pr142.C` plots the tube's top from both (requested by Luigi). 240 of 1000 vertices fall in the
 lid before, none after.
 
 ![PR 142](geom/RTlidfix/pr142.png)
@@ -111,23 +114,23 @@ remage -q -g after/l1000.gdml -o after/vtx.root -w confine.mac
 root -l -b -q pr142.C
 ```
 
-![the tube](output/tube.png)
-
 The tube's outline as `ana/background.C` reads it: its three sections, the decay sources, and the two seams a design
 moves (z = 920 and 2925 mm in the GDML, depths 4.07 and 2.06 m: the top is at z = 4987 mm).
 
+![the tube](output/tube.png)
+
 ![the tube, the decay source](output/tube_geometry.png)
 
-![the UGLAr, the veto](output/uglar_geometry.png)
-
-The underground argon around the detectors (18.83 m³, 26.17 t) is the veto, its light read by 12096 fibres and 252
+The underground argon around the detectors (18.83 m³, 26.17 tonnes) is the veto, its light read by 12096 fibres and 252
 silicon photomultipliers (SiPMs).
 
-![the HPGe detectors](output/hpge_geometry.png)
+![the UGLAr, the veto](output/uglar_geometry.png)
 
 Each detector is an inverted-coaxial point-contact (ICPC) germanium detector, 90.0 mm tall and 88.8 mm across, its
 borehole 53 mm deep from the top: 3.046 kg, 1023.4 kg in all. The commands: the GDML, the overlap check, then the
 pictures (`geom/l1000geom/l1000-autopeel.py` draws each part alone, offscreen, and prints its numbers):
+
+![the HPGe detectors](output/hpge_geometry.png)
 
 ```bash
 export LEGEND1000_METADATA=~/Documents/legend-exp/legend1000-metadata
@@ -149,7 +152,7 @@ names the run's file; `VOLS`, a regex over the source volumes `reentrance_tube_c
 nuclide in one section, a 32-thread NERSC task of 16-75 min, and writes
 `output/output_lh5/<nuclide>_<SEED>.lh5`: `stp/` (the steps in the germanium detectors and in
 `liquid_argon_underground`), `vtx` (one row per decay, with its position), `detector_origins`,
-`number_of_simulated_events`. They are kept: every rerun starts here. No decay is in the lid (the EFCu cap over the tube's top):
+`number_of_simulated_events`. They are kept: every rerun starts here. No decay is in the lid (the EFCu cone over the tube's top):
 `sim/run.mac` leaves it out of the sampling, and the first six EFCu runs, made before that, had its decays removed from their files
 afterwards (7.6 M of each 10 M kept).
 
@@ -157,12 +160,12 @@ The sections are simulated separately because their decays reach the detectors a
 the decays it needs (a run over the whole tube would put nearly 9 in 10 of its decays in the Cu and SS, which the detectors
 barely see); the reweighting (step 5) combines them into any design:
 
-| section | runs | decays (Tl-208 / Bi-214) | real years they stand for | why that many                                                                                           |
-| ------- | ---- | ------------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------- |
-| EFCu    | 25   | 122 M / 112 M            | 166 000 / 107 000         | next to the array, they give 122 of the BI's 128 counts after all cuts: the BI's ±9%                    |
-| Cu      | 366  | 460 M / 3.2 G            | 55 000 / 116 000          | they decide how far the SS can come down: one count, turned into SS, adds 12% of the BI            |
-| SS      | 36   | 50 M / 310 M             | 7 / 6                     | 2.7-4.8 m above the array: none of their decays puts a count in the ROI, at any cut level          |
-| total   | 427  | 4.3 × 10⁹ (76 GB)        |                           |                                                                                                         |
+| section | runs | decays (Tl-208 / Bi-214) | real years they stand for | why that many                                                                             |
+| ------- | ---- | ------------------------ | ------------------------- | ----------------------------------------------------------------------------------------- |
+| EFCu    | 25   | 122 M / 112 M            | 166 000 / 107 000         | next to the array, they give 122 of the BI's 128 counts after all cuts: the BI's ±9%      |
+| Cu      | 366  | 460 M / 3.2 G            | 55 000 / 116 000          | they decide how far the SS can come down: one count, turned into SS, adds 12% of the BI   |
+| SS      | 36   | 50 M / 310 M             | 7 / 6                     | 2.7-4.8 m above the array: none of their decays puts a count in the ROI, at any cut level |
+| total   | 427  | 4.3 × 10⁹ (76 GB)        |                           |                                                                                           |
 
 "Real years": how long the section, as built, takes to make that many decays (its activity × mass). In the Cu and
 SS, Bi-214 needs ~7 × the decays of Tl-208: the SS holds ~7 × more Bi-214 than Tl-208 (2500 vs 360 µBq/kg), and a
@@ -182,13 +185,13 @@ the answer, and were deleted.
 
 From the first 408 runs, in the 100 keV ROI, with the A/E cut then at −1.06 (the as-built table in step 4 has today's numbers):
 
-| nuclide | section | share f of the BI | p = counts ÷ decays          | counts needed for ±10% | decays needed | decays then  |
-| ------- | ------- | ----------------- | ---------------------------- | ---------------------- | ------------- | ------------ |
-| Tl-208  | EFCu    | 58%               | 15 ÷ 22.6 M = 6.6 × 10⁻⁷     | ~80                    | ~120 M        | 22.6 M       |
-| Bi-214  | EFCu    | 33%               | 6 ÷ 22.6 M = 2.7 × 10⁻⁷      | ~28                    | ~105 M        | 22.6 M       |
-| Tl-208  | Cu      | 6.5%              | 3 ÷ 460 M = 6.5 × 10⁻⁹       | 3: enough              | 460 M         | 460 M        |
-| Bi-214  | Cu      | 2%                | 2 ÷ 3.2 G = 6.3 × 10⁻¹⁰      | 2: enough              | 3.2 G         | 3.2 G        |
-| both    | SS      | 0%                | 0 ÷ 360 M                    | none                   | —             | 50 M / 310 M |
+| nuclide | section | share f of the BI | p = counts ÷ decays      | counts needed for ±10% | decays needed | decays then  |
+| ------- | ------- | ----------------- | ------------------------ | ---------------------- | ------------- | ------------ |
+| Tl-208  | EFCu    | 58%               | 15 ÷ 22.6 M = 6.6 × 10⁻⁷ | ~80                    | ~120 M        | 22.6 M       |
+| Bi-214  | EFCu    | 33%               | 6 ÷ 22.6 M = 2.7 × 10⁻⁷  | ~28                    | ~105 M        | 22.6 M       |
+| Tl-208  | Cu      | 6.5%              | 3 ÷ 460 M = 6.5 × 10⁻⁹   | 3: enough              | 460 M         | 460 M        |
+| Bi-214  | Cu      | 2%                | 2 ÷ 3.2 G = 6.3 × 10⁻¹⁰  | 2: enough              | 3.2 G         | 3.2 G        |
+| both    | SS      | 0%                | 0 ÷ 360 M                | none                   | —             | 50 M / 310 M |
 
 Then: 0.58²/15 + 0.33²/6 + 0.065²/3 + 0.02²/2 = 0.042, ±21%. With ~80 and ~28 EFCu counts it is 0.0098, ±10%: the
 EFCu needs ~5 × its decays, the Cu and SS none. The 19 EFCu runs this asked for, 10 M decays each without the lid
@@ -303,15 +306,15 @@ are from Ralph Massarczyk's MaterialMix talk (23 Jun 2026):
 The tube as built, from mass to BI (each section sampled at its own density; decays counted where they happened,
 so ~1 M of the EFCu runs' decays, just above the Cu seam, count as Cu):
 
-| chain  | section | mass     | real decays a year | simulated decays | w           | simulated counts: no cut / M1 / + LAr / + A/E | counts a year, all cuts | BI, all cuts       |
-| ------ | ------- | -------- | ------------------ | ---------------- | ----------- | --------------------------------------------- | ----------------------- | ------------------ |
-| Tl-208 | EFCu    | 174.6 kg | 733                | 122 M            | 6.0 × 10⁻⁶  | 63755 / 52911 / 437 / 77                      | 4.6 × 10⁻⁴              | 4.52 ± 0.52 × 10⁻⁹ |
-| Tl-208 | Cu      | 671.7 kg | 8 380              | 461 M            | 1.8 × 10⁻⁵  | 551 / 497 / 34 / 3                            | 0.5 × 10⁻⁴              | 0.53 ± 0.31 × 10⁻⁹ |
-| Tl-208 | SS      | 619.4 kg | 7.0 × 10⁶          | 50.0 M           | 0.14        | 0 / 0 / 0 / 0                                 | 0                       | 0                  |
-| Bi-214 | EFCu    | 174.6 kg | 1 047              | 112 M            | 9.4 × 10⁻⁶  | 4720 / 4383 / 588 / 45                        | 4.2 × 10⁻⁴              | 4.11 ± 0.61 × 10⁻⁹ |
-| Bi-214 | Cu      | 671.7 kg | 27 560             | 3.20 G           | 8.6 × 10⁻⁶  | 170 / 160 / 42 / 3                            | 0.3 × 10⁻⁴              | 0.25 ± 0.15 × 10⁻⁹ |
-| Bi-214 | SS      | 619.4 kg | 4.9 × 10⁷          | 310 M            | 0.16        | 0 / 0 / 0 / 0                                 | 0                       | 0                  |
-| all    |         |          |                    | 4.26 G           |             | 128 after all cuts                            | 9.6 × 10⁻⁴              | 9.4 ± 0.9 × 10⁻⁹   |
+| chain  | section | mass     | real decays a year | simulated decays | w          | simulated counts: no cut / M1 / + LAr / + A/E | counts a year, all cuts | BI, all cuts       |
+| ------ | ------- | -------- | ------------------ | ---------------- | ---------- | --------------------------------------------- | ----------------------- | ------------------ |
+| Tl-208 | EFCu    | 174.6 kg | 733                | 122 M            | 6.0 × 10⁻⁶ | 63755 / 52911 / 437 / 77                      | 4.6 × 10⁻⁴              | 4.52 ± 0.52 × 10⁻⁹ |
+| Tl-208 | Cu      | 671.7 kg | 8 380              | 461 M            | 1.8 × 10⁻⁵ | 551 / 497 / 34 / 3                            | 0.5 × 10⁻⁴              | 0.53 ± 0.31 × 10⁻⁹ |
+| Tl-208 | SS      | 619.4 kg | 7.0 × 10⁶          | 50.0 M           | 0.14       | 0 / 0 / 0 / 0                                 | 0                       | 0                  |
+| Bi-214 | EFCu    | 174.6 kg | 1 047              | 112 M            | 9.4 × 10⁻⁶ | 4720 / 4383 / 588 / 45                        | 4.2 × 10⁻⁴              | 4.11 ± 0.61 × 10⁻⁹ |
+| Bi-214 | Cu      | 671.7 kg | 27 560             | 3.20 G           | 8.6 × 10⁻⁶ | 170 / 160 / 42 / 3                            | 0.3 × 10⁻⁴              | 0.25 ± 0.15 × 10⁻⁹ |
+| Bi-214 | SS      | 619.4 kg | 4.9 × 10⁷          | 310 M            | 0.16       | 0 / 0 / 0 / 0                                 | 0                       | 0                  |
+| all    |         |          |                    | 4.26 G           |            | 128 after all cuts                            | 9.6 × 10⁻⁴              | 9.4 ± 0.9 × 10⁻⁹   |
 
 ```bash
 root -l -b -q ana/background.C
@@ -333,10 +336,10 @@ stand for any material a design puts at its depth; only its weight w changes: th
 built there (SS runs 0-2.06 m, Cu runs 2.06-4.07 m, EFCu runs 4.07-6.25 m), so the two savings reweight different
 runs:
 
-| design change                     | decays reweighted                                  | w × (Tl-208 / Bi-214)      | simulated counts there           |
-| --------------------------------- | -------------------------------------------------- | -------------------------- | -------------------------------- |
-| EFCu starts lower (L2 deeper)     | the EFCu runs', from 4.07 m to L2: EFCu becomes Cu | 3.0 / 6.8                  | thousands: the change is precise |
-| SS comes further down (L1 deeper) | the Cu runs', from 2.06 m to L1: Cu becomes SS     | 810 / 1700                 | a handful: each one matters      |
+| design change                     | decays reweighted                                  | w × (Tl-208 / Bi-214) | simulated counts there           |
+| --------------------------------- | -------------------------------------------------- | --------------------- | -------------------------------- |
+| EFCu starts lower (L2 deeper)     | the EFCu runs', from 4.07 m to L2: EFCu becomes Cu | 3.0 / 6.8             | thousands: the change is precise |
+| SS comes further down (L1 deeper) | the Cu runs', from 2.06 m to L1: Cu becomes SS     | 810 / 1700            | a handful: each one matters      |
 
 **Why the Cu runs decide the SS.** The SS added in a design would sit where the Cu is now, 2-3 m above the array,
 and only the Cu runs have decays there. Those decays rarely reach the detectors: there, one in ~5 × 10⁷ Tl-208
@@ -408,7 +411,7 @@ L2 recolour the tube by its BI and give the masses. To build and install it (aga
 ## Future work
 
 **The Hall C geometry.** Matthew Busch's string and lock update (29 Sep 2026) proposes 12-detector strings, for
-running beyond 1 t, at the same central depth in the UGLAr:
+running beyond 1 tonne of germanium, at the same central depth in the UGLAr:
 
 - **Array**: 42 strings × 8 detectors × 3 kg = 1008 kg becomes 48 × 12 × 3 kg = 1728 kg. Each string's germanium
   grows from 1.08 to 1.64 m and its fibres from 1.36 to 1.92 m, reaching 0.28 m higher and 0.28 m deeper.
