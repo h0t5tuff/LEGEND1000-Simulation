@@ -97,15 +97,15 @@ solids, agrees to 0.1%.
 The lid is an artifact of legend-pygeom-l1000, fixed by
 [legend-exp/legend-pygeom-l1000#142](https://github.com/legend-exp/legend-pygeom-l1000/pull/142): the argon closed
 6 mm below the top on the axis but at the top at the wall, leaving a 55.51 kg EFCu cone; it now closes 1 µm below the
-top, leaving 0.03 kg (EFCu 231.54 → 176.05 kg). `output/pr/` validates it: `before/` and `after/` hold the GDML
+top, leaving 0.03 kg (EFCu 231.54 → 176.05 kg). `geom/RTlidfix/` validates it: `before/` and `after/` hold the GDML
 built at the PR's base (`bcadda2`) and head (`5a558ec`), and 1000 remage vertices sampled uniformly in
 `reentrance_tube_copper` (`confine.mac`); `pr142.C` plots the tube's top from both. 240 of 1000 vertices fall in the
 lid before, none after.
 
-![PR 142](output/pr/pr142.png)
+![PR 142](geom/RTlidfix/pr142.png)
 
 ```bash
-cd output/pr
+cd geom/RTlidfix
 remage -q -g before/l1000.gdml -o before/vtx.root -w confine.mac
 remage -q -g after/l1000.gdml -o after/vtx.root -w confine.mac
 root -l -b -q pr142.C
