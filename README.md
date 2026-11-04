@@ -5,9 +5,15 @@ steel (SS) at the top, oxygen-free high-conductivity (OFHC) copper (Cu) in the m
 3-7 × less radioactive than the Cu, around the detectors.
 
 **The question:** how much of the expensive EFCu can be cut, and how much cheap SS added, without changing the
-tube's background index (BI)? "Without changing" means within 10%: any
-material swap changes the BI a little, and the simulation cannot see changes smaller than ~10% (its BI rests on 128
-simulated counts, which vary by ±√128, ±9%).
+tube's background index (BI)? "Without changing" means within 10%:
+
+1. Any material swap changes the BI a little, so "no change" can't mean exactly zero.
+2. The as-built BI rests on 128 simulated counts after all cuts.
+3. Counts of rare, independent decays follow Poisson statistics: a count of N scatters by √N, so √128 ≈ 11, ±9%.
+4. So the BI itself is only known to ±9% (0.94 ± 0.09 × 10⁻⁸).
+5. A change smaller than that can't be told apart from the simulation's own scatter.
+6. So "no change" means within ~10%: a choice made for this study, not a LEGEND requirement, and the simulation was
+   sized to resolve it (step 2).
 
 **The answer** (depths below the tube's top; as built the SS ends at 2.06 m and the EFCu starts at 4.07 m):
 
@@ -17,7 +23,7 @@ simulated counts, which vary by ±√128, ±9%).
 | EFCu from 4.40 m (0.33 m shorter), SS to 2.69 m (0.63 m longer) | 809 : 489 : 146 kg | +8%: within 10%                              |
 
 [Getting started](#getting-started) · [How radioactive is EFCu?](#how-radioactive-is-efcu) · [Method](#method) ·
-[Results](#results) · [Future work](#future-work)
+[Results](#results) · [LEGEND 1700?](#legend-1700)
 
 ## Getting started
 
@@ -320,7 +326,7 @@ so ~1 M of the EFCu runs' decays, just above the Cu seam, count as Cu):
 root -l -b -q ana/background.C
 ```
 
-### 5. Finding the best design: reweighting
+### 5. reweighting
 
 A design moves the two seams: the SS ends at depth L1 (2.06 m as built) and the EFCu starts at depth L2 (4.07 m),
 with Cu between. The wall keeps its shape and thickness as built; only the material of each part changes (EFCu turned
@@ -369,57 +375,46 @@ the tube's top (the table):
 
 ## Results
 
-**The BI as built** through the cuts, in counts/(keV·kg·yr) (the LEGEND-1000 goal is 10⁻⁵; per chain and section in
-the as-built table of step 4):
+**BI as-built**
 
-| no cut      | M1                          | M1 + LAr                                     | all cuts (M1 + LAr + A/E)                           |
-| ----------- | --------------------------- | -------------------------------------------- | --------------------------------------------------- |
-| 4.29 × 10⁻⁶ | 3.61 × 10⁻⁶: M1 removes 16% | 0.89 ± 0.03 × 10⁻⁷: the LAr veto removes 98% | **0.94 ± 0.09 × 10⁻⁸**: A/E removes 89% of the rest |
-
-![the spectrum](output/slide_spectrum.png)
+| no cut    | M1                       | M1 + LAr                       | all cuts (M1 + LAr + A/E)     |
+| --------- | ------------------------ | ------------------------------ | ----------------------------- |
+| 4.29×10⁻⁶ | 3.61×10⁻⁶ M1_removes_16% | 0.89×10⁻⁷ LAr_veto_removes_98% | **0.94×10⁻⁸** A/E_removes_89% |
 
 The tube's spectrum as built, through each cut: the ROI shaded green with `Qββ` as a line, the BI after all cuts as
 the black line across it, the 10⁻⁵ goal dashed.
 
-**The designs**: for each depth L2 where the EFCu starts, the deepest L1 where the SS can end:
+![the spectrum](output/slide_spectrum.png)
 
-| EFCu from (L2)    | EFCu       | SS to (L1) | SS : Cu : EFCu         | BI change                      |
-| ----------------- | ---------- | ---------- | ---------------------- | ------------------------------ |
-| 4.07 m, as built  | 175 kg     | 2.69 m     | 809 : 460 : 175 kg     | +0%                            |
-| 4.20 m            | 163 kg     | 2.69 m     | 809 : 472 : 163 kg     | +2%                            |
-| 4.30 m            | 154 kg     | 2.69 m     | 809 : 480 : 154 kg     | +4%                            |
-| **4.40 m**        | **146 kg** | **2.69 m** | **809 : 489 : 146 kg** | **+8%**                        |
-| 4.50 m and deeper | ≤ 137 kg   | none       |                        | more than 10% at any SS length |
+**Designs**
 
-- **EFCu** can start 0.33 m lower, at 4.40 m: 146 kg instead of 175 (−17%). Deeper, the Cu that would replace it
-  sits next to the detectors at 3-7 × EFCu's activity, and the BI rises more than 10% whatever the SS.
-- **SS** can come down to 2.69 m: 809 kg instead of 619 (+190 kg), whatever the EFCu, just above the first Cu count
-  that, turned into SS, would add 12% at once.
-- **The SS as built** never reaches the detectors: no ROI count at any cut level in its 360 M decays.
+depths of L2 possible @ (deepest L1 possible wrt the as-built L2): (no ROI count from SS)
+
+| EFCu from (L2)    | SS to (L1) | SS : Cu : EFCu          | BI change |
+| ----------------- | ---------- | ----------------------- | --------- |
+| 4.07 m, as built  | 2.69 m     | 809 : 460 : 175 kg      | none      |
+| 4.20 m            | same       | same : 472 : 163 kg     | +2%       |
+| 4.30 m            | same       | same : 480 : 154 kg     | +4%       |
+| **4.40 m** (-17%) | same       | **same : 489 : 146 kg** | **+8%**   |
 
 ![the designs](output/slide_designs.png)
-
-The designs near the tube as built, coloured by their BI over the as-built's: the designs left of and below the bold
-+10% line keep the BI within 10%. The star is the tube as built, the square the answer. The rt viewer of
-`/Applications/LEGEND.app` shows the same scan (`output/designs.json`) on the GDML's tube in 3D: two sliders for L1 and
-L2 recolour the tube by its BI and give the masses. To build and install it (again after each `ana/background.C` run, which rewrites the scan):
 
 ```bash
 ~/venvs/v/bin/python app/make_app.py
 ```
 
-## Future work
+## LEGEND 1700?
 
-**The Hall C geometry.** Matthew Busch's string and lock update (29 Sep 2026) proposes 12-detector strings, for
-running beyond 1 tonne of germanium, at the same central depth in the UGLAr:
+Matthew Busch's talk, *String and lock updates, including a 12 detector string concept for beyond 1T deployment*
+(29 Sep 2026; `0νββ/Presentations/Hall C design, Beusch.pdf` in iCloud Drive), answers Bernhard's question: could the
+same hardware later hold more than 1 tonne of germanium?
 
-- **Array**: 42 strings × 8 detectors × 3 kg = 1008 kg becomes 48 × 12 × 3 kg = 1728 kg. Each string's germanium
-  grows from 1.08 to 1.64 m and its fibres from 1.36 to 1.92 m, reaching 0.28 m higher and 0.28 m deeper.
-- **Tube**: 0.2 m longer, the extra height in the Cu section, and a deeper bottom head (467 → 575 mm deep): more UGLAr.
-- **Lab**: the cleanroom floor, cryostat and water tank drop 0.2 m; the lock pipe grows from 7.54 to 7.81 m. It
-  still waits on the crane and cleanroom details.
+- **The idea:** 12 detectors per string instead of 8, at the same central depth in the argon: 42 × 8 × 3 kg = 1008 kg
+  becomes 48 × 12 × 3 kg ≈ 1.7 tonnes.
+- **What changes:** strings get 0.28 m longer at each end, the tube gets 0.2 m more OFHC copper and a deeper bottom
+  head (467 → 575 mm), and the cleanroom floor, cryostat and water tank drop 0.2 m.
+- **Status:** viable, but still waiting on the crane and cleanroom details.
+- **The catch:** he recommends the Hall C change only if it works with the background simulations.
 
-He makes the change conditional on the background simulations, which is what this study can answer. The array
-reaches 0.28 m higher, so the EFCu likely has to start higher too; the design scan says how much. It needs
-the Hall C geometry from legend-pygeom-l1000 (`units: n: 12` in its `configs/string.yaml`, 48 strings, the longer
-tube and head), then the same NERSC runs and analysis on it.
+That last check is what this study can do: build the 12-detector geometry in legend-pygeom-l1000, then rerun the same
+simulation and analysis on it.
