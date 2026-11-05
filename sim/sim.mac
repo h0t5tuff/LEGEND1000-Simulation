@@ -1,0 +1,43 @@
+#  1. Setup (before init):
+/RMG/Geometry/RegisterDetectorsFromGDML Germanium                             # the 336 HPGe detectors, from the map inside the GDML
+/RMG/Geometry/RegisterDetector Scintillator liquid_argon_underground 10001    # the UGLAr, the argon veto (uid as in the GDML)
+/RMG/Output/NtupleUseVolumeName true                                          # tables named V00101Z ... and liquid_argon_underground
+/RMG/Processes/EnableGammaAngularCorrelation                                  # a physics-list setting: before init only
+/RMG/Geometry/GDMLDisableOverlapCheck true                                    # overlaps are checked with the geometry (step 1)
+/RMG/Geometry/IncludeGDMLFile {GDML}
+/run/initialize
+
+#-------------------------------------------------------------------------------
+#  2. Output:
+/RMG/Output/Germanium/DiscardZeroEnergyHits true
+/RMG/Output/Germanium/EdepCutLow 0 keV                                        # a decay with no germanium energy (~99%) keeps only its vertex
+/RMG/Output/Germanium/StoreSinglePrecisionPosition
+/RMG/Output/Germanium/StoreSinglePrecisionEnergy
+/RMG/Output/Scintillator/StoreSinglePrecisionPosition
+/RMG/Output/Scintillator/StoreSinglePrecisionEnergy
+/RMG/Output/Vertex/StoreSinglePrecisionPosition
+
+#-------------------------------------------------------------------------------
+#  3. Decay physics, for a whole chain (the holders):
+/process/had/rdm/thresholdForVeryLongDecayTime 1.0e+60 year                   # Geant4 >= 11.2 skips decays after 1 year: U-234, Th-230, Ra-226, Pb-210
+/RMG/Processes/Stepping/DaughterNucleusMaxLifetime -1                         # no daughter is stopped: the chain runs to its lead
+
+#-------------------------------------------------------------------------------
+#  4. The source: nuclide {Z} {A} at rest, uniform in {VOLS}, without the lid
+/RMG/Manager/Randomization/Seed {SEED}
+/RMG/Generator/Confine Volume
+/RMG/Generator/Confinement/MaxSamplingTrials 100000                           # thin walls: ~560 tries per vertex
+/RMG/Generator/Confinement/Physical/AddVolume {VOLS}
+/RMG/Generator/Confinement/SamplingMode SubtractGeometrical
+/RMG/Generator/Confinement/Geometrical/AddExcludedSolid Cylinder              # the lid, the EFCu cone over the tube's top
+/RMG/Generator/Confinement/Geometrical/CenterPositionX 0 m
+/RMG/Generator/Confinement/Geometrical/CenterPositionY 0 m
+/RMG/Generator/Confinement/Geometrical/CenterPositionZ 4.985 m
+/RMG/Generator/Confinement/Geometrical/Cylinder/OuterRadius 0.993 m
+/RMG/Generator/Confinement/Geometrical/Cylinder/Height 0.02 m
+/RMG/Generator/Select GPS
+/gps/particle ion
+/gps/energy 0 eV
+/gps/ion {Z} {A}
+/process/had/rdm/nucleusLimits {AMIN} {A} {ZMIN} {Z}                          # tube: only {Z} {A} (AMIN=A, ZMIN=Z); holders: the whole chain
+/run/beamOn {NEV}

@@ -36,7 +36,7 @@ VIEWS = {  # the source of each viewer's geometry, its window title, its picture
 }
 ICON = {"picture": "l1000", "label": "LEGEND", "fill": ("#1d6b6f", "#08262a")}  # background gradient (top, bottom)
 SHOW = ("string hardware", "ultem", "PEN")  # autopeel layers drawn with the HPGe detectors in the l200 and l1000 pictures
-DESIGNS = REPO / "output" / "designs.json"  # ana/background.C's design scan, which rt shows
+DESIGNS = REPO / "output" / "designs.json"  # ana/ana.C's design scan, which rt shows
 ZIP = REPO / "output" / f"{NAME}.zip"  # a copy to share
 STOPS = ((0.9, (38, 70, 150)), (1.0, (33, 120, 190)), (1.1, (40, 170, 150)), (1.2, (140, 200, 80)), (1.3, (250, 220, 60)))  # its colours
 SOURCES = ("legend.swift", "autopeel.swift", "rt.swift")
@@ -279,7 +279,7 @@ def export_designs(m, tube: dict, title: str, out: Path) -> tuple[int, int]:
     doc = json.loads(DESIGNS.read_text())
     z = tube["pts"][:, 2]
     if abs(np.ptp(z) - 1000 * doc["depthTot"]) > 1:
-        sys.exit(f"the GDML's tube is {np.ptp(z):.0f} mm long, the design scan's {1000 * doc['depthTot']:.0f} mm: rerun ana/background.C")
+        sys.exit(f"the GDML's tube is {np.ptp(z):.0f} mm long, the design scan's {1000 * doc['depthTot']:.0f} mm: rerun ana/ana.C")
     step = 10.0  # mm
     depth = np.arange(0, 1000 * doc["depthTot"] + step, step)
     doc |= {"title": title, "zTop": float(z.max()), "rStep": step,
@@ -331,7 +331,7 @@ def main():
     if sys.argv[1:]:
         sys.exit("usage: make_app.py   (no arguments: it builds LEGEND.app with l200, l1000 and rt)")
     if not DESIGNS.exists():
-        sys.exit(f"no {DESIGNS}: run ana/background.C first")
+        sys.exit(f"no {DESIGNS}: run ana/ana.C first")
     peels = {}
     with tempfile.TemporaryDirectory() as tmp:  # out of iCloud, which puts attributes back that codesign refuses
         t = Path(tmp)

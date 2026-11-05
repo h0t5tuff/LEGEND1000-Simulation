@@ -469,7 +469,7 @@ def write_panels(out, panels):
     print(f"wrote {out}")
 
 
-# ── the tube, the UGLAr and the HPGe detectors of sim/run.mac, offscreen to PNGs (--tube, --uglar, --hpge) ──
+# ── the tube, the UGLAr and the HPGe detectors of sim/sim.mac, offscreen to PNGs (--tube, --uglar, --hpge) ──
 
 TUBE = ("reentrance_tube_layer_steel_316L", "reentrance_tube_layer_copper_ofhc", "reentrance_tube_copper")  # top to bottom
 UGLAR = "liquid_argon_underground"
@@ -528,20 +528,51 @@ def gdml_parts():
     return _PARTS
 
 
-def rz_volume(rz, z0=-np.inf, z1=np.inf, dz=0.5):
-    """[mm3] the solid of revolution of a closed (r, z) outline between two heights, in slices of dz: each slice's area
-    from the outline's crossings, paired into rings (as ana/background.C does)."""
+def crossings(rz, zm):
+    """The radii [mm] where a closed (r, z) outline crosses height zm, sorted."""
     r, z = rz
-    lo, hi = max(z.min(), z0), min(z.max(), z1)
     j = np.roll(np.arange(len(r)), 1)
-    v = 0.0
-    for zl in np.arange(lo, hi, dz):
-        s = min(dz, hi - zl)
-        zm = zl + 0.5 * s
-        cross = (z > zm) != (z[j] > zm)
-        x = np.sort(r[cross] + (zm - z[cross]) * (r[j][cross] - r[cross]) / (z[j][cross] - z[cross]))
-        v += np.pi * np.sum(x[1::2] ** 2 - x[0::2] ** 2) * s
-    return v
+    c = (z > zm) != (z[j] > zm)
+    return np.sort(r[c] + (zm - z[c]) * (r[j][c] - r[c]) / (z[j][c] - z[c]))
+
+
+def ring_area(rz, zm):
+    """[mm2] the cross-section of a solid of revolution at height zm: its outline's crossings, paired into rings."""
+    x = crossings(rz, zm)
+    return np.pi * np.sum(x[1::2] ** 2 - x[0::2] ** 2)
+
+
+def rz_volume(rz, z0=-np.inf, z1=np.inf, dz=0.5):
+    """[mm3] the solid of revolution of a closed (r, z) outline between two heights, in slices of dz."""
+    lo, hi = max(rz[1].min(), z0), min(rz[1].max(), z1)
+    return sum(ring_area(rz, zl + 0.5 * min(dz, hi - zl)) * min(dz, hi - zl) for zl in np.arange(lo, hi, dz))
+
+
+def tube_table(out):
+    """For ana/ana.C: the tube's top, bottom and seams [mm], its densities [kg/m3], the germanium [kg], and the wall's
+    cross-section [mm2] per 0.5 mm slice from the top down (below the SS seam the solid minus the argon in it, above it the
+    steel shell alone: the tube is open at the top). And the tube check: the head and both shells flush with the barrel."""
+    poly, dens, vols, placed_n = gdml_parts()
+    wall, argon = poly[TUBE[2]], poly[UGLAR]
+    ss_o, ss_i, cu_o = poly[f"{TUBE[0]}_outer_bound"], poly[f"{TUBE[0]}_inner_bound"], poly[f"{TUBE[1]}_outer_bound"]
+    top, bottom, cu_seam, ss_seam = wall[1].max(), wall[1].min(), cu_o[1].min(), ss_o[1].min()
+    area = [ring_area(wall, zm) - ring_area(argon, zm) if zm < ss_seam else ring_area(ss_o, zm) - ring_area(ss_i, zm)
+            for zm in np.arange(top - 0.25, bottom, -0.5)]
+    rho = [1000 * dens[vols[n][0]] for n in TUBE]  # SS, Cu, EFCu
+    ge = [(n, m, s) for n, (m, s) in vols.items() if "Germanium" in m and s in poly]
+    ge_kg = sum(placed_n[n] * 1000 * dens[m] * rz_volume(poly[s]) * 1e-9 for n, m, s in ge)
+    n_ge = sum(placed_n[n] for n, _, _ in ge)
+    with open(out, "w") as f:
+        f.write(f"{top} {bottom} {cu_seam} {ss_seam}\n{rho[0]} {rho[1]} {rho[2]}\n{ge_kg} {n_ge}\n")
+        f.write("".join(f"{a:.4f}\n" for a in area))
+    zb = 0.5 * (cu_seam + ss_seam)
+    rb, z_head = crossings(wall, zb)[-1], wall[1][wall[0].argmax()]
+    steps = {"head": wall[0].max() - rb, "Cu": cu_o[0].max() - rb, "SS": ss_o[0].max() - rb}
+    print(f"tube: z {bottom:.1f} .. {top:.1f} mm, seams EFCu | {cu_seam:.1f} | Cu | {ss_seam:.1f} | SS; densities SS {rho[0]:.0f}, "
+          f"Cu {rho[1]:.0f}, EFCu {rho[2]:.0f} kg/m3; {n_ge} germanium detectors, {ge_kg:.1f} kg")
+    print("against the barrel [mm]: " + ", ".join(f"{k} {v:+.4f}" for k, v in steps.items()) + "; wall thickness [mm]: "
+          + ", ".join(f"z {zq:.0f} {crossings(wall, zq)[-1] - crossings(argon, zq)[-1]:.2f}" for zq in (z_head, cu_seam - 10, zb, 0.5 * (ss_seam + top))))
+    print(f"tube check: {'PASS' if all(abs(v) <= 0.05 for v in steps.values()) else 'FAIL'}; wrote {out}")
 
 
 def plane(origin, normal):
@@ -629,7 +660,7 @@ def tube_png(out):
                                          [c for c in (clip, top if n == TUBE[2] else None) if c is not None])[0] for i, n in zip(idx, TUBE)]
     th, ph = START_THETA_PHI
     write_panels(out, [
-        ("the re-entrant tube, sim/run.mac's decay source: steel, OFHC Cu, EFCu", tube(), (th, ph, 0.9)),
+        ("the re-entrant tube, sim/sim.mac's decay source: steel, OFHC Cu, EFCu", tube(), (th, ph, 0.9)),
         ("its bottom cut along the axis: the 336 detectors (ghosted) sit in the EFCu section",
          tube(facing(ph)) + [make_actor([placed(g, i) for i in dets], GHOST, 0)[0]], (th, ph, 1.0, _bounds(pts, zmax=1500))),
     ])
@@ -655,7 +686,7 @@ def uglar_png(out):
     inner = np.concatenate([placed(g, i)[0] for i in dets + fibres])
     th, ph = START_THETA_PHI
     write_panels(out, [
-        ("the underground argon (UGLAr), alone: the argon veto of sim/run.mac", [make_actor([placed(g, u)], colours[UGLAR], 0)[0]],
+        ("the underground argon (UGLAr), alone: the argon veto of sim/sim.mac", [make_actor([placed(g, u)], colours[UGLAR], 0)[0]],
          (th, ph, 0.9)),
         ("its bottom, ghosted: the 336 detectors, and the fibres whose SiPMs see its light",
          [make_actor([placed(g, u)], (0.55, 0.8, 1.0, 0.18), 0)[0], make_actor([placed(g, i) for i in dets], colours[names[dets[0]]], 0)[0],
@@ -694,7 +725,7 @@ def hpge_png(out):
     ])
 
 
-PICTURES = {"--holders": holders_png, "--tube": tube_png, "--uglar": uglar_png, "--hpge": hpge_png}
+PICTURES = {"--holders": holders_png, "--tube": tube_png, "--uglar": uglar_png, "--hpge": hpge_png, "--table": tube_table}
 
 
 def main():

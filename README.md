@@ -13,7 +13,7 @@ tube's background index (BI)? "Without changing" means within 10%:
 4. So the BI itself is only known to ±9% (0.94 ± 0.09 × 10⁻⁸).
 5. A change smaller than that can't be told apart from the simulation's own scatter.
 6. So "no change" means within ~10%: a choice made for this study, not a LEGEND requirement, and the simulation was
-   sized to resolve it (step 2).
+   sized to resolve it (step 2, Simulation).
 
 **The answer** (depths below the tube's top; as built the SS ends at 2.06 m and the EFCu starts at 4.07 m):
 
@@ -33,7 +33,7 @@ registers the 336 germanium detectors from the GDML file itself. The software wa
 source for this work: Geant4, BxDecay0 and remage, on both Apple Silicon and Linux, through a chain in which each stage
 tests itself before passing on ([ElmikawyStack2026](https://github.com/h0t5tuff/Physics-Simulation-Stack)); on Apple
 Silicon, remage 0.26 also needed its library paths patched by hand. Over the course of this work the remage setup grew
-from separate tutorial examples into the single simulation used here, `sim/run.mac`, on remage's 1.1.0 release: pixi
+from separate tutorial examples into the single simulation used here, `sim/sim.mac`, on remage's 1.1.0 release: pixi
 on the Mac, the collaboration's container on NERSC. The Python steps run in `~/venvs/v` (Python 3.14: reboost
 1.4.0, legend-pygeom-l1000 0.6.0, pylegendmeta, uproot, vtk), the analysis in ROOT 6.40.
 
@@ -45,8 +45,7 @@ geometry ([ElmikawyRTsim2026](https://github.com/h0t5tuff/LEGEND1000-Simulation)
 Three words, used throughout:
 
 - **decay:** one simulated nuclear decay of Tl-208 or Bi-214 in the tube (a whole Th-232 or U-238 chain, for the holders);
-- **hit:** the energy one decay leaves in one detector (`sim/hit.py` makes them); one decay can leave hits in several
-  detectors;
+- **hit:** the energy one decay leaves in one detector; one decay can leave hits in several detectors;
 - **count:** a decay whose hit lands in the ROI (the 100 keV window around `Qββ` = 2039 keV) after the cuts. The
   simulation gives _simulated counts_; each stands for w real decays a year, and Σw is the _counts a year_.
 
@@ -62,16 +61,15 @@ activities (0.37 and 0.19 µBq/kg), so the two spectra simply add. Two lines thr
 
 ![the holders' spectrum](output/holders_spectrum.png)
 
-The raw energy each detector gets (no detector response), summed over 10 µs: 435 125
-hits from the Th-232 chain, 176 436 from the U-238 chain. `sim/holders.mac` writes every germanium step (`stp/germanium`: `evtid`, `det_uid`, `edep_in_keV`,
-`time_in_ns`, ...) and one row per chain (`stp/vtx`) to `output/holders_th232.root` and `holders_u238.root`;
-`ana/holders.C` draws them.
+`sim/sim.mac` decays the whole chain in the holders (`AMIN` `ZMIN`: the chain's lowest mass and atomic numbers);
+`holders()` in `ana/ana.C` sums each detector's energy within 10 µs, with no detector response: 435 530 hits from
+Th-232, 176 339 from U-238.
 
 ```bash
 ~/venvs/v/bin/python geom/l1000geom/l1000-autopeel.py --holders output/holders_geometry.png
-remage -q --ignore-warnings -t 8 -w -o output/holders_th232.root -s GDML=geom/l1000geom/l1000.gdml -s Z=90 -s A=232 -s NEV=370000 -s SEED=21 -- sim/holders.mac
-remage -q --ignore-warnings -t 8 -w -o output/holders_u238.root -s GDML=geom/l1000geom/l1000.gdml -s Z=92 -s A=238 -s NEV=190000 -s SEED=22 -- sim/holders.mac
-root -l -b -q ana/holders.C
+remage -q --ignore-warnings -t 8 -w -o output/holders_th232.root -s GDML=geom/l1000geom/l1000.gdml -s VOLS='hpge_string_support_weldment_copper_.*' -s Z=90 -s A=232 -s ZMIN=81 -s AMIN=208 -s NEV=370000 -s SEED=21 -- sim/sim.mac
+remage -q --ignore-warnings -t 8 -w -o output/holders_u238.root -s GDML=geom/l1000geom/l1000.gdml -s VOLS='hpge_string_support_weldment_copper_.*' -s Z=92 -s A=238 -s ZMIN=81 -s AMIN=206 -s NEV=190000 -s SEED=22 -- sim/sim.mac
+root -l -b -q -e '.L ana/ana.C' -e 'holders()'
 ```
 
 ## Method
@@ -79,12 +77,12 @@ root -l -b -q ana/holders.C
 Five steps. Only the PNGs of `output/` are in git; the commands in each step remake the rest.
 
 1. **Geometry:** build `geom/l1000geom/l1000.gdml` with legend-pygeom-l1000 and check it with
-   `geom/l1000geom/check.mac`.
-2. **Simulation:** `sim/run.mac` (remage) decays Tl-208 and Bi-214 in each section of the tube on NERSC, into `output/output_lh5` (76 GB).
+   `geom/l1000geom/check.mac` and `l1000-autopeel.py --table`, which writes the tube's numbers to `output/tube.txt`.
+2. **Simulation:** `sim/sim.mac` (remage) decays Tl-208 and Bi-214 in each section of the tube on NERSC, into `output/output_lh5` (76 GB).
 3. **Detector response:** `sim/hit.py` turns those decays into what the detectors and the LAr veto see, in
    `output/output_root`.
-4. **Cuts and BI:** `ana/background.C` applies the cuts and computes the BI.
-5. **Reweighting:** `ana/background.C` also tries every design, without a new simulation.
+4. **Cuts and BI:** `ana/ana.C` applies the cuts and computes the BI.
+5. **Reweighting:** `ana/ana.C` also tries every design, without a new simulation.
 
 ### 1. The geometry
 
@@ -93,15 +91,17 @@ LEGEND-1000 geometry. The tube is 6.246 m tall and 0.999 m in radius; the 336 de
 top, inside the EFCu section.
 
 Two checks run before any physics. The first
-builds the geometry and scans it for overlapping volumes. The second, at the start of
-`ana/background.C`, reads the tube from the GDML, with the densities and the germanium mass, and checks it: a clean
-outline, the bottom head and the Cu and SS layers flush with the barrel. It also profiles the wall: 1.5 mm of EFCu
+builds the geometry and scans it for overlapping volumes. The second,
+`l1000-autopeel.py --table`, reads the tube from the GDML and checks that the bottom head and the Cu and SS layers are
+flush with the barrel. It also profiles the wall: 1.5 mm of EFCu
 through the endcap and lower wall, thickening to 3 mm over the last 2 cm below the Cu seam, and 6 mm through the Cu
-and SS. In the GDML, the Cu and SS layers are placed inside the EFCu tube volume.
+and SS. In the GDML, the Cu and SS layers are placed inside the EFCu tube volume. `--table` then writes what the analysis needs
+to `output/tube.txt`: the seams, the densities, the germanium mass (1023.4 kg) and the wall's cross-section every
+0.5 mm.
 
 Every later step reads the tube from this one file (the analysis, the pictures, the app), so a new design is just a
 new GDML file. The one exception is the lid: the GDML's EFCu also closes the tube's top with a 6 mm cone, the lid
-(z = 4981-4987 mm), which this study leaves out; `sim/run.mac` keeps it out of the sampling by its position.
+(z = 4981-4987 mm), which this study leaves out; `sim/sim.mac` keeps it out of the sampling by its position.
 
 The lid is an artifact of legend-pygeom-l1000, fixed by
 [legend-exp/legend-pygeom-l1000#142](https://github.com/legend-exp/legend-pygeom-l1000/pull/142): the argon closed
@@ -120,10 +120,8 @@ remage -q -g after/l1000.gdml -o after/vtx.root -w confine.mac
 root -l -b -q pr142.C
 ```
 
-The tube's outline as `ana/background.C` reads it: its three sections, the decay sources, and the two seams a design
-moves (z = 920 and 2925 mm in the GDML, depths 4.07 and 2.06 m: the top is at z = 4987 mm).
-
-![the tube](output/tube.png)
+The tube's three sections, the decay sources, and the two seams a design moves (z = 920 and 2925 mm in the GDML,
+depths 4.07 and 2.06 m: the top is at z = 4987 mm).
 
 ![the tube, the decay source](output/tube_geometry.png)
 
@@ -133,8 +131,8 @@ silicon photomultipliers (SiPMs).
 ![the UGLAr, the veto](output/uglar_geometry.png)
 
 Each detector is an inverted-coaxial point-contact (ICPC) germanium detector, 90.0 mm tall and 88.8 mm across, its
-borehole 53 mm deep from the top: 3.046 kg, 1023.4 kg in all. The commands: the GDML, the overlap check, then the
-pictures (`geom/l1000geom/l1000-autopeel.py` draws each part alone, offscreen, and prints its numbers):
+borehole 53 mm deep from the top: 3.046 kg, 1023.4 kg in all. The commands: the GDML, the overlap check, the tube table,
+then the pictures (`geom/l1000geom/l1000-autopeel.py` draws each part alone, offscreen, and prints its numbers):
 
 ![the HPGe detectors](output/hpge_geometry.png)
 
@@ -142,6 +140,7 @@ pictures (`geom/l1000geom/l1000-autopeel.py` draws each part alone, offscreen, a
 export LEGEND1000_METADATA=~/Documents/legend-exp/legend1000-metadata
 ~/venvs/v/bin/legend-pygeom-l1000 -v geom/l1000geom/l1000.gdml
 remage --ignore-warnings -s GDML=geom/l1000geom/l1000.gdml -s SKIP=false -s NPOINTS=1000 -- geom/l1000geom/check.mac 2>&1 | grep "Overlap is detected"
+~/venvs/v/bin/python geom/l1000geom/l1000-autopeel.py --table output/tube.txt
 ~/venvs/v/bin/python geom/l1000geom/l1000-autopeel.py --tube output/tube_geometry.png
 ~/venvs/v/bin/python geom/l1000geom/l1000-autopeel.py --uglar output/uglar_geometry.png
 ~/venvs/v/bin/python geom/l1000geom/l1000-autopeel.py --hpge output/hpge_geometry.png
@@ -149,18 +148,17 @@ remage --ignore-warnings -s GDML=geom/l1000geom/l1000.gdml -s SKIP=false -s NPOI
 
 ### 2. Simulation
 
-With `sim/run.mac` (remage), one nuclide decays uniformly through one section of the tube wall: **Tl-208** (²³²Th
+With `sim/sim.mac` (remage), one nuclide decays uniformly through one section of the tube wall: **Tl-208** (²³²Th
 chain) or **Bi-214** (²³⁸U chain), the only chain members whose gammas reach `Qββ`. It records the energy each decay
-leaves in each detector and in the UGLAr. Its `-s` aliases: `GDML`; `Z` `A` (Tl-208: 81 208, Bi-214: 83 214); `NEV`;
-`SEED`, which starts remage's random numbers (the same seed repeats the same decays, so every run has its own) and
+leaves in each detector and in the UGLAr. Its `-s` aliases: `GDML`; `Z` `A` (Tl-208: 81 208, Bi-214: 83 214), with `ZMIN` `AMIN` the same so only that nuclide
+decays; `NEV`; `SEED`, which starts remage's random numbers (the same seed repeats the same decays, so every run has its own) and
 names the run's file; `VOLS`, a regex over the source volumes `reentrance_tube_copper` (EFCu),
 `reentrance_tube_layer_copper_ofhc` (Cu) or `reentrance_tube_layer_steel_316L` (SS). Each run is 10 M decays of one
 nuclide in one section, a 32-thread NERSC task of 16-75 min, and writes
 `output/output_lh5/<nuclide>_<SEED>.lh5`: `stp/` (the steps in the germanium detectors and in
 `liquid_argon_underground`), `vtx` (one row per decay, with its position), `detector_origins`,
-`number_of_simulated_events`. They are kept: every rerun starts here. No decay is in the lid (the EFCu cone over the tube's top):
-`sim/run.mac` leaves it out of the sampling, and the first six EFCu runs, made before that, had its decays removed from their files
-afterwards (7.6 M of each 10 M kept).
+`number_of_simulated_events`. They are kept: every rerun starts here. No decay is in the lid: `sim/sim.mac` excludes it, and
+the first six EFCu runs, made before that, had its decays removed (7.6 M of each 10 M kept).
 
 The sections are simulated separately because their decays reach the detectors at very different rates, so each gets
 the decays it needs (a run over the whole tube would put nearly 9 in 10 of its decays in the Cu and SS, which the detectors
@@ -215,9 +213,9 @@ To rerun them on Perlmutter (`nersc`: an ssh host alias with an `sshproxy` key; 
 ```bash
 ssh nersc 'mkdir -p $SCRATCH/LEGEND1000-Simulation/sim $SCRATCH/LEGEND1000-Simulation/geom/l1000geom $SCRATCH/LEGEND1000-Simulation/output/output_lh5'
 rsync -a geom/l1000geom/l1000.gdml nersc:'$SCRATCH/LEGEND1000-Simulation/geom/l1000geom/'
-rsync -a sim/run.mac nersc:'$SCRATCH/LEGEND1000-Simulation/sim/'
+rsync -a sim/sim.mac nersc:'$SCRATCH/LEGEND1000-Simulation/sim/'
 ssh nersc 'shifterimg pull docker:legendexp/remage:v1.1.0'
-ssh nersc 'cd $SCRATCH/LEGEND1000-Simulation && sbatch --account=m2676 --qos=shared --constraint=cpu --cpus-per-task=32 --time=01:30:00 --output=output/%x_%a.log --image=docker:legendexp/remage:v1.1.0 --array=<SEEDS> --job-name=rt --wrap "shifter --module=none remage -q --ignore-warnings -t 32 -w -m -s GDML=geom/l1000geom/l1000.gdml -s NEV=10000000 -s SEED=\$SLURM_ARRAY_TASK_ID -o output/output_lh5/<NUCLIDE>_\$SLURM_ARRAY_TASK_ID.lh5 -s Z=<Z> -s A=<A> -s VOLS=<VOLS> -- sim/run.mac"'
+ssh nersc 'cd $SCRATCH/LEGEND1000-Simulation && sbatch --account=m2676 --qos=shared --constraint=cpu --cpus-per-task=32 --time=01:30:00 --output=output/%x_%a.log --image=docker:legendexp/remage:v1.1.0 --array=<SEEDS> --job-name=rt --wrap "shifter --module=none remage -q --ignore-warnings -t 32 -w -m -s GDML=geom/l1000geom/l1000.gdml -s NEV=10000000 -s SEED=\$SLURM_ARRAY_TASK_ID -o output/output_lh5/<NUCLIDE>_\$SLURM_ARRAY_TASK_ID.lh5 -s Z=<Z> -s A=<A> -s ZMIN=<Z> -s AMIN=<A> -s VOLS=<VOLS> -- sim/sim.mac"'
 rsync -a --include='*_[0-9][0-9][0-9][0-9].lh5' --exclude='*' nersc:'$SCRATCH/LEGEND1000-Simulation/output/output_lh5/' output/output_lh5/
 ssh nersc 'rm -r $SCRATCH/LEGEND1000-Simulation'
 ```
@@ -252,7 +250,7 @@ bring their own dead layer, resolution and A/E.
   arrives the BI is a 0.9-2.8 × 10⁻⁸ range (2.8 × 10⁻⁸ with the LAr veto read off the map alone, no light from the
   argon beyond its edge).
 
-`sim/hit.py` writes `output/output_root/<nuclide>_<SEED>_hit.root` (~7 s a file, 20-40 s for an EFCu run; ~50 GB in all; only `ana/background.C` reads
+`sim/hit.py` writes `output/output_root/<nuclide>_<SEED>_hit.root` (~7 s a file, 20-40 s for an EFCu run; ~50 GB in all; only `ana/ana.C` reads
 them): TTrees `geds` (`evtid`, `det`, `edep`, `energy` [keV], `aoe_class`), `lar` (`evtid`, `edep`, `pe`, `pe_map`),
 `vtx` (`evtid`, `xloc`, `yloc`, `zloc` [m]). Options: `--optmap`, `--dtmap`, `--metadata`, `--gdml`, `--outdir`
 (defaults: the two maps fetched below, the metadata above, `geom/l1000geom/l1000.gdml`, `output/output_root`); `--seed` (default 1; not remage's `SEED`: with each
@@ -268,9 +266,9 @@ rsync -a nersc:/global/cfs/cdirs/m2676/users/neuberger/L1000_optical_muon_sims/h
 
 ### 4. Cuts and BI
 
-`ana/background.C` is the analysis and its figures. Its arguments, both optional: the hit files, as `pattern=nuclide`
-pairs (wildcards merge files; default: the Tl-208 and Bi-214 sets in `output/output_root`), and the GDML (default
-`geom/l1000geom/l1000.gdml`). The cuts, activities and the 10% line are in `cfg` (`m1_keV`, `lar_pe`, `psd_low`,
+`ana/ana.C` is the analysis and its figures. Its arguments, both optional: the hit files, as `pattern=nuclide`
+pairs (wildcards merge files; default: the Tl-208 and Bi-214 sets in `output/output_root`), and the tube table (default
+`output/tube.txt`, from step 1). The cuts, activities and the 10% line are in `cfg` (`m1_keV`, `lar_pe`, `psd_low`,
 `chain`, `simTol`).
 
 **Cuts**, in LEGEND's order: **M1** (exactly one detector above 25 keV) and the **LAr veto** (rejects ≥ 4 PE), both
@@ -323,14 +321,14 @@ so ~1 M of the EFCu runs' decays, just above the Cu seam, count as Cu):
 | all    |         |          |                    | 4.26 G           |            | 128 after all cuts                            | 9.6 × 10⁻⁴              | 9.4 ± 0.9 × 10⁻⁹   |
 
 ```bash
-root -l -b -q ana/background.C
+root -l -b -q ana/ana.C
 ```
 
-### 5. reweighting
+### 5. Reweighting
 
 A design moves the two seams: the SS ends at depth L1 (2.06 m as built) and the EFCu starts at depth L2 (4.07 m),
 with Cu between. The wall keeps its shape and thickness as built; only the material of each part changes (EFCu turned
-into Cu at 4.07-4.40 m is the EFCu's 1.5 mm wall, made of Cu). `ana/background.C` scans them: for every L2, L1 goes
+into Cu at 4.07-4.40 m is the EFCu's 1.5 mm wall, made of Cu). `ana/ana.C` scans them: for every L2, L1 goes
 down 1 cm at a time while the BI stays within 10% of the as-built's. The answer is the least EFCu, then, for it, the
 most SS.
 
@@ -375,11 +373,11 @@ the tube's top (the table):
 
 ## Results
 
-**BI as-built**
+**BI as built** [counts/(keV·kg·yr)]
 
 | no cut    | M1                       | M1 + LAr                       | all cuts (M1 + LAr + A/E)     |
 | --------- | ------------------------ | ------------------------------ | ----------------------------- |
-| 4.29×10⁻⁶ | 3.61×10⁻⁶ M1_removes_16% | 0.89×10⁻⁷ LAr_veto_removes_98% | **0.94×10⁻⁸** A/E_removes_89% |
+| 4.29×10⁻⁶ | 3.61×10⁻⁶ (M1 removes 16%) | 0.89×10⁻⁷ (LAr veto removes 98%) | **0.94×10⁻⁸** (A/E removes 89%) |
 
 The tube's spectrum as built, through each cut: the ROI shaded green with `Qββ` as a line, the BI after all cuts as
 the black line across it, the 10⁻⁵ goal dashed.
@@ -388,16 +386,18 @@ the black line across it, the 10⁻⁵ goal dashed.
 
 **Designs**
 
-depths of L2 possible @ (deepest L1 possible wrt the as-built L2): (no ROI count from SS)
+For each L2, the deepest L1 that keeps the BI within 10%; deeper than 4.40 m no L1 passes:
 
 | EFCu from (L2)    | SS to (L1) | SS : Cu : EFCu          | BI change |
 | ----------------- | ---------- | ----------------------- | --------- |
 | 4.07 m, as built  | 2.69 m     | 809 : 460 : 175 kg      | none      |
 | 4.20 m            | same       | same : 472 : 163 kg     | +2%       |
 | 4.30 m            | same       | same : 480 : 154 kg     | +4%       |
-| **4.40 m** (-17%) | same       | **same : 489 : 146 kg** | **+8%**   |
+| **4.40 m** (−17% EFCu) | same       | **same : 489 : 146 kg** | **+8%**   |
 
 ![the designs](output/slide_designs.png)
+
+The rt viewer of `/Applications/LEGEND.app` shows the same scan in 3D; rebuild it after each `ana/ana.C` run:
 
 ```bash
 ~/venvs/v/bin/python app/make_app.py
@@ -405,7 +405,7 @@ depths of L2 possible @ (deepest L1 possible wrt the as-built L2): (no ROI count
 
 ## LEGEND 1700?
 
-Matthew Busch's talk, *String and lock updates, including a 12 detector string concept for beyond 1T deployment*
+Matthew Busch's talk, _String and lock updates, including a 12 detector string concept for beyond 1T deployment_
 (29 Sep 2026; `0νββ/Presentations/Hall C design, Beusch.pdf` in iCloud Drive), answers Bernhard's question: could the
 same hardware later hold more than 1 tonne of germanium?
 
@@ -416,5 +416,5 @@ same hardware later hold more than 1 tonne of germanium?
 - **Status:** viable, but still waiting on the crane and cleanroom details.
 - **The catch:** he recommends the Hall C change only if it works with the background simulations.
 
-That last check is what this study can do: build the 12-detector geometry in legend-pygeom-l1000, then rerun the same
+That last check is what I might wanna do with this study: build the 12-detector geometry in legend-pygeom-l1000, then rerun the same
 simulation and analysis on it.

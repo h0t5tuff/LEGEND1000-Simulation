@@ -1,6 +1,6 @@
 // LEGEND.app's rt: the re-entrance tube designs, the GDML's tube in 3D. Two sliders set L1 (the SS ends at that depth
 // below the tube's top) and L2 (the EFCu starts there), Cu in between; the tube's colour is that design's BI after
-// all cuts over the as-built tube's, from ana/background.C's design scan (output/designs.json). It reads designs.json
+// all cuts over the as-built tube's, from ana/ana.C's design scan (output/designs.json). It reads designs.json
 // + tube.bin from its folder of the bundle (both written by make_app.py), so it needs nothing else installed.
 // legend.swift opens it; --snapshot out.png --open rt [--l1 m] [--l2 m] [--size WxH] draws the window (the 3D view
 // and the panel) offscreen.
