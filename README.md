@@ -1,4 +1,4 @@
-# LEGEND-1000 re-entrance tube
+# LEGEND 1000 Background Index
 
 The re-entrance tube (RT) holds the underground argon (UGLAr) and the detector array. It is a 6 m × 2 m cylinder of
 steel (SS) at the top, oxygen-free high-conductivity (OFHC) copper (Cu) in the middle and electroformed copper (EFCu),
@@ -375,8 +375,8 @@ the tube's top (the table):
 
 **BI as built** [counts/(keV·kg·yr)]
 
-| no cut    | M1                       | M1 + LAr                       | all cuts (M1 + LAr + A/E)     |
-| --------- | ------------------------ | ------------------------------ | ----------------------------- |
+| no cut    | M1                         | M1 + LAr                         | all cuts (M1 + LAr + A/E)       |
+| --------- | -------------------------- | -------------------------------- | ------------------------------- |
 | 4.29×10⁻⁶ | 3.61×10⁻⁶ (M1 removes 16%) | 0.89×10⁻⁷ (LAr veto removes 98%) | **0.94×10⁻⁸** (A/E removes 89%) |
 
 The tube's spectrum as built, through each cut: the ROI shaded green with `Qββ` as a line, the BI after all cuts as
@@ -388,11 +388,11 @@ the black line across it, the 10⁻⁵ goal dashed.
 
 For each L2, the deepest L1 that keeps the BI within 10%; deeper than 4.40 m no L1 passes:
 
-| EFCu from (L2)    | SS to (L1) | SS : Cu : EFCu          | BI change |
-| ----------------- | ---------- | ----------------------- | --------- |
-| 4.07 m, as built  | 2.69 m     | 809 : 460 : 175 kg      | none      |
-| 4.20 m            | same       | same : 472 : 163 kg     | +2%       |
-| 4.30 m            | same       | same : 480 : 154 kg     | +4%       |
+| EFCu from (L2)         | SS to (L1) | SS : Cu : EFCu          | BI change |
+| ---------------------- | ---------- | ----------------------- | --------- |
+| 4.07 m, as built       | 2.69 m     | 809 : 460 : 175 kg      | none      |
+| 4.20 m                 | same       | same : 472 : 163 kg     | +2%       |
+| 4.30 m                 | same       | same : 480 : 154 kg     | +4%       |
 | **4.40 m** (−17% EFCu) | same       | **same : 489 : 146 kg** | **+8%**   |
 
 ![the designs](output/slide_designs.png)
