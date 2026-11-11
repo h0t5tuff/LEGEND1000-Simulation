@@ -8,8 +8,8 @@
 //  1. Configuration:
 namespace cfg
 {
-  // the ROI: one window around Qbb, Qbb +- 50 keV (1989-2089 keV), short of the Tl208 single-escape peak at 2103.5 keV, as
-  // in Ralph Massarczyk's tube study (13 Oct 2026: Qbb +- 55 keV). the BI is its counts / 100 keV
+  // the ROI: one window around Qbb, Qbb +- 50 keV (1989-2089 keV), short of the Tl208 single-escape peak at 2103.5 keV.
+  // the BI is its counts / 100 keV
   const double Qbb = 2039.0, roiHalf = 50.0;
   const double winLo = Qbb - roiHalf, winHi = Qbb + roiHalf;
   bool inWindow(double e) { return e >= winLo && e <= winHi; }
@@ -18,7 +18,7 @@ namespace cfg
   const double m1_keV = 25.0;  // a detector fired above this; M1: exactly one did
   const double lar_pe = 4.0;   // the LAr veto rejects a decay whose SiPMs see this many photoelectrons, summed
   const double psd_low = -1.5; // the production's A/E cut: keep a hit whose A/E classifier is above this (low side)
-  // LEGEND sets it in data to keep 90% of the Tl208 double-escape peak (DEP); here that is only checked (checkAoE)
+  // LEGEND tunes it in data to keep 90% of the Tl208 double-escape peak (DEP); here that is only checked (checkAoE)
   const double depKeep = 0.90, peakHalf = 2.5, sideLo = 5.0, sideHi = 10.0; // keV: peak +-2.5, sidebands 5-10 off it
   const int NC = 4;                                                         // cut levels: none, M1, M1 + LAr, M1 + LAr + A/E
   const char *cutName[NC] = {"no cut", "M1", "M1 + LAr", "M1 + LAr + A/E"};
@@ -30,10 +30,10 @@ namespace cfg
   const int NDB = 10; // depth slabs of the DEPTH table
 
   const char *mat[3] = {"SS", "Cu", "EFCu"}; // top to bottom; their densities are the GDML's (output/tube.txt)
-  // chain activities [uBq/kg], {232Th, 238U}, from Ralph's MaterialMix slides (23 Jun 2026): steel from Bernhard (p. 5),
-  // OFHC Cu from the MAJORANA assay paper (p. 15), EFCu from M. Green, CD-1 (p. 5)
-  const double chain[3][2] = {{1000, 2500}, {1.1, 1.3}, {0.37, 0.19}};
-  const double branch[2] = {0.3594, 1.0};                                                           // Tl208 is 35.94% of the 232Th chain (ENSDF); Bi214 100% of the 238U chain
+  // chain activities [uBq/kg], {232Th, 238U}: steel from "RT MaterialMix, ralph.pdf" (p. 5), OFHC Cu from MAJORANA's assay
+  // paper (Phys. Rev. C 110, 055804, Table II), EFCu from the LEGEND-1000 CDR's Table XVII
+  const double chain[3][2] = {{1000, 2500}, {1.10, 1.37}, {0.37, 0.19}};
+  const double branch[2] = {0.3594, 1.0};                                                           // Tl208 is 35.94% of the 232Th chain (Nuclear Data Sheets for A = 208); Bi214 100% of the 238U chain
   int iso(const std::string &s) { return s.find("Bi") != std::string::npos ? 1 : 0; }               // 0 Tl208, 1 Bi214
   double activity(const std::string &s, int m) { return chain[m][iso(s)] * branch[iso(s)] * 1e-6; } // Bq/kg of the simulated nuclide
 }
@@ -207,12 +207,12 @@ static std::vector<std::string> expand(const std::string &pat) // "output/tl208*
 }
 
 //-------------------------------------------------------------------------------
-//  4. The A/E cut, checked on the Tl208 runs' M1 hits: what it keeps of the DEP, SEP and FEP (net of the continuum, from the
-//     sidebands) and of the ROI, against V00000A at HADES; and where LEGEND's 90%-of-the-DEP rule would put it
+//  4. The A/E cut, checked on the Tl208 runs' M1 hits against the LEGEND-1000 pCDR (p. 71): what it keeps of the single-site
+//     DEP (net of the continuum, from the sidebands; LEGEND tunes the cut to 90%) and of the ROI (the pCDR: reduced 2-3 x)
 static void checkAoE(const std::vector<std::string> &files)
 {
-  const double E[3] = {1592.5, 2103.5, 2614.5}, hades[3] = {0.90, 0.04, 0.06}; // DEP, SEP, FEP
-  std::vector<float> peak[3], side[3], roi;
+  const double dep = 1592.5;
+  std::vector<float> peak, side, roi;
   for (auto &file : files)
   {
     auto f = TFile::Open(file.c_str());
@@ -227,27 +227,18 @@ static void checkAoE(const std::vector<std::string> &files)
         if (v[1] <= cfg::m1_keV || nFired[(Long64_t)v[0]] != 1) return;
         float a = std::isnan(v[2]) ? -1e30 : v[2]; // an undefined A/E fails
         if (cfg::inWindow(v[1])) roi.push_back(a);
-        for (int k = 0; k < 3; k++)
-        {
-          double d = fabs(v[1] - E[k]);
-          if (d < cfg::peakHalf) peak[k].push_back(a);
-          else if (d > cfg::sideLo && d < cfg::sideHi) side[k].push_back(a);
-        } });
+        double d = fabs(v[1] - dep);
+        if (d < cfg::peakHalf) peak.push_back(a);
+        else if (d > cfg::sideLo && d < cfg::sideHi) side.push_back(a); });
     delete f;
   }
   const double w = cfg::peakHalf / (cfg::sideHi - cfg::sideLo); // sideband counts per peak width
-  auto above = [](const std::vector<float> &x, double thr)
-  { return (double)std::count_if(x.begin(), x.end(), [&](float a) { return a > thr; }); };
-  auto kept = [&](int k, double thr) // the net fraction of a peak above thr
-  { return (above(peak[k], thr) - w * above(side[k], thr)) / (peak[k].size() - w * side[k].size()); };
-  double thr = 0;
-  while (thr > -50 && kept(0, thr) < cfg::depKeep)
-    thr -= 0.005;
-  const double net = peak[0].size() - w * side[0].size();
-  printf("A/E CUT  classifier > %.2f (the production's): it keeps %.2f of the DEP (+- %.2f, %.0f net), SEP %.2f, FEP %.2f, ROI %.2f;\n",
-         cfg::psd_low, kept(0, cfg::psd_low), sqrt(peak[0].size() + w * w * side[0].size()) / net, net, kept(1, cfg::psd_low),
-         kept(2, cfg::psd_low), roi.empty() ? 0.0 : above(roi, cfg::psd_low) / roi.size());
-  printf("    V00000A at HADES: DEP %.2f, SEP %.2f, FEP %.2f, ROI 0.27. keeping 90%% of the DEP would take > %.2f\n\n", hades[0], hades[1], hades[2], thr);
+  auto above = [](const std::vector<float> &x)
+  { return (double)std::count_if(x.begin(), x.end(), [](float a) { return a > cfg::psd_low; }); };
+  const double net = peak.size() - w * side.size(), roiKept = roi.empty() ? 0.0 : above(roi) / roi.size();
+  printf("A/E CUT  classifier > %.2f (the production's): it keeps %.2f of the DEP (+- %.2f, %.0f net; LEGEND tunes it to %.2f)\n",
+         cfg::psd_low, (above(peak) - w * above(side)) / net, sqrt(peak.size() + w * w * side.size()) / net, net, cfg::depKeep);
+  printf("    and %.2f of the ROI: a factor %.1f (the pCDR: 2-3)\n\n", roiKept, roiKept > 0 ? 1 / roiKept : 0.0);
 }
 
 void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/output_root/bi214*_hit.root=Bi214", const char *tubeFile = "output/tube.txt")
@@ -538,7 +529,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
 }
 
 //-------------------------------------------------------------------------------
-//  11. How radioactive is EFCu: sim/sim.mac's whole Th-232 and U-238 chains in the EFCu detector holders, no detector
+//  11. Which decays can reach Qbb (README step 2): sim/sim.mac's whole Th-232 and U-238 chains in the EFCu detector holders, no detector
 //      response. Each detector's steps within 10 us of its first are one hit; the spectrum of the hits, its lines named.
 //      root -l -b -q -e '.L ana/ana.C' -e 'holders()'
 static Long64_t holderHits(const char *file, TH1D *h) // fills h, returns the chains
