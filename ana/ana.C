@@ -8,12 +8,14 @@
 //  1. Configuration:
 namespace cfg
 {
-  // the ROI: one window around Qbb, Qbb +- 50 keV (1989-2089 keV), short of the Tl208 single-escape peak at 2103.5 keV.
-  // the BI is its counts / 100 keV
-  const double Qbb = 2039.0, roiHalf = 50.0;
+  // the analysis window: the energy window of LEGEND-1000's background projections, Qbb +- 55 keV (1984-2094 keV; pCDR p. 20), short of the Tl208 single-escape
+  // peak at 2103.5 keV. the BI is its counts / 110 keV
+  const double Qbb = 2039.0, roiHalf = 55.0;
   const double winLo = Qbb - roiHalf, winHi = Qbb + roiHalf;
   bool inWindow(double e) { return e >= winLo && e <= winHi; }
-  const double winWidth = winHi - winLo; // 100 keV
+  const double winWidth = winHi - winLo; // 110 keV
+  // the ROI, where 0vbb would show: Qbb +- 2 sigma of the resolution, FWHM = sqrt(0.5 + 0.001 E) keV (pars/geds/eresmod)
+  const double roiSig2 = 2 * sqrt(0.5 + 0.001 * Qbb) / 2.35482; // 1.35 keV: the ROI is 2037.6-2040.4 keV
   // the cuts of the LEGEND-1000 simulation production (legend1000-metadata simprod/config, l1000dsg01: tier/evt, pars/geds/psdcuts)
   const double m1_keV = 25.0;  // a detector fired above this; M1: exactly one did
   const double lar_pe = 4.0;   // the LAr veto rejects a decay whose SiPMs see this many photoelectrons, summed
@@ -100,13 +102,13 @@ struct Run
   Long64_t nsim = 0;
   long nPv[3] = {0, 0, 0};                                            // decays per section: SS, Cu, EFCu
   double mcDensity[3] = {0, 0, 0};                                    // simulated decays per m^3 in each section, measured
-  long dN[cfg::NDB] = {0}, dW1[cfg::NDB] = {0}, dWA[cfg::NDB] = {0}; // per depth slab: decays, ROI counts after M1 and after all cuts
+  long dN[cfg::NDB] = {0}, dW1[cfg::NDB] = {0}, dWA[cfg::NDB] = {0}; // per depth slab: decays, counts after M1 and after all cuts
   double S = 0;                                                       // the cut survival near the detectors (DESIGNS)
   std::vector<float> depth;                                           // per decay WITH a Ge hit: mm below the top of the tube
   std::vector<signed char> pv;                                        // its section
-  std::vector<short> win[cfg::NC];                                    // its hits in the ROI, per cut level
+  std::vector<short> win[cfg::NC];                                    // its hits in the analysis window, per cut level
   std::vector<short> winMap[2];                                       // ...and with the LAr veto read off the map alone: M1 + LAr, + A/E
-  std::vector<size_t> roi;                                            // the decays with an ROI count after M1: the only ones a design changes
+  std::vector<size_t> roi;                                            // the decays with a count after M1: the only ones a design changes
   std::vector<Hit> hits;
 };
 
@@ -208,7 +210,7 @@ static std::vector<std::string> expand(const std::string &pat) // "output/tl208*
 
 //-------------------------------------------------------------------------------
 //  4. The A/E cut, checked on the Tl208 runs' M1 hits against the LEGEND-1000 pCDR (p. 71): what it keeps of the single-site
-//     DEP (net of the continuum, from the sidebands; LEGEND tunes the cut to 90%) and of the ROI (the pCDR: reduced 2-3 x)
+//     DEP (net of the continuum, from the sidebands; LEGEND tunes the cut to 90%) and of the counts after M1 (the pCDR: reduced 2-3 x)
 static void checkAoE(const std::vector<std::string> &files)
 {
   const double dep = 1592.5;
@@ -238,7 +240,7 @@ static void checkAoE(const std::vector<std::string> &files)
   const double net = peak.size() - w * side.size(), roiKept = roi.empty() ? 0.0 : above(roi) / roi.size();
   printf("A/E CUT  classifier > %.2f (the production's): it keeps %.2f of the DEP (+- %.2f, %.0f net; LEGEND tunes it to %.2f)\n",
          cfg::psd_low, (above(peak) - w * above(side)) / net, sqrt(peak.size() + w * w * side.size()) / net, net, cfg::depKeep);
-  printf("    and %.2f of the ROI: a factor %.1f (the pCDR: 2-3)\n\n", roiKept, roiKept > 0 ? 1 / roiKept : 0.0);
+  printf("    and %.2f of the counts after M1: a factor %.1f (the pCDR: 2-3)\n\n", roiKept, roiKept > 0 ? 1 / roiKept : 0.0);
 }
 
 void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/output_root/bi214*_hit.root=Bi214", const char *tubeFile = "output/tube.txt")
@@ -283,13 +285,13 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
   { return p < 0 || r.mcDensity[p] <= 0 ? 0.0 : rt.density[m] * cfg::activity(r.iso, m) * cfg::secPerYear / (r.mcDensity[p] * rt.geMass); };
   auto massOf = [&](double d0, double d1, int m)
   { return d1 > d0 ? rt.density[m] * rt.volume(d0, d1) : 0.0; };
-  printf("INPUTS  ROI %.0f-%.0f keV (%.0f keV); cuts: M1 (one detector above %.0f keV), LAr veto (< %.0f PE), A/E > %.2f; germanium %.1f kg\n\n",
+  printf("INPUTS  analysis window %.0f-%.0f keV (%.0f keV); cuts: M1 (one detector above %.0f keV), LAr veto (< %.0f PE), A/E > %.2f; germanium %.1f kg\n\n",
          cfg::winLo, cfg::winHi, cfg::winWidth, cfg::m1_keV, cfg::lar_pe, cfg::psd_low, rt.geMass);
 
   //-------------------------------------------------------------------------------
   //  5. The background index as built, per chain and section: the README's as-built table
   printf("BI AS BUILT  [counts/(keV kg yr)], +- simulation statistics\n");
-  printf("    %-6s %-5s %8s %10s %10s %9s  %-30s %10s  %s\n", "chain", "sect", "mass", "real/yr", "simulated", "w", "ROI counts: none/M1/+LAr/+A/E",
+  printf("    %-6s %-5s %8s %10s %10s %9s  %-30s %10s  %s\n", "chain", "sect", "mass", "real/yr", "simulated", "w", "window hits/counts: none/M1/+LAr/+A/E",
          "counts/yr", "BI, all cuts");
   double gB[NC] = {0}, gV[NC] = {0}, mB[2] = {0}, mV[2] = {0}; // all chains, per cut level; and with the LAr veto off the map alone
   for (auto &[key, r] : R)
@@ -317,10 +319,10 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
   printf("\n    with the LAr veto off the optical map alone (no light from the argon beyond its edge): M1 + LAr %.2e, all cuts %.2e\n\n", mB[0], mB[1]);
 
   //-------------------------------------------------------------------------------
-  //  6. Where the ROI counts come from, by depth: the README's depth table
+  //  6. Where the counts come from, by depth: the README's depth table
   for (auto &[key, r] : R)
   {
-    printf("DEPTH  %s  per slab below the tube's top: decays, ROI counts after M1, after all cuts\n", r.iso.c_str());
+    printf("DEPTH  %s  per slab below the tube's top: decays, counts after M1, after all cuts\n", r.iso.c_str());
     for (int b = 0; b < cfg::NDB; b++)
       printf("    %5.2f-%-5.2f m %12ld %8ld %6ld\n", depthTot * b / cfg::NDB / 1000, depthTot * (b + 1) / cfg::NDB / 1000, r.dN[b], r.dW1[b], r.dWA[b]);
   }
@@ -329,7 +331,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
   //  7. Designs against the tube as built: steel to L1, Cu to L2, EFCu below, for less EFCu (L2 deeper) and more steel (L1 deeper)
   // a design differs from the tube as built only where a slab changed material, so its BI after all cuts is the as-built's plus
   // that change, dB. Too few counts survive all cuts away from the detectors to count dB on them, so it is counted on the
-  // changed slabs' ROI counts after M1 times the cut survival (the share of them all cuts keep, see DEPTH), measured where the
+  // changed slabs' counts after M1 times the cut survival (the share of them all cuts keep, see DEPTH), measured where the
   // change is: near the detectors, below farEdge, per chain; above it, both chains together
   const double biBuilt = gB[ALL], maxRise = cfg::simTol * biBuilt;
   const int nFar = 7; // the slabs above 4.37 m: above the array
@@ -416,7 +418,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
   sp[0]->SetMinimum(0.1 * std::max(1e-12, sp[ALL]->GetMinimum(0) > 0 ? sp[ALL]->GetMinimum(0) : sp[2]->GetMinimum(0)));
 
   //-------------------------------------------------------------------------------
-  //  9. Two slide figures, one message each: the spectrum with the ROI and the BI marked; the design map near the tube as built
+  //  9. Two slide figures, one message each: the spectrum with the analysis window and the BI marked; the design map near the tube as built
   auto sci = [](double x) { // "9.8 #times 10^{-9}"
     const int e = (int)floor(log10(x));
     return std::string(Form("%.1f #times 10^{%d}", x / pow(10, e), e));
@@ -448,11 +450,15 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     gPad->Update();
     const double y0 = pow(10, gPad->GetUymin()), y1 = pow(10, gPad->GetUymax());
     const int roiCol = TColor::GetColor("#2e7d32");
-    auto b = new TBox(cfg::winLo, y0, cfg::winHi, y1); // the ROI, one band
+    auto b = new TBox(cfg::winLo, y0, cfg::winHi, y1); // the analysis window, one band
     b->SetFillColorAlpha(roiCol, 0.2);
     b->SetLineWidth(0);
     b->Draw();
-    line(cfg::Qbb, y0, cfg::Qbb, y1, roiCol, 2);
+    auto r = new TBox(cfg::Qbb - cfg::roiSig2, y0, cfg::Qbb + cfg::roiSig2, y1); // the ROI: 2.7 keV, a line at this scale
+    r->SetFillColor(roiCol);
+    r->SetLineColor(roiCol);
+    r->SetLineWidth(2);
+    r->Draw("l");
     auto leg = new TLegend(0.10, 0.80, 0.50, 0.91);
     leg->SetNColumns(2);
     leg->SetBorderSize(0);
@@ -466,11 +472,27 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     }
     leg->Draw();
     line(cfg::eLo, cfg::bgGoal, cfg::eHi, cfg::bgGoal, kGray + 2, 2, 2); // the goal, dashed
-    label(cfg::eHi - 20, 1.6 * cfg::bgGoal, "LEGEND-1000 goal: 10^{-5}", kGray + 2, 0.034, 31);
-    line(cfg::winLo, biBuilt, cfg::winHi, biBuilt, kBlack, 4); // the BI over the ROI
-    label(cfg::winHi + 15, biBuilt / 3, "#splitline{BI = " + sci(biBuilt) + "}{purple, averaged over the ROI}", kBlack, 0.032, 13); // below the spectra
-    label(cfg::winHi + 6, pow(10, gPad->GetUymax() - 0.06 * (gPad->GetUymax() - gPad->GetUymin())), Form("ROI: Q_{#beta#beta} #pm %.0f keV", cfg::roiHalf), roiCol, 0.036);
-    label(2614.5 - 12, 0.6 * sp[0]->GetBinContent(sp[0]->FindBin(2614.5)), "Tl-208, 2614 keV", kGray + 3, 0.032, 32);
+    label(cfg::eHi - 20, 0.6 * cfg::bgGoal, "LEGEND-1000 goal: 10^{-5}", kGray + 2, 0.034, 33); // below the line: above 2614 keV the spectra are low
+    line(cfg::winLo, biBuilt, cfg::winHi, biBuilt, kBlack, 4); // the BI over the analysis window
+    label(cfg::winHi + 15, biBuilt / 3, "#splitline{BI = " + sci(biBuilt) + "}{purple, averaged over the analysis window}", kBlack, 0.032, 13); // below the spectra
+    label(cfg::winHi + 6, pow(10, gPad->GetUymax() - 0.06 * (gPad->GetUymax() - gPad->GetUymin())), Form("analysis window: Q_{#beta#beta} #pm %.0f keV", cfg::roiHalf), roiCol, 0.036);
+    label(cfg::winHi + 6, pow(10, gPad->GetUymax() - 0.13 * (gPad->GetUymax() - gPad->GetUymin())),
+          "ROI: Q_{#beta#beta} #pm 2#sigma", roiCol, 0.034);
+    // the gamma lines: Tl-208's 2614 keV and Bi-214's 2448 keV, and the two just above the analysis window, 2104 keV
+    // (Tl-208, 2614 keV with one 511 keV photon escaping) and 2119 keV (Bi-214)
+    auto top = [&](double e) { return sp[0]->GetBinContent(sp[0]->FindBin(e)); };
+    label(2614.5 + 12, 0.6 * top(2614.5), "Tl-208, 2614 keV", kGray + 3, 0.032, 12);
+    label(2447.9, 1.6 * top(2447.9), "Bi-214, 2448 keV", kGray + 3, 0.032, 21);
+    const double yIn = 0.35 * sp[1]->GetBinContent(sp[1]->FindBin(2300)); // under the M1 spectrum, right of Bi-214's 2204 keV line
+    label(2232, yIn, "#splitline{Tl-208, 2104 keV}{Bi-214, 2119 keV}", kGray + 3, 0.027, 12);
+    for (auto [e, f] : {std::pair{2103.5, 1.6}, std::pair{2118.5, 0.6}}) // an arrow from each label line to its peak
+    {
+      auto a = new TArrow(2228, f * yIn, e + 2, 1.15 * top(e), 0.008, "|>");
+      a->SetLineColor(kGray + 3);
+      a->SetFillColor(kGray + 3);
+      a->SetLineWidth(2);
+      a->Draw();
+    }
     cs->SaveAs("output/slide_spectrum.png");
   }
   { // the design map, near the tube as built
@@ -586,8 +608,9 @@ void holders()
   };
   const Line lines[] = {{238.6, "238", "Pb-212", 0, 200, 0.90}, {351.9, "352", "Pb-214", 1, 390, 0.79}, {583.2, "583", "Tl-208", 0, 590, 0.90},
                         {609.3, "609", "Bi-214", 1, 790, 0.79}, {911.2, "911", "Ac-228", 0, 1000, 0.90}, {1120.3, "1120", "Bi-214", 1, 1220, 0.72},
-                        {1764.5, "1764", "Bi-214", 1, 1764, 0.70}, {2447.9, "2448", "Bi-214", 1, 2448, 0.50}, {2614.5, "2614", "Tl-208", 0, 2614, 0.74}};
-  const double eMax = 3000, band = 2 * sqrt(0.5 + 0.001 * cfg::Qbb) / 2.35482; // Qbb +- 2 sigma, the tube's resolution (step 3)
+                        {1764.5, "1764", "Bi-214", 1, 1764, 0.70}, {2447.9, "2448", "Bi-214", 1, 2448, 0.50}, {2614.5, "2614", "Tl-208", 0, 2720, 0.70},
+                        {2103.5, "2104", "Tl-208", 0, 2130, 0.55}, {2118.5, "2119", "Bi-214", 1, 2290, 0.62}};
+  const double eMax = 3000, band = cfg::roiSig2; // the ROI: Qbb +- 2 sigma
   TH1D *h[2];
   Long64_t nCh[2] = {0, 0};
   for (int k = 0; k < 2; k++)
@@ -627,12 +650,21 @@ void holders()
       h[k]->Draw("hist same");
       leg->AddEntry(h[k], Form("%s chain (%.0f k)", chain[k], nCh[k] / 1e3), "f");
     }
-  const int roiCol = TColor::GetColor("#2e7d32"); // the Qbb +- 2 sigma band: 2.7 keV, a line at this scale
-  auto b = new TBox(cfg::Qbb - band, yMin, cfg::Qbb + band, yMax);
-  b->SetFillColorAlpha(roiCol, 0.8);
-  b->SetLineWidth(0);
-  b->Draw();
-  auto roiText = ndc(cfg::Qbb + 15, 0.62, Form("#splitline{Q_{#beta#beta} #pm 2#sigma}{%.1f-%.1f keV}", cfg::Qbb - band, cfg::Qbb + band));
+  const int roiCol = TColor::GetColor("#2e7d32"); // as on every spectrum: the analysis window shaded green, the ROI a green line
+  auto w = new TBox(cfg::winLo, yMin, cfg::winHi, yMax);
+  w->SetFillColorAlpha(roiCol, 0.2);
+  w->SetLineWidth(0);
+  w->Draw();
+  auto b = new TBox(cfg::Qbb - band, yMin, cfg::Qbb + band, yMax); // the ROI: 2.7 keV, a line at this scale
+  b->SetFillColor(roiCol);
+  b->SetLineColor(roiCol);
+  b->SetLineWidth(2);
+  b->Draw("l");
+  auto winText = ndc(cfg::winLo - 6, 0.86, Form("analysis window: Q_{#beta#beta} #pm %.0f keV", cfg::roiHalf));
+  winText->SetTextAlign(31);
+  winText->SetTextColor(roiCol);
+  winText->Draw();
+  auto roiText = ndc(cfg::winHi + 6, 0.78, Form("#splitline{ROI: Q_{#beta#beta} #pm 2#sigma}{%.1f-%.1f keV}", cfg::Qbb - band, cfg::Qbb + band));
   roiText->SetTextAlign(11);
   roiText->SetTextColor(roiCol);
   roiText->Draw();

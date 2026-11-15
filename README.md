@@ -30,19 +30,25 @@ changing" means within 10%, this study's line (step 6).
 
 **The answer** (depths below the tube's top; as built the SS ends at 2.06 m and the EFCu starts at 4.07 m):
 
-|                                                                 | SS : Cu : EFCu     | BI after all cuts [counts/(keV·kg·yr)]       |
-| --------------------------------------------------------------- | ------------------ | -------------------------------------------- |
-| as built                                                        | 619 : 672 : 175 kg | 0.94 ± 0.09 × 10⁻⁸ (before cuts 4.29 × 10⁻⁶) |
-| EFCu from 4.40 m (0.33 m shorter), SS to 2.69 m (0.63 m longer) | 809 : 489 : 146 kg | +8%: within 10%                              |
+|                                                                 | SS : Cu : EFCu     | BI after all cuts [counts/(keV·kg·yr)]                          |
+| --------------------------------------------------------------- | ------------------ | --------------------------------------------------------------- |
+| as built                                                        | 619 : 672 : 175 kg | 0.94 ± 0.09 × 10⁻⁸ (before cuts, from window hits: 4.29 × 10⁻⁶) |
+| EFCu from 4.40 m (0.33 m shorter), SS to 2.69 m (0.63 m longer) | 809 : 489 : 146 kg | +8%: within 10%                                                 |
 
-Four words, used throughout:
+Words:
 
-- **decay:** one simulated nuclear decay in the tube wall;
-- **hit:** the energy one decay leaves in one detector; a decay can leave hits in several;
-- **ROI:** the window `Qββ` ± 50 keV (1989-2089 keV, **100 keV**) in which background is counted; it stops short of
-  Tl-208's single-escape peak at 2103.5 keV;
-- **count:** a decay whose hit lands in the ROI after the cuts (step 5). The simulation gives _simulated counts_;
-  each stands for w real decays a year (step 6), and Σw is the _counts a year_.
+- **decay:** one simulated Tl-208 or Bi-214 decay in the tube wall (in step 2, one whole Th-232 or U-238 chain);
+- **event:** everything the detectors and the argon record at once, after a detector crosses its threshold; here,
+  one event is one decay;
+- **hit:** one detector's signal in an event, here its energy;
+- **multiplicity:** the number of detectors with a hit in an event; M1 means exactly one;
+- **analysis window:** `Qββ` ± 55 keV (1984-2094 keV, **110 keV**), where the BI is counted. The background there is
+  flat, so a window wider than the energy resolution gives the same BI from more counts;
+- **ROI** (region of interest): `Qββ` ± 2σ of the energy resolution (2037.6-2040.4 keV, 2.7 keV), where 0νββ would
+  show. The background expected in it is the BI × 2.7 keV × kg × yr;
+- **window hit:** a hit in the analysis window; with no cut, these are tallied;
+- **count:** an M1 event whose hit is in the analysis window, after the cuts named (step 5). _Simulated counts_ come
+  from the simulation; each stands for w real decays a year (step 6), and Σw is the _counts a year_.
 
 ## Setup
 
@@ -63,7 +69,7 @@ Seven steps, each needed by the next. Only the PNGs of `output/` are in git; the
 | 2. Decays            | which decays can reach `Qββ`?              | `sim/sim.mac`, `holders()` in `ana/ana.C` | `output/holders_spectrum.png`   |
 | 3. Simulation        | what do they leave in the detectors?       | `sim/sim.mac` on NERSC                    | `output/output_lh5` (76 GB)     |
 | 4. Detector response | what would be measured?                    | `sim/hit.py`                              | `output/output_root` (~50 GB)   |
-| 5. Cuts              | which hits could pass for 0νββ?            | `ana/ana.C`                               |                                 |
+| 5. Cuts              | which events could be 0νββ?                | `ana/ana.C`                               |                                 |
 | 6. BI as built       | what is the tube's BI, and how well known? | `ana/ana.C`                               | `output/slide_spectrum.png`     |
 | 7. Designs           | which other designs keep it?               | `ana/ana.C`                               | `output/slide_designs.png`      |
 
@@ -138,7 +144,7 @@ To see, whole chains are decayed in a small EFCu part next to the detectors:
 - **Decays:** 370 k Th-232 and 190 k U-238 chains (`ZMIN` `AMIN` in `sim/sim.mac` are the chain's lowest atomic and
   mass numbers): the holders' decays over the same ~16 500 years, so the two spectra add as they are.
 - **Spectrum:** `holders()` in `ana/ana.C` sums each detector's energy within 10 µs, with no detector response:
-  435 530 hits from Th-232, 176 339 from U-238. The green band is `Qββ` ± 2σ of the resolution (2037.6-2040.4 keV).
+  435 530 hits from Th-232, 176 339 from U-238. The green band is the ROI.
 - **Result:** above `Qββ` the spectrum ends in two labelled gamma lines, **Tl-208 at 2614 keV** and **Bi-214 at
   2448 keV** (`Legend_Note_24_007.pdf`, p. 31): the two decays the pCDR calls "of primary concern" (p. 29).
 - **So** the tube simulation decays only Tl-208 (²³²Th chain) and Bi-214 (²³⁸U chain).
@@ -175,7 +181,7 @@ root -l -b -q -e '.L ana/ana.C' -e 'holders()'
 | ------- | ---- | ------------------------ | ------------------------- | ----------------------------------------------- |
 | EFCu    | 25   | 123 M / 113 M            | 166 000 / 107 000         | the BI as built: 122 of its 128 counts (step 6) |
 | Cu      | 366  | 460 M / 3.2 G            | 55 000 / 110 000          | how far the SS can come down (step 7)           |
-| SS      | 36   | 50 M / 310 M             | 7 / 6                     | nothing: no ROI count at any cut                |
+| SS      | 36   | 50 M / 310 M             | 7 / 6                     | nothing: no window hit at any cut               |
 | total   | 427  | 4.3 × 10⁹ (76 GB)        |                           |                                                 |
 
 - **Real years:** how long the section, as built, takes to make that many decays (activities in step 6).
@@ -208,12 +214,12 @@ ssh nersc 'rm -r $SCRATCH/LEGEND1000-Simulation'
 - **Detectors:** every one is the dummy `V99999Z` with the drift times of `V00000A` (the same geometry); real
   detectors would each bring their own dead layer, resolution and A/E.
 
-|            | value                                                                                 | from                                                         |
-| ---------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| dead layer | full-charge-collection depth (FCCD) 0.7 mm, outer half fully dead, linear in between  | `V99999Z`; `tier/hit` `dead_layer_fraction` 0.5              |
-| resolution | FWHM = √(0.5 + 0.001·E) keV: 1.59 keV at `Qββ`                                        | `pars/geds/eresmod`                                          |
-| A/E        | A: max of one template current pulse per step, at its drift time; σ_A/E = 0.01        | `pars/geds/currmod`, `aoeresmod`; `output/dtmap_V00000A.lh5` |
-| PE         | LAr scintillation × the summed optical map; σ 0.3 PE, 16 ns merging, ≤ 100 PE per hit | `/all` of the optical map; `tier/opt`                        |
+|            | value                                                                                  | from                                                         |
+| ---------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| dead layer | full-charge-collection depth (FCCD) 0.7 mm, outer half fully dead, linear in between   | `V99999Z`; `tier/hit` `dead_layer_fraction` 0.5              |
+| resolution | FWHM = √(0.5 + 0.001·E) keV: 1.59 keV at `Qββ`                                         | `pars/geds/eresmod`                                          |
+| A/E        | A: max of one template current pulse per step, at its drift time; σ_A/E = 0.01         | `pars/geds/currmod`, `aoeresmod`; `output/dtmap_V00000A.lh5` |
+| PE         | LAr scintillation × the summed optical map; σ 0.3 PE, 16 ns merging, ≤ 100 PE per step | `/all` of the optical map; `tier/opt`                        |
 
 - **A/E** is the current pulse's amplitude over the energy: lower for a gamma that interacts at several sites than
   for the single site of 0νββ (pCDR, p. 24, 71). The **A/E classifier** is A/E − 1 in units of its resolution: 0 for
@@ -252,17 +258,17 @@ rsync -a nersc:/global/cfs/cdirs/m2676/users/neuberger/L1000_optical_muon_sims/h
 cuts, in the order of LEGEND-1000's background model (`CDRBackgroundModel, Green.pdf`, p. 6) and with the
 production's values (legend1000-metadata, `tier/evt` and `pars/geds/psdcuts`):
 
-1. **M1:** exactly one detector above 25 keV.
+1. **M1:** multiplicity 1, counting detectors above 25 keV.
 2. **LAr veto:** fewer than 4 PE in the argon.
 3. **A/E** classifier > −1.5, one value for all detectors.
 
-**Does the A/E cut work?** Checked on the Tl-208 decays after M1, against LEGEND-1000's own two numbers (pCDR,
+**Does the A/E cut work?** Checked on the Tl-208 M1 events, against LEGEND-1000's own two numbers (pCDR,
 p. 71):
 
-|                                                                      | LEGEND-1000                 | this simulation                                |
-| -------------------------------------------------------------------- | --------------------------- | ---------------------------------------------- |
-| single-site: kept of the Tl-208 double-escape peak (DEP, 1592.5 keV) | 90%: the cut is tuned to it | 87 ± 3% (of 2992 decays, net of the continuum) |
-| multi-site: reduction of the gamma background near `Qββ`             | a factor of 2-3             | a factor of 3.5 (29% of the ROI counts kept)   |
+|                                                                      | LEGEND-1000                 | this simulation                                   |
+| -------------------------------------------------------------------- | --------------------------- | ------------------------------------------------- |
+| single-site: kept of the Tl-208 double-escape peak (DEP, 1592.5 keV) | 90%: the cut is tuned to it | 87 ± 3% (of 2992 events, net of the continuum)    |
+| multi-site: reduction of the gamma background near `Qββ`             | a factor of 2-3             | a factor of 3.5 (29% of the counts after M1 kept) |
 
 ### 6. BI as built
 
@@ -274,37 +280,39 @@ p. 71):
 - 0.36: Tl-208 is 35.94% of the ²³²Th chain (`Nuclear Data Sheets for A = 208, Martin.pdf`, p. 1); Bi-214 is all of
   the ²³⁸U chain (Ralph's talk, p. 6);
 - Σw over the simulated counts = the counts a year;
-- BI = counts a year / (1023.4 kg × 100 keV).
+- BI = counts a year / (1023.4 kg × 110 keV).
 
 The mass of each section is the GDML's. The activities (`cfg::chain`; bulk only, as in Ralph's talk, p. 22):
 
-| µBq/kg | ²³²Th chain | ²³⁸U chain | source                                                                    |
-| ------ | ----------- | ---------- | ------------------------------------------------------------------------- |
-| SS     | 1000        | 2500       | `RT MaterialMix, ralph.pdf`, p. 5                                         |
-| Cu     | 1.10        | 1.37       | `An assay-based background projection, Majorana Demonstrator.pdf`, p. 6   |
-| EFCu   | 0.37        | 0.19       | CDR Table XVII (`CDRBackgroundModel, Green.pdf`, p. 7)                    |
+| µBq/kg | ²³²Th chain | ²³⁸U chain | source                                                                  |
+| ------ | ----------- | ---------- | ----------------------------------------------------------------------- |
+| SS     | 1000        | 2500       | `RT MaterialMix, ralph.pdf`, p. 5                                       |
+| Cu     | 1.10        | 1.37       | `An assay-based background projection, Majorana Demonstrator.pdf`, p. 6 |
+| EFCu   | 0.37        | 0.19       | CDR Table XVII (`CDRBackgroundModel, Green.pdf`, p. 7)                  |
 
 The tube as built, from mass to BI (decays counted where they happened, so ~1 M of the EFCu runs' decays, just
 above the Cu seam, count as Cu):
 
-| chain  | section | mass     | real decays a year | simulated decays | w          | simulated counts: no cut / M1 / + LAr / + A/E | counts a year, all cuts | BI, all cuts       |
-| ------ | ------- | -------- | ------------------ | ---------------- | ---------- | --------------------------------------------- | ----------------------- | ------------------ |
-| Tl-208 | EFCu    | 174.6 kg | 733                | 122 M            | 6.0 × 10⁻⁶ | 63755 / 52911 / 437 / 77                      | 4.6 × 10⁻⁴              | 4.52 ± 0.52 × 10⁻⁹ |
-| Tl-208 | Cu      | 671.7 kg | 8 380              | 461 M            | 1.8 × 10⁻⁵ | 551 / 497 / 34 / 3                            | 0.5 × 10⁻⁴              | 0.53 ± 0.31 × 10⁻⁹ |
-| Tl-208 | SS      | 619.4 kg | 7.0 × 10⁶          | 50.0 M           | 0.14       | 0 / 0 / 0 / 0                                 | 0                       | 0                  |
-| Bi-214 | EFCu    | 174.6 kg | 1 047              | 112 M            | 9.4 × 10⁻⁶ | 4720 / 4383 / 588 / 45                        | 4.2 × 10⁻⁴              | 4.11 ± 0.61 × 10⁻⁹ |
-| Bi-214 | Cu      | 671.7 kg | 29 040             | 3.20 G           | 9.1 × 10⁻⁶ | 170 / 160 / 42 / 3                            | 0.3 × 10⁻⁴              | 0.27 ± 0.15 × 10⁻⁹ |
-| Bi-214 | SS      | 619.4 kg | 4.9 × 10⁷          | 310 M            | 0.16       | 0 / 0 / 0 / 0                                 | 0                       | 0                  |
-| all    |         |          |                    | 4.26 G           |            | 128 after all cuts                            | 9.6 × 10⁻⁴              | 9.4 ± 0.9 × 10⁻⁹   |
+| chain  | section | mass     | real decays a year | simulated decays | w          | window hits, no cut / simulated counts: M1 / + LAr / + A/E | counts a year, all cuts | BI, all cuts       |
+| ------ | ------- | -------- | ------------------ | ---------------- | ---------- | ---------------------------------------------------------- | ----------------------- | ------------------ |
+| Tl-208 | EFCu    | 174.6 kg | 733                | 122 M            | 6.0 × 10⁻⁶ | 63755 / 52911 / 437 / 77                                   | 4.6 × 10⁻⁴              | 4.52 ± 0.52 × 10⁻⁹ |
+| Tl-208 | Cu      | 671.7 kg | 8 380              | 461 M            | 1.8 × 10⁻⁵ | 551 / 497 / 34 / 3                                         | 0.5 × 10⁻⁴              | 0.53 ± 0.31 × 10⁻⁹ |
+| Tl-208 | SS      | 619.4 kg | 7.0 × 10⁶          | 50.0 M           | 0.14       | 0 / 0 / 0 / 0                                              | 0                       | 0                  |
+| Bi-214 | EFCu    | 174.6 kg | 1 047              | 112 M            | 9.4 × 10⁻⁶ | 4720 / 4383 / 588 / 45                                     | 4.2 × 10⁻⁴              | 4.11 ± 0.61 × 10⁻⁹ |
+| Bi-214 | Cu      | 671.7 kg | 29 040             | 3.20 G           | 9.1 × 10⁻⁶ | 170 / 160 / 42 / 3                                         | 0.3 × 10⁻⁴              | 0.27 ± 0.15 × 10⁻⁹ |
+| Bi-214 | SS      | 619.4 kg | 4.9 × 10⁷          | 310 M            | 0.16       | 0 / 0 / 0 / 0                                              | 0                       | 0                  |
+| all    |         |          |                    | 4.26 G           |            | 128 after all cuts                                         | 9.6 × 10⁻⁴              | 9.4 ± 0.9 × 10⁻⁹   |
+
+In the ROI, the tube as built leaves 0.94 × 10⁻⁸ × 2.7 keV × 1023.4 kg = 2.6 × 10⁻⁵ counts a year after all cuts.
 
 Cut by cut [counts/(keV·kg·yr)]:
 
-| no cut    | M1                         | M1 + LAr                         | all cuts (M1 + LAr + A/E)       |
-| --------- | -------------------------- | -------------------------------- | ------------------------------- |
-| 4.29×10⁻⁶ | 3.61×10⁻⁶ (M1 removes 16%) | 0.89×10⁻⁷ (LAr veto removes 98%) | **0.94×10⁻⁸** (A/E removes 89%) |
+| no cut (window hits) | M1                         | M1 + LAr                         | all cuts (M1 + LAr + A/E)       |
+| -------------------- | -------------------------- | -------------------------------- | ------------------------------- |
+| 4.29×10⁻⁶            | 3.61×10⁻⁶ (M1 removes 16%) | 0.89×10⁻⁷ (LAr veto removes 98%) | **0.94×10⁻⁸** (A/E removes 89%) |
 
-The spectrum through each cut: the ROI shaded green with `Qββ` as a line, the BI after all cuts as the black line
-across it, the 10⁻⁵ goal dashed.
+The spectrum through each cut: the analysis window shaded green with the ROI as the line in it, the BI after all cuts as
+the black line across it, the 10⁻⁵ goal dashed.
 
 ![the spectrum](output/slide_spectrum.png)
 
@@ -350,7 +358,7 @@ root -l -b -q ana/ana.C
 **Why the Cu runs decide the SS:**
 
 1. SS added in a design sits where the Cu is now, 2-3 m above the array.
-2. Decays there rarely reach the detectors: one in ~5 × 10⁷ Tl-208 decays gives an ROI count after M1, and none of
+2. Decays there rarely reach the detectors: one in ~5 × 10⁷ Tl-208 decays gives a count after M1, and none of
    1.7 × 10⁹ Bi-214 decays does (the table below).
 3. Turned into SS, each such count weighs ~1000 times more: one adds 12% of the BI, more than the 10% line.
 4. So the SS stops at 2.69 m, just above the first such count (2.70 m): the step in the design map.
@@ -360,22 +368,22 @@ root -l -b -q ana/ana.C
 **Cut survival:**
 
 1. Away from the detectors, too few counts pass all cuts to measure a design's change.
-2. So the change is measured on the ROI counts after M1 (100-700 times more) × the **cut survival**: the fraction
+2. So the change is measured on the counts after M1 (100-700 times more) × the **cut survival**: the fraction
    of them that also pass the LAr veto and A/E, per 0.62 m slab:
    - below 4.37 m, per chain: 1.4 × 10⁻³ (Tl-208), 1.0 × 10⁻² (Bi-214);
    - above, both chains together: 10 of 1258 = 8.0 × 10⁻³ (higher than Tl-208's below, partly because the optical
      map gives no light above 3.61 m deep).
 
-| depth [m]                        | Tl-208 decays | ROI after M1 | after all cuts | Bi-214 decays | ROI after M1 | after all cuts |
-| -------------------------------- | ------------- | ------------ | -------------- | ------------- | ------------ | -------------- |
-| 0.00-1.87                        | 45.4 M        | 0            | 0              | 282 M         | 0            | 0              |
-| 1.87-2.50                        | 105 M         | 0            | 0              | 729 M         | 0            | 0              |
-| 2.50-3.12                        | 144 M         | 5            | 0              | 1.00 G        | 0            | 0              |
-| 3.12-3.75                        | 144 M         | 97           | 0              | 1.00 G        | 29           | 2              |
-| 3.75-4.37                        | 90.3 M        | 959          | 6              | 511 M         | 168          | 2              |
-| 4.37-5.00                        | 36.7 M        | 11645        | 16             | 33.8 M        | 958          | 7              |
-| 5.00-5.62                        | 36.7 M        | 26443        | 37             | 33.7 M        | 2217         | 23             |
-| 5.62-6.25, nearest the detectors | 29.9 M        | 14259        | 21             | 27.5 M        | 1171         | 14             |
+| depth [m]                        | Tl-208 decays | counts after M1 | after all cuts | Bi-214 decays | counts after M1 | after all cuts |
+| -------------------------------- | ------------- | --------------- | -------------- | ------------- | --------------- | -------------- |
+| 0.00-1.87                        | 45.4 M        | 0               | 0              | 282 M         | 0               | 0              |
+| 1.87-2.50                        | 105 M         | 0               | 0              | 729 M         | 0               | 0              |
+| 2.50-3.12                        | 144 M         | 5               | 0              | 1.00 G        | 0               | 0              |
+| 3.12-3.75                        | 144 M         | 97              | 0              | 1.00 G        | 29              | 2              |
+| 3.75-4.37                        | 90.3 M        | 959             | 6              | 511 M         | 168             | 2              |
+| 4.37-5.00                        | 36.7 M        | 11645           | 16             | 33.8 M        | 958             | 7              |
+| 5.00-5.62                        | 36.7 M        | 26443           | 37             | 33.7 M        | 2217            | 23             |
+| 5.62-6.25, nearest the detectors | 29.9 M        | 14259           | 21             | 27.5 M        | 1171            | 14             |
 
 **The designs.** For each L2, in steps of 0.1 m, the deepest L1 that keeps the BI within 10%; at 4.50 m none does
 (+12% at any L1):
