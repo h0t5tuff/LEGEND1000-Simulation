@@ -482,7 +482,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     // (Tl-208, 2614 keV with one 511 keV photon escaping) and 2119 keV (Bi-214)
     auto top = [&](double e) { return sp[0]->GetBinContent(sp[0]->FindBin(e)); };
     label(2614.5 + 12, 0.6 * top(2614.5), "Tl-208, 2614 keV", kGray + 3, 0.032, 12);
-    label(2447.9, 1.6 * top(2447.9), "Bi-214, 2448 keV", kGray + 3, 0.032, 21);
+    label(2447.9, 1.8 * cfg::bgGoal, "Bi-214, 2448 keV", kGray + 3, 0.032, 21); // above its peak and the dashed goal line
     const double yIn = 0.35 * sp[1]->GetBinContent(sp[1]->FindBin(2300)); // under the M1 spectrum, right of Bi-214's 2204 keV line
     label(2232, yIn, "#splitline{Tl-208, 2104 keV}{Bi-214, 2119 keV}", kGray + 3, 0.027, 12);
     for (auto [e, f] : {std::pair{2103.5, 1.6}, std::pair{2118.5, 0.6}}) // an arrow from each label line to its peak
