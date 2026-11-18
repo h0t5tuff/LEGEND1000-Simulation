@@ -18,7 +18,9 @@ Every claim has its source in place: a PDF (files named `….pdf` are in iCloud 
 4. **The risk.** Neutrinoless double-beta decay (0νββ) of ⁷⁶Ge would leave `Qββ` = 2039 keV in a detector (pCDR,
    p. 7). A gamma from a decay in the tube wall can leave the same energy: background.
 5. **The measure.** The background index (BI): background counts per keV, per kg of germanium, per year, around
-   `Qββ`. LEGEND-1000's goal is below 10⁻⁵ counts/(keV·kg·yr) (pCDR, p. 8): 1 count a year in 10³ kg and 10² keV.
+   `Qββ`. LEGEND-1000's goal is below 10⁻⁵ counts/(keV·kg·yr) (pCDR, p. 8).
+   - For LEGEND-1000, M·t ≈ 10⁴ kg·yr and ΔE ≈ 2.7 keV, which gives BI < about 4 × 10⁻⁵ counts/(keV·kg·yr).
+   - The pCDR rounds this down to 10⁻⁵ for margin. That leaves about 0.3 background counts in the ROI over ten years.
 6. **What was missing.** Ralph Massarczyk's tube study asked where EFCu is needed and how far from the array the SS
    must end. Its one simulation over the whole tube left 1 simulated count from the Cu and none from the SS after
    all cuts; it concluded that optimising "needs full remage simulations" (`ralph_GeneralCall_10_12_2026.pdf`,
