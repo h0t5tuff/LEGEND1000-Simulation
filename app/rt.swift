@@ -1,6 +1,6 @@
 // LEGEND.app's rt: the re-entrance tube designs, the GDML's tube in 3D. Two sliders set L1 (the SS ends at that depth
 // below the tube's top) and L2 (the EFCu starts there), Cu in between; the tube's colour is that design's BI after
-// all cuts over the as-built tube's, from ana/ana.C's design scan (output/designs.json). It reads designs.json
+// all cuts over the as-proposed tube's, from ana/ana.C's design scan (output/designs.json). It reads designs.json
 // + tube.bin from its folder of the bundle (both written by make_app.py), so it needs nothing else installed.
 // legend.swift opens it; --snapshot out.png --open rt [--l1 m] [--l2 m] [--size WxH] draws the window (the 3D view
 // and the panel) offscreen.
@@ -13,12 +13,12 @@ import simd
 
 struct Designs: Decodable {
     let title: String
-    let depthTot, L1built, L2built: Double  // m below the tube's top: its length, its seams as built
-    let biBuilt, tol: Double                // the as-built BI after all cuts [cts/(keV kg yr)]; the rise a design may have
-    let l1, l2: [Double]                    // m: the depths the sliders step through (2 cm apart, through the seams as built)
+    let depthTot, L1built, L2built: Double  // m below the tube's top: its length, its seams as proposed
+    let biBuilt, tol: Double                // the as-proposed BI after all cuts [cts/(keV kg yr)]; the rise a design may have
+    let l1, l2: [Double]                    // m: the depths the sliders step through (2 cm apart, through the seams as proposed)
     let mSS, mCu1: [Double]                 // kg: the SS above l1[i]; the Cu-section mass above l1[i]
     let mCu2, mEF: [Double]                 // kg: the Cu-section mass above l2[j]; the EFCu below l2[j]
-    let ratio: [[Double?]]                  // the BI of design (l1[i], l2[j]) over the as-built BI; null where l1 >= l2
+    let ratio: [[Double?]]                  // the BI of design (l1[i], l2[j]) over the as-proposed BI; null where l1 >= l2
     let zTop: Double                        // mm: the tube's top in the GDML (z up)
     let rStep: Double                       // mm
     let radius: [Double]                    // mm: the tube's outer radius every rStep down from its top
@@ -47,7 +47,7 @@ func tubeGeometry(_ d: Designs, _ bin: Data) -> SCNGeometry {
 
 // ── colours ───────────────────────────────────────────────────────────────────────────────────
 
-// blue at 0.9 x the as-built BI, through green, to yellow at 1.3 and above
+// blue at 0.9 x the as-proposed BI, through green, to yellow at 1.3 and above
 let stops: [(x: Double, rgb: [Double])] = [(0.9, [38, 70, 150]), (1.0, [33, 120, 190]), (1.1, [40, 170, 150]),
                                            (1.2, [140, 200, 80]), (1.3, [250, 220, 60])]
 
@@ -147,7 +147,7 @@ final class TubeScene {
         rig.constraints = [face]
         for depth in [d.L1built, d.L2built] {
             let t = label3D(80)
-            place(t, "as built", SCNVector3(-(r(depth) + 60), y(depth), 0), align: 1, colour: muted)
+            place(t, "as proposed", SCNVector3(-(r(depth) + 60), y(depth), 0), align: 1, colour: muted)
             rig.addChildNode(t)
         }
         for t in sections + seamLabels { rig.addChildNode(t) }
@@ -177,7 +177,7 @@ final class TubeScene {
         startView()
     }
 
-    // the seam as built: a dashed ring, faint
+    // the seam as proposed: a dashed ring, faint
     func dashedRing(_ depth: Double) -> SCNNode {
         let ring = SCNNode(), n = 48, rr = r(depth) + 6
         let dash = SCNBox(width: 2 * .pi * rr / CGFloat(n) / 2, height: 10, length: 10, chamferRadius: 0)
@@ -263,7 +263,7 @@ final class RTController: NSObject, Viewer {
     let ratioText = field(34, .bold)
     let verdictText = field(13, .semibold)
     let massText = [field(13), field(13), field(13)]
-    let built: (Int, Int)   // the slider steps nearest the seams as built
+    let built: (Int, Int)   // the slider steps nearest the seams as proposed
     static let P: CGFloat = 360   // the panel's width
     let noteText = wrapping("", 12, muted, width: RTController.P - 72)
 
@@ -306,7 +306,7 @@ final class RTController: NSObject, Viewer {
             s.isContinuous = true
             return s
         }
-        let reset = NSButton(title: "Back to as built", target: self, action: #selector(asBuilt))
+        let reset = NSButton(title: "Back to as proposed", target: self, action: #selector(asBuilt))
         reset.bezelStyle = .rounded
         let ticks = NSStackView(views: ["0.9", "1.0", "1.1", "1.2", "≥ 1.3"].map { field(11, .regular, muted, $0) })
         ticks.distribution = .equalSpacing
@@ -315,15 +315,15 @@ final class RTController: NSObject, Viewer {
         let stack = column([
             field(19, .bold, fg, "Re-entrance tube designs"),
             wrapping("SS down to L1, Cu down to L2, EFCu below. The tube's colour is that design's BI after all cuts "
-                     + "over the as-built tube's.", 13, muted, width: W),
+                     + "over the as-proposed tube's.", 13, muted, width: W),
             card([row(field(13, .semibold, fg, "L1: SS ends at depth"), depthText[0]), sliders[0],
                   row(field(13, .semibold, fg, "L2: EFCu starts at depth"), depthText[1]), sliders[1], row(reset, NSView())], width: W),
-            card([field(13, .regular, muted, "BI over the as-built tube"), ratioText, scale, ticks,
-                  row(field(13, .regular, fg, "within 10% of the as-built BI?"), verdictText)], width: W),
+            card([field(13, .regular, muted, "BI over the as-proposed tube"), ratioText, scale, ticks,
+                  row(field(13, .regular, fg, "BI within 10% of it?"), verdictText)], width: W),
             card([row(field(13, .semibold, fg, "SS"), massText[0]), row(field(13, .semibold, fg, "Cu"), massText[1]),
                   row(field(13, .semibold, fg, "EFCu"), massText[2]), noteText], width: W),
         ], spacing: 14, width: W)
-        let keys = wrapping("drag rotate   scroll zoom   c start view   0 as built   q quit", 11, muted, width: W)
+        let keys = wrapping("drag rotate   scroll zoom   c start view   0 as proposed   q quit", 11, muted, width: W)
         keys.translatesAutoresizingMaskIntoConstraints = false
         panel.addSubview(stack)
         panel.addSubview(keys)
@@ -376,8 +376,8 @@ final class RTController: NSObject, Viewer {
         let ss = d.mSS[i], cu = d.mCu2[j] - d.mCu1[i], ef = d.mEF[j], tot = ss + cu + ef
         for (t, m) in zip(massText, [ss, cu, ef]) { t.stringValue = String(format: "%.0f kg · %.0f%%", m, 100 * m / tot) }
         noteText.stringValue = (i, j) == built
-            ? String(format: "As built. BI after all cuts %.2e cts/(keV·kg·yr).", d.biBuilt)
-            : String(format: "A design passes when its BI rises by at most %.0f%%. Dashed rings: the seams as built.", 100 * d.tol)
+            ? String(format: "As proposed. BI after all cuts %.2e cts/(keV·kg·yr).", d.biBuilt)
+            : String(format: "A design passes when its BI rises by at most %.0f%%. Dashed rings: the seams as proposed.", 100 * d.tol)
     }
 
     // --snapshot out.png [--l1 m] [--l2 m] [--size WxH]: the 3D view and the panel side by side, as the window shows them

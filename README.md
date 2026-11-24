@@ -3,13 +3,13 @@
 How much electroformed copper does the LEGEND-1000 re-entrance tube need? A remage simulation of the tube, from its
 geometry to a design.
 
-Every claim has its source in place: a PDF (files named `….pdf` are in iCloud Drive, `0νββ/Papers` or
-`0νββ/Presentations`; "p." is the PDF's page) or this repository's own output, with the command that makes it.
+Every claim has its source in place: a PDF (files named `….pdf` are in iCloud Drive, `0νββ/Papers`; "p." is the
+PDF's page) or this repository's own output, with the command that makes it.
 
 ## The question
 
 1. **The tube.** The re-entrance tube (RT) holds the underground argon (UGLAr) and the detector array
-   (`LEGEND1000pCDR, LEGEND.pdf`, p. 8). It is a 6 m × 2 m cylinder: steel (SS) at the top, oxygen-free
+   (`LEGEND1000pCDR.pdf`, p. 8). It is a 6 m × 2 m cylinder: steel (SS) at the top, oxygen-free
    high-conductivity (OFHC) copper (Cu) in the middle, electroformed copper (EFCu) around the detectors
    (`ReentrantTubeFabrication, Lee.pdf`, p. 9).
 2. **Why EFCu.** It is the least radioactive: 3-7 × below Cu, over 1000 × below SS (step 6).
@@ -25,16 +25,16 @@ Every claim has its source in place: a PDF (files named `….pdf` are in iCloud 
    must end. Its one simulation over the whole tube left 1 simulated count from the Cu and none from the SS after
    all cuts; it concluded that optimising "needs full remage simulations" (`ralph_GeneralCall_10_12_2026.pdf`,
    13 Oct 2026, p. 2, 16, 29).
-7. **This study** simulates each section on its own, computes the BI as built, then the BI of every other design.
+7. **This study** simulates each section on its own, computes the BI as proposed, then the BI of every other design.
 
 **The question:** how much of the EFCu can be cut, and how much SS added, without changing the tube's BI? "Without
 changing" means within 10%, this study's line (step 6).
 
-**The answer** (depths below the tube's top; as built the SS ends at 2.06 m and the EFCu starts at 4.07 m):
+**The answer** (depths below the tube's top; as proposed the SS ends at 2.06 m and the EFCu starts at 4.07 m):
 
 |                                                                 | SS : Cu : EFCu     | BI after all cuts [counts/(keV·kg·yr)]                          |
 | --------------------------------------------------------------- | ------------------ | --------------------------------------------------------------- |
-| as built                                                        | 619 : 672 : 175 kg | 0.93 ± 0.08 × 10⁻⁸ (before cuts, from window hits: 4.29 × 10⁻⁶) |
+| as proposed                                                        | 619 : 672 : 175 kg | 0.93 ± 0.08 × 10⁻⁸ (before cuts, from window hits: 4.29 × 10⁻⁶) |
 | EFCu from 4.40 m (0.33 m shorter), SS to 2.69 m (0.63 m longer) | 809 : 489 : 146 kg | +8%: within 10%                                                 |
 
 Words:
@@ -72,7 +72,7 @@ Seven steps, each needed by the next. Only the PNGs of `output/` are in git; the
 | 3. Simulation        | what do they leave in the detectors?       | `sim/sim.mac` on NERSC                    | `output/output_lh5` (76 GB)     |
 | 4. Detector response | what would be measured?                    | `sim/hit.py`                              | `output/output_root` (~50 GB)   |
 | 5. Cuts              | which events could be 0νββ?                | `ana/ana.C`                               |                                 |
-| 6. BI as built       | what is the tube's BI, and how well known? | `ana/ana.C`                               | `output/slide_spectrum.png`     |
+| 6. BI as proposed       | what is the tube's BI, and how well known? | `ana/ana.C`                               | `output/slide_spectrum.png`     |
 | 7. Designs           | which other designs keep it?               | `ana/ana.C`                               | `output/slide_designs.png`      |
 
 ### 1. Geometry
@@ -183,12 +183,12 @@ root -l -b -q -e '.L ana/ana.C' -e 'holders()'
 
 | section | runs | decays (Tl-208 / Bi-214) | real years they stand for | what they decide                                |
 | ------- | ---- | ------------------------ | ------------------------- | ----------------------------------------------- |
-| EFCu    | 25   | 123 M / 113 M            | 166 000 / 107 000         | the BI as built: 132 of its 139 counts (step 6) |
+| EFCu    | 25   | 123 M / 113 M            | 166 000 / 107 000         | the BI as proposed: 132 of its 139 counts (step 6) |
 | Cu      | 366  | 460 M / 3.2 G            | 55 000 / 110 000          | how far the SS can come down (step 7)           |
 | SS      | 36   | 50 M / 310 M             | 7 / 6                     | nothing: no window hit at any cut               |
 | total   | 427  | 4.3 × 10⁹ (76 GB)        |                           |                                                 |
 
-- **Real years:** how long the section, as built, takes to make that many decays (activities in step 6).
+- **Real years:** how long the section, as proposed, takes to make that many decays (activities in step 6).
 - **Bi-214 gets ~7 × Tl-208's decays in the Cu and SS:** the SS holds ~7 × more Bi-214 than Tl-208 (2500 vs
   360 µBq/kg), and a Cu count turned into SS (step 7) must weigh the same in both chains.
 - **Cost:** 20 node-hours of NERSC's m2676 allocation on Perlmutter (a Cu run 16 min, an EFCu run about an hour).
@@ -274,7 +274,7 @@ p. 71):
 | single-site: kept of the Tl-208 double-escape peak (DEP, 1592.5 keV) | 90%: the cut is tuned to it | 87 ± 3% (of 2992 events, net of the continuum)    |
 | multi-site: reduction of the gamma background near `Qββ`             | a factor of 2-3             | a factor of 3.5 (29% of the counts after M1 kept) |
 
-### 6. BI as built
+### 6. BI as proposed
 
 **From decays to counts.** Each simulated decay stands for w real decays a year, its weight
 (`ralph_GeneralCall_10_12_2026.pdf`, p. 3):
@@ -294,7 +294,7 @@ The mass of each section is the GDML's. The activities (`cfg::chain`; bulk only,
 | Cu     | 1.10        | 1.37       | `An assay-based background projection, Majorana Demonstrator.pdf`, p. 6 |
 | EFCu   | 0.37        | 0.19       | CDR Table XVII (`CDRBackgroundModel, Green.pdf`, p. 7)                  |
 
-The tube as built, from mass to BI (decays counted where they happened, so ~1 M of the EFCu runs' decays, just
+The tube as proposed, from mass to BI (decays counted where they happened, so ~1 M of the EFCu runs' decays, just
 above the Cu seam, count as Cu):
 
 | chain  | section | mass     | real decays a year | simulated decays | w          | window hits, no cut / simulated counts: M1 / + LAr / + A/E | counts a year, all cuts | BI, all cuts       |
@@ -307,7 +307,7 @@ above the Cu seam, count as Cu):
 | Bi-214 | SS      | 619.4 kg | 4.9 × 10⁷          | 310 M            | 0.16       | 0 / 0 / 0 / 0                                              | 0                       | 0                  |
 | all    |         |          |                    | 4.26 G           |            | 139 after all cuts                                         | 10.5 × 10⁻⁴             | 9.3 ± 0.8 × 10⁻⁹   |
 
-In the ROI, the tube as built leaves 0.93 × 10⁻⁸ × 2.7 keV × 1023.4 kg = 2.6 × 10⁻⁵ counts a year after all cuts.
+In the ROI, the tube as proposed leaves 0.93 × 10⁻⁸ × 2.7 keV × 1023.4 kg = 2.6 × 10⁻⁵ counts a year after all cuts.
 
 Cut by cut [counts/(keV·kg·yr)]:
 
@@ -339,9 +339,9 @@ root -l -b -q ana/ana.C
 
 **A design** moves the two seams:
 
-- the SS ends at depth L1 (2.06 m as built), the EFCu starts at depth L2 (4.07 m), with Cu between;
+- the SS ends at depth L1 (2.06 m as proposed), the EFCu starts at depth L2 (4.07 m), with Cu between;
 - the wall keeps its shape and thickness; only its material changes (so Cu at 4.07-4.40 m has the EFCu's 1.5 mm wall);
-- `ana/ana.C` scans them: for every L2, L1 goes down 1 cm at a time while the BI stays within 10% of the as-built's;
+- `ana/ana.C` scans them: for every L2, L1 goes down 1 cm at a time while the BI stays within 10% of the as-proposed's;
 - the answer is the least EFCu, then, for it, the most SS.
 
 **Reweighting, not resimulating:**
@@ -394,7 +394,7 @@ root -l -b -q ana/ana.C
 
 | EFCu from (L2)         | SS to (L1) | SS : Cu : EFCu          | BI change |
 | ---------------------- | ---------- | ----------------------- | --------- |
-| 4.07 m, as built       | 2.69 m     | 809 : 460 : 175 kg      | none      |
+| 4.07 m, as proposed       | 2.69 m     | 809 : 460 : 175 kg      | none      |
 | 4.20 m                 | same       | same : 472 : 163 kg     | +2%       |
 | 4.30 m                 | same       | same : 480 : 154 kg     | +4%       |
 | **4.40 m** (−17% EFCu) | same       | **same : 489 : 146 kg** | **+8%**   |

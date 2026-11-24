@@ -1,0 +1,21 @@
+#  The miniature tube (tut/toy.gdml): 2614.5 keV gammas, the Tl-208 line, uniform in one section of the wall ({VOL}), isotropic.
+#  Aliases: VOL (wall_efcu or wall_ss), NEV, SEED.
+/RMG/Geometry/RegisterDetector Germanium ge 1                                 # the 1 kg crystal
+/RMG/Output/NtupleUseVolumeName true                                          # its table is named ge
+/run/initialize
+
+/RMG/Output/Germanium/DiscardZeroEnergyHits true
+/RMG/Output/Germanium/EdepCutLow 0 keV                                        # a gamma that leaves nothing in the crystal keeps only its vertex
+/RMG/Output/Germanium/StoreSinglePrecisionEnergy
+/RMG/Output/Germanium/StoreSinglePrecisionPosition
+/RMG/Output/Vertex/StoreSinglePrecisionPosition                              # the vertex z is what reweighting needs
+
+/RMG/Manager/Randomization/Seed {SEED}
+/RMG/Generator/Confine Volume
+/RMG/Generator/Confinement/MaxSamplingTrials 100000
+/RMG/Generator/Confinement/Physical/AddVolume {VOL}
+/RMG/Generator/Select GPS
+/gps/particle gamma                                                           # only the 2614.5 keV gamma: no beta, no other Tl-208 gamma
+/gps/energy 2614.511 keV
+/gps/ang/type iso
+/run/beamOn {NEV}

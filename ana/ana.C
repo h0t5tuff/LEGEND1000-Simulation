@@ -25,7 +25,7 @@ namespace cfg
   const int NC = 4;                                                         // cut levels: none, M1, M1 + LAr, M1 + LAr + A/E
   const char *cutName[NC] = {"no cut", "M1", "M1 + LAr", "M1 + LAr + A/E"};
   const double bgGoal = 1e-5; // LEGEND-1000 goal [counts/(keV kg yr)] at Qbb, for scale
-  const double simTol = 0.10; // a design passes when its BI after all cuts is at most this much above the tube's as built
+  const double simTol = 0.10; // a design passes when its BI after all cuts is at most this much above the tube's as proposed
   const double secPerYear = 365.25 * 24 * 3600;
   const double eLo = 1000, eHi = 3000; // spectrum [keV]
   const int eBins = 200;
@@ -270,11 +270,11 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     for (auto &f : expand(pat))
       R[cfg::iso(iso)].iso = iso, readFile(f, R[cfg::iso(iso)], rt);
 
-  const double depthTot = rt.zTop - rt.zBottom, L1built = rt.zTop - rt.seamSS, L2built = rt.zTop - rt.seamCu; // the seams as built, as depths
+  const double depthTot = rt.zTop - rt.zBottom, L1built = rt.zTop - rt.seamSS, L2built = rt.zTop - rt.seamCu; // the seams as proposed, as depths
   const double binW = (cfg::eHi - cfg::eLo) / cfg::eBins;
   const int NC = cfg::NC, ALL = NC - 1;
   const double edge[4] = {0, L1built, L2built, depthTot};
-  double physV[3]; // m^3: SS, Cu, EFCu, as built
+  double physV[3]; // m^3: SS, Cu, EFCu, as proposed
   for (int p = 0; p < 3; p++)
     physV[p] = rt.volume(edge[p], edge[p + 1]);
   for (auto &[key, r] : R)
@@ -289,8 +289,8 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
          cfg::winLo, cfg::winHi, cfg::winWidth, cfg::m1_keV, cfg::lar_pe, cfg::psd_low, rt.geMass);
 
   //-------------------------------------------------------------------------------
-  //  5. The background index as built, per chain and section: the README's as-built table
-  printf("BI AS BUILT  [counts/(keV kg yr)], +- simulation statistics\n");
+  //  5. The background index as proposed, per chain and section: the README's as-proposed table
+  printf("BI AS PROPOSED  [counts/(keV kg yr)], +- simulation statistics\n");
   printf("    %-6s %-5s %8s %10s %10s %9s  %-30s %10s  %s\n", "chain", "sect", "mass", "real/yr", "simulated", "w", "window hits/counts: none/M1/+LAr/+A/E",
          "counts/yr", "BI, all cuts");
   double gB[NC] = {0}, gV[NC] = {0}, mB[2] = {0}, mV[2] = {0}; // all chains, per cut level; and with the LAr veto off the map alone
@@ -328,8 +328,8 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
   }
 
   //-------------------------------------------------------------------------------
-  //  7. Designs against the tube as built: steel to L1, Cu to L2, EFCu below, for less EFCu (L2 deeper) and more steel (L1 deeper)
-  // a design differs from the tube as built only where a slab changed material, so its BI after all cuts is the as-built's plus
+  //  7. Designs against the tube as proposed: steel to L1, Cu to L2, EFCu below, for less EFCu (L2 deeper) and more steel (L1 deeper)
+  // a design differs from the tube as proposed only where a slab changed material, so its BI after all cuts is the as-proposed's plus
   // that change, dB. Too few counts survive all cuts away from the detectors to count dB on them, so it is counted on the
   // changed slabs' counts after M1 times the cut survival (the share of them all cuts keep, see DEPTH), measured where the
   // change is: near the detectors, below farEdge, per chain; above it, both chains together
@@ -361,7 +361,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
       }
     return dB;
   };
-  auto deepestSteel = [&](double L2) { // 1 cm at a time below the steel as built, always some Cu
+  auto deepestSteel = [&](double L2) { // 1 cm at a time below the steel as proposed, always some Cu
     double l1 = -1;
     for (double L1 = L1built; L1 <= L2 - 10 && change(L1, L2) <= maxRise; L1 += 10)
       l1 = L1;
@@ -369,7 +369,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
   };
   auto split = [&](double l1, double L2)
   { return std::string(Form("%4.0f : %3.0f : %3.0f kg", massOf(0, l1, 0), massOf(l1, L2, 1), massOf(L2, depthTot, 2))); };
-  printf("\nDESIGNS  SS down to L1, Cu down to L2, EFCu below; a design passes when its BI stays within %.0f%% of the as-built's (%.2e)\n",
+  printf("\nDESIGNS  SS down to L1, Cu down to L2, EFCu below; a design passes when its BI stays within %.0f%% of the as-proposed's (%.2e)\n",
          100 * cfg::simTol, biBuilt);
   printf("    cut survival: below %.2f m", farEdge / 1000);
   for (auto &[key, r] : R)
@@ -395,14 +395,14 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     if (L2 > best[1] || (L2 == best[1] && l1 > best[0]))
       best[0] = l1, best[1] = L2;
   }
-  printf("    best: L2 %.2f m, L1 %.2f m, %s, BI %+.0f%%; as built: %s\n", best[1] / 1000, best[0] / 1000, split(best[0], best[1]).c_str(),
+  printf("    best: L2 %.2f m, L1 %.2f m, %s, BI %+.0f%%; as proposed: %s\n", best[1] / 1000, best[0] / 1000, split(best[0], best[1]).c_str(),
          100 * change(best[0], best[1]) / biBuilt, split(L1built, L2built).c_str());
 
   //-------------------------------------------------------------------------------
-  //  8. The tube's spectrum as built, per cut level, for the slide below
+  //  8. The tube's spectrum as proposed, per cut level, for the slide below
   TH1D *sp[NC];
   for (int c = 0; c < NC; c++)
-    sp[c] = new TH1D(Form("sp%d", c), "Re-entrant tube background, as built;energy [keV];counts / (keV kg yr)", cfg::eBins, cfg::eLo, cfg::eHi);
+    sp[c] = new TH1D(Form("sp%d", c), "Re-entrant tube background, as proposed;energy [keV];counts / (keV kg yr)", cfg::eBins, cfg::eLo, cfg::eHi);
   for (auto &[key, r] : R)
     for (auto &h : r.hits)
     {
@@ -418,7 +418,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
   sp[0]->SetMinimum(0.1 * std::max(1e-12, sp[ALL]->GetMinimum(0) > 0 ? sp[ALL]->GetMinimum(0) : sp[2]->GetMinimum(0)));
 
   //-------------------------------------------------------------------------------
-  //  9. Two slide figures, one message each: the spectrum with the analysis window and the BI marked; the design map near the tube as built
+  //  9. Two slide figures, one message each: the spectrum with the analysis window and the BI marked; the design map near the tube as proposed
   auto sci = [](double x) { // "9.8 #times 10^{-9}"
     const int e = (int)floor(log10(x));
     return std::string(Form("%.1f #times 10^{%d}", x / pow(10, e), e));
@@ -444,7 +444,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     cs->SetGridy();
     cs->SetMargin(0.09, 0.03, 0.11, 0.08);
     const char *what[NC] = {"no cut", "M1: one detector only", "+ LAr veto", "+ A/E: all cuts"};
-    sp[0]->SetTitle("What the as-built tube leaves in the detectors;energy [keV];counts / (keV kg yr)");
+    sp[0]->SetTitle("What the as-proposed tube leaves in the detectors;energy [keV];counts / (keV kg yr)");
     sp[0]->SetMaximum(5 * sp[0]->GetMaximum());
     sp[0]->Draw("HIST");
     gPad->Update();
@@ -495,8 +495,8 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     }
     cs->SaveAs("output/slide_spectrum.png");
   }
-  { // the design map, near the tube as built
-    auto hz = new TH2D("hZoom", ";steel ends at depth L1 [m];EFCu starts at depth L2 [m];BI / BI as built", 48, 1.6, 3.2, 36, 3.9, 4.8);
+  { // the design map, near the tube as proposed
+    auto hz = new TH2D("hZoom", ";steel ends at depth L1 [m];EFCu starts at depth L2 [m];BI / BI as proposed", 48, 1.6, 3.2, 36, 3.9, 4.8);
     for (int i = 1; i <= 48; i++)
       for (int j = 1; j <= 36; j++)
         hz->SetBinContent(i, j, 1 + change(hz->GetXaxis()->GetBinCenter(i) * 1000, hz->GetYaxis()->GetBinCenter(j) * 1000) / biBuilt);
@@ -509,7 +509,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     hz->GetZaxis()->SetTitleOffset(1.3);
     hz->Draw("COLZ");
     auto leg = new TLegend(0.12, 0.80, 0.35, 0.92);
-    for (auto [x, y, col, name] : {std::tuple{L1built, L2built, kRed + 1, "as built"}, std::tuple{best[0], best[1], (int)kBlack, "best design"}})
+    for (auto [x, y, col, name] : {std::tuple{L1built, L2built, kRed + 1, "as proposed"}, std::tuple{best[0], best[1], (int)kBlack, "best design"}})
     {
       auto m = new TMarker(x / 1000, y / 1000, 29); // a star
       m->SetMarkerColor(col);
@@ -520,7 +520,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     leg->Draw();
     cd->SaveAs("output/slide_designs.png");
   }
-  { // 10. Every design for LEGEND.app's rt (app/): a 2 cm grid through the seams as built, the BI over the as-built one,
+  { // 10. Every design for LEGEND.app's rt (app/): a 2 cm grid through the seams as proposed, the BI over the as-proposed one,
     //     with the masses -> output/designs.json
     std::vector<double> g1, g2; // L1, L2 [mm]
     for (double v = fmod(L1built, 20); v <= depthTot; v += 20)
