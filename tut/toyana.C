@@ -1,5 +1,5 @@
-//  The miniature tube study: weight, reweight, scan the seam. Reads remage's two runs of tut/toy.mac (tut/toy.gdml).
-//      root -l -b -q tut/toy.C
+//  The miniature tube study: weight, reweight, scan the seam. Reads remage's two runs of tut/toysim.mac (tut/toygeom.gdml).
+//      root -l -b -q tut/toyana.C
 //  1. Constants: the GDML's tube and crystal, the true materials and activities (as in ana/ana.C's cfg)
 //  2. Read the hits: the energy each gamma leaves in the crystal, and the depth z where that gamma started
 //  3. Weight: one simulated gamma stands for w real gammas a year, w = rho A V t / N
@@ -11,8 +11,8 @@
 namespace cfg
 {
   // the two runs: the gammas started in the EFCu section (z 0-2 m) and in the steel section (z 2-4 m)
-  const char *inFile[2] = {"output/output_root/toy_efcu.root", "output/output_root/toy_ss.root"};
-  // the tube (tut/toy.gdml): 4 m tall, inner radius 0.25 m, 1 cm wall; steel above the seam, EFCu below; proposed seam at 2 m
+  const char *inFile[2] = {"tut/toyoutput/toy_efcu.root", "tut/toyoutput/toy_ss.root"};
+  // the tube (tut/toygeom.gdml): 4 m tall, inner radius 0.25 m, 1 cm wall; steel above the seam, EFCu below; proposed seam at 2 m
   const double H = 4.0, R = 0.25, T = 0.01, L0 = 2.0;
   const double Vsec = TMath::Pi() * ((R + T) * (R + T) - R * R) * H / 2; // one section's volume [m^3]
   // the crystal: 1 kg of enriched Ge (90% Ge-76), radius 30.61 mm, height 61.22 mm, density 5.5502 g/cm^3
@@ -29,7 +29,7 @@ namespace cfg
   const double dL = 0.01, dLmap = 0.05;   // seam step of the scan and of the heat map [m]
 }
 
-void toy()
+void toyana()
 {
   using namespace cfg;
   gErrorIgnoreLevel = kWarning;
@@ -51,7 +51,7 @@ void toy()
     auto vtx = (TTree *)f.Get("stp/vtx");
     if (!ge || !vtx)
     {
-      printf("ERROR: no stp/ge or stp/vtx in %s: run tut/toy.mac first\n", inFile[r]);
+      printf("ERROR: no stp/ge or stp/vtx in %s: run tut/toysim.mac first\n", inFile[r]);
       return;
     }
     N[r] = vtx->GetEntries();
@@ -172,7 +172,7 @@ void toy()
     t->SetTextColor(q ? TColor::GetColor("#1b7a33") : kGray + 3);
     t->Draw();
   }
-  c1->SaveAs("output/toy_background.png");
+  c1->SaveAs("tut/toyoutput/toy_background.png");
 
   //---------------------------------------------------------------------------
   //  6b. Heat map: B(E) for every seam L (rows), as proposed and the new design marked
@@ -208,6 +208,6 @@ void toy()
     t->SetTextSize(0.028);
     t->Draw();
   }
-  c2->SaveAs("output/toy_heatmap.png");
-  printf("wrote output/toy_background.png and output/toy_heatmap.png\n");
+  c2->SaveAs("tut/toyoutput/toy_heatmap.png");
+  printf("wrote tut/toyoutput/toy_background.png and tut/toyoutput/toy_heatmap.png\n");
 }

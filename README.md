@@ -17,6 +17,10 @@ PDF's page) or this repository's own output, with the command that makes it.
    on-time delivery is among the tube's most critical activities (Lee, p. 5, 16).
 4. **The risk.** Neutrinoless double-beta decay (0νββ) of ⁷⁶Ge would leave `Qββ` = 2039 keV in a detector (pCDR,
    p. 7). A gamma from a decay in the tube wall can leave the same energy: background.
+
+   ![the 2νββ spectrum at true scale, zooming to Qββ](qbb_zoom.gif)
+
+   Drawn to true scale, if the 2νββ peak were 120 km high, a 0νββ line at `Qββ` would be 1.5 m.
 5. **The measure.** The background index (BI): background counts per keV, per kg of germanium, per year, around
    `Qββ`. LEGEND-1000's goal is below 10⁻⁵ counts/(keV·kg·yr) (pCDR, p. 8).
    - For LEGEND-1000, M·t ≈ 10⁴ kg·yr and ΔE ≈ 2.7 keV, which gives BI < about 4 × 10⁻⁵ counts/(keV·kg·yr).

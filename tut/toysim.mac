@@ -1,4 +1,4 @@
-#  The miniature tube (tut/toy.gdml): 2614.5 keV gammas, the Tl-208 line, uniform in one section of the wall ({VOL}), isotropic.
+#  The miniature tube (tut/toygeom.gdml): 2614.5 keV gammas, the Tl-208 line, uniform in one section of the wall ({VOL}), isotropic.
 #  Aliases: VOL (wall_efcu or wall_ss), NEV, SEED.
 /RMG/Geometry/RegisterDetector Germanium ge 1                                 # the 1 kg crystal
 /RMG/Output/NtupleUseVolumeName true                                          # its table is named ge
