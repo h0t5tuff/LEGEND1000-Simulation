@@ -23,8 +23,8 @@ PDF's page) or this repository's own output, with the command that makes it.
    Drawn to true scale, if the 2νββ peak were 120 km high, a 0νββ line at `Qββ` would be 1.5 m.
 5. **The measure.** The background index (BI): background counts per keV, per kg of germanium, per year, around
    `Qββ`. LEGEND-1000's goal is below 10⁻⁵ counts/(keV·kg·yr) (pCDR, p. 8).
-   - For LEGEND-1000, M·t ≈ 10⁴ kg·yr and ΔE ≈ 2.7 keV, which gives BI < about 4 × 10⁻⁵ counts/(keV·kg·yr).
-   - The pCDR rounds this down to 10⁻⁵ for margin. That leaves about 0.3 background counts in the ROI over ten years.
+   - Fewer than 1 background count in the ROI over 1 t × 10 yr = 10⁴ kg·yr needs BI < 1 / (10⁴ kg·yr × 4.2 keV)
+     ≈ 2 × 10⁻⁵ counts/(keV·kg·yr). The goal of 10⁻⁵ leaves about 0.4 counts there.
 6. **What was missing.** Where the tube needs EFCu, and how far down the SS can come, was not known: decays in the
    Cu and SS so rarely reach the array that one simulation over the whole tube leaves almost no counts from them
    after all cuts.
@@ -37,8 +37,8 @@ changing" means within 10%, this study's line (step 6).
 
 |                                                                 | SS : Cu : EFCu     | BI after all cuts [counts/(keV·kg·yr)]                          |
 | --------------------------------------------------------------- | ------------------ | --------------------------------------------------------------- |
-| as proposed                                                        | 619 : 672 : 175 kg | 0.93 ± 0.08 × 10⁻⁸ (before cuts, from window hits: 4.29 × 10⁻⁶) |
-| EFCu from 4.40 m (0.33 m shorter), SS to 2.69 m (0.63 m longer) | 809 : 489 : 146 kg | +8%: within 10%                                                 |
+| as proposed                                                     | 619 : 672 : 175 kg | 0.68 ± 0.07 × 10⁻⁸ (before cuts, from window hits: 4.22 × 10⁻⁶) |
+| EFCu from 4.50 m (0.43 m shorter), SS to 2.69 m (0.63 m longer) | 809 : 497 : 137 kg | +10%: just within the line                                      |
 
 Words:
 
@@ -49,17 +49,17 @@ Words:
 - **multiplicity:** the number of detectors with a hit in an event; M1 means exactly one;
 - **analysis window:** `Qββ` ± 55 keV (1984-2094 keV, **110 keV**), where the BI is counted. The background there is
   flat, so a window wider than the energy resolution gives the same BI from more counts;
-- **ROI** (region of interest): `Qββ` ± 2σ of the energy resolution (2037.6-2040.4 keV, 2.7 keV), where 0νββ would
-  show. The background expected in it is the BI × 2.7 keV × kg × yr;
+- **ROI** (region of interest): `Qββ` ± 2σ of the energy resolution (2036.9-2041.1 keV, 4.2 keV), where 0νββ would
+  show. The background expected in it is the BI × 4.2 keV × kg × yr;
 - **window hit:** a hit in the analysis window; with no cut, these are tallied;
 - **count:** an M1 event whose hit is in the analysis window, after the cuts named (step 5). _Simulated counts_ come
   from the simulation; each stands for w real decays a year (step 6), and Σw is the _counts a year_.
 
 ## Setup
 
-- **Geometry:** legend-pygeom-l1000 0.6.0.
+- **Geometry:** legend-pygeom-l1000 0.6.2, the release the production's optical map is built on.
 - **Simulation:** remage 1.1.0 (`remage paper, LEGEND.pdf`): pixi on the Mac, the collaboration's container on NERSC.
-- **Python:** `~/venvs/v` (Python 3.14: reboost 1.4.0, legend-pygeom-l1000 0.6.0, pylegendmeta, uproot, vtk).
+- **Python:** `~/venvs/v` (Python 3.14: reboost 1.4.0, legend-pygeom-l1000 0.6.2, pylegendmeta, uproot, vtk).
 - **Analysis:** ROOT 6.40.
 - **Building from source** (Geant4, BxDecay0, remage):
   [Physics-Simulation-Stack](https://github.com/h0t5tuff/Physics-Simulation-Stack).
@@ -75,7 +75,7 @@ Seven steps, each needed by the next. Only the PNGs of `output/` are in git; the
 | 3. Simulation        | what do they leave in the detectors?       | `sim/sim.mac` on NERSC                    | `output/output_lh5` (76 GB)     |
 | 4. Detector response | what would be measured?                    | `sim/hit.py`                              | `output/output_root` (~50 GB)   |
 | 5. Cuts              | which events could be 0νββ?                | `ana/ana.C`                               |                                 |
-| 6. BI as proposed       | what is the tube's BI, and how well known? | `ana/ana.C`                               | `output/slide_spectrum.png`     |
+| 6. BI as proposed    | what is the tube's BI, and how well known? | `ana/ana.C`                               | `output/slide_spectrum.png`     |
 | 7. Designs           | which other designs keep it?               | `ana/ana.C`                               | `output/slide_designs.png`      |
 
 ### 1. Geometry
@@ -88,7 +88,7 @@ writes:
 - **Wall:** 1.5 mm of EFCu through the endcap and lower wall, thickening to 3 mm over the last 2 cm below the Cu
   seam; 6 mm through the Cu and SS, which are layers placed inside the EFCu tube volume.
 - **Detectors:** 336 inverted-coaxial point-contact (ICPC) germanium detectors, 4.8-5.9 m below the top, inside the
-  EFCu section. Each is 90.0 mm tall, 88.8 mm across, with a 53 mm borehole: 3.046 kg, 1023.4 kg in all.
+  EFCu section. Each is 90.0 mm tall, 88.8 mm across, with a 53 mm borehole: 3.047 kg, 1023.7 kg in all.
 - **Veto:** the UGLAr around the detectors (18.83 m³, 26.17 tonnes), its light read by 12096 fibres and 252 silicon
   photomultipliers (SiPMs).
 
@@ -99,8 +99,8 @@ Two checks, before any physics:
 2. `l1000-autopeel.py --table` checks that the bottom head and the Cu and SS layers are flush with the barrel, then
    writes `output/tube.txt`: the seams, the densities, the germanium mass and the wall's cross-section every 0.5 mm.
 
-`ana/ana.C` reads the tube only from `output/tube.txt`, so a new design is just a new GDML file and this table. `l1000-autopeel.py`
-also draws each part alone, offscreen, and prints its numbers.
+`ana/ana.C` reads the tube only from `output/tube.txt`, so a new design is just a new GDML file and this table.
+`l1000-autopeel.py` also draws each part alone, offscreen, and prints its numbers.
 
 ![the tube, the decay source](output/tube_geometry.png)
 
@@ -120,7 +120,7 @@ remage --ignore-warnings -s GDML=geom/l1000geom/l1000.gdml -s SKIP=false -s NPOI
 
 **The lid**, the one part of the GDML left out:
 
-1. In legend-pygeom-l1000 0.6.0 the argon closes 6 mm below the tube's top on the axis but at the top at the wall,
+1. In legend-pygeom-l1000 0.6.2 the argon closes 6 mm below the tube's top on the axis but at the top at the wall,
    leaving a 55.51 kg EFCu cone over the tube's top (z = 4981-4987 mm): the lid, an artifact.
 2. So `sim/sim.mac` keeps decays out of it, by position.
 3. [legend-exp/legend-pygeom-l1000#142](https://github.com/legend-exp/legend-pygeom-l1000/pull/142) fixes it: the
@@ -184,12 +184,12 @@ root -l -b -q -e '.L ana/ana.C' -e 'holders()'
 - **One section at a time:** the Cu and SS are 88% of the tube's mass, and the detectors barely see them. A run over
   the whole tube would spend its decays there; a run per section gives each section the decays it needs:
 
-| section | runs | decays (Tl-208 / Bi-214) | real years they stand for | what they decide                                |
-| ------- | ---- | ------------------------ | ------------------------- | ----------------------------------------------- |
-| EFCu    | 25   | 123 M / 113 M            | 166 000 / 107 000         | the BI as proposed: 132 of its 139 counts (step 6) |
-| Cu      | 366  | 460 M / 3.2 G            | 55 000 / 110 000          | how far the SS can come down (step 7)           |
-| SS      | 36   | 50 M / 310 M             | 7 / 6                     | nothing: no window hit at any cut               |
-| total   | 427  | 4.3 × 10⁹ (76 GB)        |                           |                                                 |
+| section | runs | decays (Tl-208 / Bi-214) | real years they stand for | what they decide                                   |
+| ------- | ---- | ------------------------ | ------------------------- | -------------------------------------------------- |
+| EFCu    | 25   | 123 M / 113 M            | 166 000 / 107 000         | the BI as proposed: 103 of its 104 counts (step 6) |
+| Cu      | 366  | 460 M / 3.2 G            | 55 000 / 110 000          | how far the SS can come down (step 7)              |
+| SS      | 36   | 50 M / 310 M             | 7 / 6                     | nothing: no window hit at any cut                  |
+| total   | 427  | 4.3 × 10⁹ (76 GB)        |                           |                                                    |
 
 - **Real years:** how long the section, as proposed, takes to make that many decays (activities in step 6).
 - **Bi-214 gets ~7 × Tl-208's decays in the Cu and SS:** the SS holds ~7 × more Bi-214 than Tl-208 (2500 vs
@@ -216,31 +216,30 @@ ssh nersc 'rm -r $SCRATCH/LEGEND1000-Simulation'
 - **Parameters:** those of LEGEND-1000's simulation production
   ([legend-simflow](https://github.com/legend-exp/legend-simflow)):
   [legend1000-metadata](https://github.com/legend-exp/legend1000-metadata), `simprod/config`, experiment `l1000dsg01`.
-- **Maps:** Moritz Neuberger's UGLAr optical map v0.4.0 and drift-time maps of `V00000A` (3500 V, ⟨100⟩ and ⟨110⟩
-  axes), on NERSC (paths in the commands below).
+- **Maps:** the production's UGLAr optical map for `l1000dsg01` (built on legend-pygeom-l1000 0.6.2) and the
+  drift-time maps of `V00000A` (3500 V, ⟨100⟩ and ⟨110⟩ axes), on NERSC (paths in the commands below).
 - **Detectors:** every one is the dummy `V99999Z` with the drift times of `V00000A` (the same geometry); real
   detectors would each bring their own dead layer, resolution and A/E.
 
-|            | value                                                                                  | from                                                         |
-| ---------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| dead layer | full-charge-collection depth (FCCD) 0.7 mm, outer half fully dead, linear in between   | `V99999Z`; `tier/hit` `dead_layer_fraction` 0.5              |
-| resolution | FWHM = √(0.5 + 0.001·E) keV: 1.59 keV at `Qββ`                                         | `pars/geds/eresmod`                                          |
-| A/E        | A: max of one template current pulse per step, at its drift time; σ_A/E = 0.01         | `pars/geds/currmod`, `aoeresmod`; `output/dtmap_V00000A.lh5` |
-| PE         | LAr scintillation × the summed optical map; σ 0.3 PE, 16 ns merging, ≤ 100 PE per step | `/all` of the optical map; `tier/opt`                        |
+|            | value                                                                                        | from                                                         |
+| ---------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| dead layer | full-charge-collection depth (FCCD) 1.0 mm, outer half fully dead, linear in between         | `V99999Z`; `tier/hit` `dead_layer_fraction` 0.5              |
+| resolution | FWHM = √(4.2 + 0.001005·E) keV: 2.50 keV at `Qββ`                                            | `pars/geds/eresmod`                                          |
+| A/E        | A: max of one template current pulse; σ_A/E = √(2.4·10⁻⁵ + (29.1 keV / E)^2.54)              | `pars/geds/currmod`, `aoeresmod`; `output/dtmap_V00000A.lh5` |
+| PE         | LAr scintillation × the summed optical map × 0.3; σ 0.3 PE, 16 ns merging, ≤ 100 PE per step | `/all` of the optical map; `tier/opt`                        |
 
 - **A/E** is the current pulse's amplitude over the energy: lower for a gamma that interacts at several sites than
   for the single site of 0νββ (pCDR, p. 24, 71). The **A/E classifier** is A/E − 1 in units of its resolution: 0 for
   single-site, negative for multi-site. One template pulse is used, not a pulse-shape library.
-- **Optical map:** for every 5 mm cell of the UGLAr, the probability that a scintillation photon made there reaches
-  a SiPM; it includes UGLAr scintillation only (`Optical_map_L1000, Sanchez.pdf`, p. 2). Its `/all` group sums every
-  SiPM, as the LAr veto does (the production's second condition, 4 SiPMs with light, and random coincidences are
-  left out).
-- **The map's limits:** made for legend-pygeom-l1000 0.4.0, it stops 68 mm short of this UGLAr's outer wall and
-  gives no light above z = 1.375 m (3.61 m deep). `sim/hit.py` reads the argon beyond the edge at the edge (`pe`),
-  and off the map alone (`pe_map`), for the BI's range in step 6.
+- **Optical map:** for every 5 mm cell of the UGLAr (x, y within ±1 m, z within ±1.375 m), the probability that a
+  scintillation photon made there reaches a SiPM, with a SiPM detection efficiency of 1; the production scales it by
+  0.3. Its `/all` group sums every SiPM, as the LAr veto does.
+- **What the light leaves out:** the map gives no light above z = 1.375 m (3.61 m deep), and the PEN plates and
+  fibers, which the production also lets scintillate, are not sources here: the runs record steps only in the
+  germanium and the UGLAr.
 - **Output:** `output/output_root/<nuclide>_<SEED>_hit.root`, read only by `ana/ana.C`: TTrees `geds` (`evtid`,
-  `det`, `edep`, `energy` [keV], `aoe_class`), `lar` (`evtid`, `edep`, `pe`, `pe_map`), `vtx` (`evtid`, `xloc`,
-  `yloc`, `zloc` [m]).
+  `det`, `edep`, `energy` [keV], `aoe_class`), `lar` (`evtid`, `edep`, `pe`), `vtx` (`evtid`, `xloc`, `yloc`,
+  `zloc` [m]).
 - **Options:** `--optmap`, `--dtmap`, `--metadata`, `--gdml`, `--outdir`; `--seed` (default 1; with the file's name
   it seeds the response, so a file always gives the same hits); `--force` (rebuilds hit files that are up to date).
 - **A new optical map** needs only `--optmap` and steps 5-7 again, no new simulation.
@@ -248,7 +247,7 @@ ssh nersc 'rm -r $SCRATCH/LEGEND1000-Simulation'
 The two maps, then the response:
 
 ```bash
-rsync -a --partial nersc:/global/cfs/cdirs/m2676/users/neuberger/L1000_optical_muon_sims/omaps/v0.4.0/ular/merged/merged_optmap_20260225_063750.lh5 output/
+rsync -a --partial nersc:/global/cfs/cdirs/m2676/sims/optmap/_prodenv_l1000/optmap-l1000dsg01/optmap-l1000dsg01.lh5 output/l1000dsg01-ular-optmap.lh5
 rsync -a nersc:/global/cfs/cdirs/m2676/users/neuberger/L1000_optical_muon_sims/hpge_related/dtmaps/gen/V00000A.lh5 output/dtmap_V00000A.lh5
 ~/venvs/v/bin/python sim/hit.py output/output_lh5/*.lh5
 ```
@@ -266,16 +265,16 @@ cuts, in the order of LEGEND-1000's background model (`CDRBackgroundModel, Green
 production's values (legend1000-metadata, `tier/evt` and `pars/geds/psdcuts`):
 
 1. **M1:** multiplicity 1, counting detectors above 25 keV.
-2. **LAr veto:** fewer than 4 PE in the argon.
-3. **A/E** classifier > −1.5, one value for all detectors.
+2. **LAr veto:** rejects an event whose SiPMs see any photoelectron.
+3. **A/E** classifier > −1.56, one value for all detectors.
 
 **Does the A/E cut work?** Checked on the Tl-208 M1 events, against LEGEND-1000's own two numbers (pCDR,
 p. 71):
 
 |                                                                      | LEGEND-1000                 | this simulation                                   |
 | -------------------------------------------------------------------- | --------------------------- | ------------------------------------------------- |
-| single-site: kept of the Tl-208 double-escape peak (DEP, 1592.5 keV) | 90%: the cut is tuned to it | 87 ± 3% (of 2992 events, net of the continuum)    |
-| multi-site: reduction of the gamma background near `Qββ`             | a factor of 2-3             | a factor of 3.5 (29% of the counts after M1 kept) |
+| single-site: kept of the Tl-208 double-escape peak (DEP, 1592.5 keV) | 90%: the cut is tuned to it | 86 ± 3% (of 2874 events, net of the continuum)    |
+| multi-site: reduction of the gamma background near `Qββ`             | a factor of 2-3             | a factor of 3.6 (28% of the counts after M1 kept) |
 
 ### 6. BI as proposed
 
@@ -290,7 +289,7 @@ p. 71):
   [Po-218](https://www.nndc.bnl.gov/nudat3/decaysearchdirect.jsp?nuc=218PO&unc=nds),
   [At-218](https://www.nndc.bnl.gov/nudat3/decaysearchdirect.jsp?nuc=218AT&unc=nds), NuDat 3);
 - Σw over the simulated counts = the counts a year;
-- BI = counts a year / (1023.4 kg × 110 keV).
+- BI = counts a year / (1023.7 kg × 110 keV).
 
 The mass of each section is the GDML's. The activities (`cfg::chain`; bulk only):
 
@@ -305,21 +304,21 @@ above the Cu seam, count as Cu):
 
 | chain  | section | mass     | real decays a year | simulated decays | w          | window hits, no cut / simulated counts: M1 / + LAr / + A/E | counts a year, all cuts | BI, all cuts       |
 | ------ | ------- | -------- | ------------------ | ---------------- | ---------- | ---------------------------------------------------------- | ----------------------- | ------------------ |
-| Tl-208 | EFCu    | 174.6 kg | 733                | 122 M            | 6.0 × 10⁻⁶ | 70222 / 58232 / 482 / 85                                   | 5.1 × 10⁻⁴              | 4.54 ± 0.49 × 10⁻⁹ |
-| Tl-208 | Cu      | 671.7 kg | 8 380              | 461 M            | 1.8 × 10⁻⁵ | 603 / 544 / 35 / 4                                         | 0.7 × 10⁻⁴              | 0.65 ± 0.32 × 10⁻⁹ |
+| Tl-208 | EFCu    | 174.6 kg | 733                | 122 M            | 6.0 × 10⁻⁶ | 69093 / 57693 / 410 / 63                                   | 3.8 × 10⁻⁴              | 3.36 ± 0.42 × 10⁻⁹ |
+| Tl-208 | Cu      | 671.7 kg | 8 380              | 461 M            | 1.8 × 10⁻⁵ | 596 / 538 / 7 / 0                                          | 0                       | 0                  |
 | Tl-208 | SS      | 619.4 kg | 7.0 × 10⁶          | 50.0 M           | 0.14       | 0 / 0 / 0 / 0                                              | 0                       | 0                  |
-| Bi-214 | EFCu    | 174.6 kg | 1 047              | 112 M            | 9.4 × 10⁻⁶ | 5164 / 4798 / 655 / 47                                     | 4.4 × 10⁻⁴              | 3.91 ± 0.57 × 10⁻⁹ |
-| Bi-214 | Cu      | 671.7 kg | 29 040             | 3.20 G           | 9.1 × 10⁻⁶ | 188 / 177 / 47 / 3                                         | 0.3 × 10⁻⁴              | 0.24 ± 0.14 × 10⁻⁹ |
+| Bi-214 | EFCu    | 174.6 kg | 1 047              | 112 M            | 9.4 × 10⁻⁶ | 5094 / 4754 / 575 / 40                                     | 3.7 × 10⁻⁴              | 3.32 ± 0.53 × 10⁻⁹ |
+| Bi-214 | Cu      | 671.7 kg | 29 040             | 3.20 G           | 9.1 × 10⁻⁶ | 185 / 174 / 27 / 1                                         | 0.09 × 10⁻⁴             | 0.08 ± 0.08 × 10⁻⁹ |
 | Bi-214 | SS      | 619.4 kg | 4.9 × 10⁷          | 310 M            | 0.16       | 0 / 0 / 0 / 0                                              | 0                       | 0                  |
-| all    |         |          |                    | 4.26 G           |            | 139 after all cuts                                         | 10.5 × 10⁻⁴             | 9.3 ± 0.8 × 10⁻⁹   |
+| all    |         |          |                    | 4.26 G           |            | 104 after all cuts                                         | 7.6 × 10⁻⁴              | 6.8 ± 0.7 × 10⁻⁹   |
 
-In the ROI, the tube as proposed leaves 0.93 × 10⁻⁸ × 2.7 keV × 1023.4 kg = 2.6 × 10⁻⁵ counts a year after all cuts.
+In the ROI, the tube as proposed leaves 0.68 × 10⁻⁸ × 4.2 keV × 1023.7 kg = 2.9 × 10⁻⁵ counts a year after all cuts.
 
 Cut by cut [counts/(keV·kg·yr)]:
 
 | no cut (window hits) | M1                         | M1 + LAr                         | all cuts (M1 + LAr + A/E)       |
 | -------------------- | -------------------------- | -------------------------------- | ------------------------------- |
-| 4.29×10⁻⁶            | 3.61×10⁻⁶ (M1 removes 16%) | 0.90×10⁻⁷ (LAr veto removes 98%) | **0.93×10⁻⁸** (A/E removes 90%) |
+| 4.22×10⁻⁶            | 3.58×10⁻⁶ (M1 removes 15%) | 0.73×10⁻⁷ (LAr veto removes 98%) | **0.68×10⁻⁸** (A/E removes 91%) |
 
 The spectrum through each cut: the analysis window shaded green with the ROI as the line in it, the BI after all cuts as
 the black line across it, the 10⁻⁵ goal dashed, the gamma lines of step 2 labelled.
@@ -333,20 +332,21 @@ root -l -b -q ana/ana.C
 **How well is it known?**
 
 1. "No change" is drawn at 10% (`cfg::simTol`): this study's line, not a LEGEND requirement. It only means something
-   if the BI itself is known to better than 10%.
+   if the BI itself is known to about 10%.
 2. Simulated counts scatter by √n (Poisson, variance = mean; `PDG2024Booklet.pdf`, p. 255). A nuclide and section that make a share f of the
    BI with n counts add f²/n to the square of the BI's relative uncertainty, so ±10% needs Σ f²/n ≤ 0.01.
 3. The first 408 runs gave 0.042, ±21%, nearly all from the EFCu: 91% of the BI on 21 counts.
-4. So 19 more EFCu runs (10 Tl-208, 9 Bi-214; 2.7 node-hours) brought the EFCu to 132 counts and the BI to ±9%.
-5. **Limit:** the optical map (step 4). With no light at all from the argon beyond its edge, the BI would be
-   2.8 × 10⁻⁸; until a 0.6.0 map arrives the BI is a 0.9-2.8 × 10⁻⁸ range.
+4. So 19 more EFCu runs (10 Tl-208, 9 Bi-214; 2.7 node-hours) brought the EFCu to 103 counts and the BI to ±10%:
+   as fine as the line.
+5. **What the light leaves out** (step 4): no light from the argon above 3.61 m deep, and none from the PEN plates
+   and fibers. Both would only make the LAr veto stronger, so on this point the BI here is an upper estimate.
 
 ### 7. Designs
 
 **A design** moves the two seams:
 
 - the SS ends at depth L1 (2.06 m as proposed), the EFCu starts at depth L2 (4.07 m), with Cu between;
-- the wall keeps its shape and thickness; only its material changes (so Cu at 4.07-4.40 m has the EFCu's 1.5 mm wall);
+- the wall keeps its shape and thickness; only its material changes (so Cu at 4.07-4.50 m has the EFCu's 1.5 mm wall);
 - `ana/ana.C` scans them: for every L2, L1 goes down 1 cm at a time while the BI stays within 10% of the as-proposed's;
 - the answer is the least EFCu, then, for it, the most SS.
 
@@ -362,50 +362,52 @@ root -l -b -q ana/ana.C
 3. A design's counts a year are Σw with the new weights: any L1 and L2 can be tried without a new simulation.
 4. Each saving reweights the runs of the section built there:
 
-| design change                     | decays reweighted                                  | w × (Tl-208 / Bi-214) | simulated counts there           |
-| --------------------------------- | -------------------------------------------------- | --------------------- | -------------------------------- |
-| EFCu starts lower (L2 deeper)     | the EFCu runs', from 4.07 m to L2: EFCu becomes Cu | 3.0 / 7.2             | thousands: the change is precise |
-| SS comes further down (L1 deeper) | the Cu runs', from 2.06 m to L1: Cu becomes SS     | 810 / 1600            | a handful: each one matters      |
+| design change                     | decays reweighted                                  | new w ÷ old w (Tl-208 / Bi-214) | simulated counts there           |
+| --------------------------------- | -------------------------------------------------- | ------------------------------- | -------------------------------- |
+| EFCu starts lower (L2 deeper)     | the EFCu runs', from 4.07 m to L2: EFCu becomes Cu | 3.0 / 7.2                       | thousands: the change is precise |
+| SS comes further down (L1 deeper) | the Cu runs', from 2.06 m to L1: Cu becomes SS     | 810 / 1600                      | a handful: each one matters      |
 
 **Why the Cu runs decide the SS:**
 
 1. SS added in a design sits where the Cu is now, 2-3 m above the array.
-2. Decays there rarely reach the detectors: one in ~4 × 10⁷ Tl-208 decays gives a count after M1, and none of
+2. Decays there rarely reach the detectors: one in ~6 × 10⁷ Tl-208 decays gives a count after M1, and none of
    1.7 × 10⁹ Bi-214 decays does (the table below).
-3. Turned into SS, each such count weighs ~1000 times more: one adds 11% of the BI, more than the 10% line.
-4. So the SS stops at 2.69 m, just above the first such count (2.70 m): the step in the design map.
-5. Not run: ~4 × the Cu decays (~40 node-hours) would bring one count's weight to ~3%. Until then the SS limit
-   rests on a single count.
+3. Turned into SS, each such count weighs ~1000 times more: one adds 7% of the BI.
+4. So the SS passes the first such count (2.70 m) only while the EFCu change leaves 7% of room: down to 2.88 m, just
+   above the second, for L2 up to 4.30 m; for less EFCu it stops at 2.69 m.
+5. Not run: ~4 × the Cu decays (~40 node-hours) would bring one count's weight to ~2%. Until then the SS limit
+   rests on single counts.
 
 **Cut survival:**
 
 1. Away from the detectors, too few counts pass all cuts to measure a design's change.
-2. So the change is measured on the counts after M1 (100-700 times more) × the **cut survival**: the fraction
+2. So the change is measured on the counts after M1 (100-1000 times more) × the **cut survival**: the fraction
    of them that also pass the LAr veto and A/E, per 0.62 m slab:
-   - below 4.37 m, per chain: 1.4 × 10⁻³ (Tl-208), 9.7 × 10⁻³ (Bi-214);
-   - above, both chains together: 11 of 1389 = 7.9 × 10⁻³ (higher than Tl-208's below, partly because the optical
+   - below 4.37 m, per chain: 1.05 × 10⁻³ (Tl-208), 8.3 × 10⁻³ (Bi-214);
+   - above, both chains together: 5 of 1364 = 3.7 × 10⁻³ (higher than Tl-208's below, partly because the optical
      map gives no light above 3.61 m deep).
 
 | depth [m]                        | Tl-208 decays | counts after M1 | after all cuts | Bi-214 decays | counts after M1 | after all cuts |
 | -------------------------------- | ------------- | --------------- | -------------- | ------------- | --------------- | -------------- |
 | 0.00-1.87                        | 45.4 M        | 0               | 0              | 282 M         | 0               | 0              |
 | 1.87-2.50                        | 105 M         | 0               | 0              | 729 M         | 0               | 0              |
-| 2.50-3.12                        | 144 M         | 6               | 0              | 1.00 G        | 0               | 0              |
-| 3.12-3.75                        | 144 M         | 105             | 1              | 1.00 G        | 31              | 2              |
-| 3.75-4.37                        | 90.3 M        | 1060            | 6              | 511 M         | 187             | 2              |
-| 4.37-5.00                        | 36.7 M        | 12851           | 16             | 33.8 M        | 1036            | 7              |
-| 5.00-5.62                        | 36.7 M        | 29071           | 43             | 33.7 M        | 2428            | 23             |
-| 5.62-6.25, nearest the detectors | 29.9 M        | 15683           | 23             | 27.5 M        | 1293            | 16             |
+| 2.50-3.12                        | 144 M         | 4               | 0              | 1.00 G        | 0               | 0              |
+| 3.12-3.75                        | 144 M         | 103             | 0              | 1.00 G        | 34              | 0              |
+| 3.75-4.37                        | 90.3 M        | 1045            | 3              | 511 M         | 178             | 2              |
+| 4.37-5.00                        | 36.7 M        | 12779           | 14             | 33.8 M        | 1030            | 8              |
+| 5.00-5.62                        | 36.7 M        | 28832           | 29             | 33.7 M        | 2420            | 18             |
+| 5.62-6.25, nearest the detectors | 29.9 M        | 15468           | 17             | 27.5 M        | 1266            | 13             |
 
-**The designs.** For each L2, in steps of 0.1 m, the deepest L1 that keeps the BI within 10%; at 4.50 m none does
-(+12% at any L1):
+**The designs.** For each L2, in steps of 0.1 m, the deepest L1 that keeps the BI within 10%; at 4.60 m none does
+(+15% at any L1):
 
-| EFCu from (L2)         | SS to (L1) | SS : Cu : EFCu          | BI change |
-| ---------------------- | ---------- | ----------------------- | --------- |
-| 4.07 m, as proposed       | 2.69 m     | 809 : 460 : 175 kg      | none      |
-| 4.20 m                 | same       | same : 472 : 163 kg     | +2%       |
-| 4.30 m                 | same       | same : 480 : 154 kg     | +4%       |
-| **4.40 m** (−17% EFCu) | same       | **same : 489 : 146 kg** | **+8%**   |
+| EFCu from (L2)         | SS to (L1) | SS : Cu : EFCu         | BI change |
+| ---------------------- | ---------- | ---------------------- | --------- |
+| 4.07 m, as proposed    | 2.88 m     | 866 : 396 : 175 kg     | +7%       |
+| 4.20 m                 | 2.88 m     | 866 : 408 : 163 kg     | +8%       |
+| 4.30 m                 | 2.88 m     | 866 : 416 : 154 kg     | +10%      |
+| 4.40 m                 | 2.69 m     | 809 : 489 : 146 kg     | +5%       |
+| **4.50 m** (−22% EFCu) | 2.69 m     | **809 : 497 : 137 kg** | **+10%**  |
 
 ![the designs](output/slide_designs.png)
 

@@ -14,12 +14,12 @@ namespace cfg
   const double winLo = Qbb - roiHalf, winHi = Qbb + roiHalf;
   bool inWindow(double e) { return e >= winLo && e <= winHi; }
   const double winWidth = winHi - winLo; // 110 keV
-  // the ROI, where 0vbb would show: Qbb +- 2 sigma of the resolution, FWHM = sqrt(0.5 + 0.001 E) keV (pars/geds/eresmod)
-  const double roiSig2 = 2 * sqrt(0.5 + 0.001 * Qbb) / 2.35482; // 1.35 keV: the ROI is 2037.6-2040.4 keV
+  // the ROI, where 0vbb would show: Qbb +- 2 sigma of the resolution, FWHM = sqrt(4.2 + 0.001005 E) keV (pars/geds/eresmod)
+  const double roiSig2 = 2 * sqrt(4.2 + 0.001005 * Qbb) / 2.35482; // 2.12 keV: the ROI is 2036.9-2041.1 keV
   // the cuts of the LEGEND-1000 simulation production (legend1000-metadata simprod/config, l1000dsg01: tier/evt, pars/geds/psdcuts)
   const double m1_keV = 25.0;  // a detector fired above this; M1: exactly one did
-  const double lar_pe = 4.0;   // the LAr veto rejects a decay whose SiPMs see this many photoelectrons, summed
-  const double psd_low = -1.5; // the production's A/E cut: keep a hit whose A/E classifier is above this (low side)
+  const double lar_pe = 0.0;    // the LAr veto rejects a decay whose SiPMs see more light than this: any photoelectron
+  const double psd_low = -1.56; // the A/E cut: keep a hit whose A/E classifier is above this (low side)
   // LEGEND tunes it in data to keep 90% of the Tl208 double-escape peak (DEP); here that is only checked (checkAoE)
   const double depKeep = 0.90, peakHalf = 2.5, sideLo = 5.0, sideHi = 10.0; // keV: peak +-2.5, sidebands 5-10 off it
   const int NC = 4;                                                         // cut levels: none, M1, M1 + LAr, M1 + LAr + A/E
@@ -87,13 +87,12 @@ static void scanTree(TTree *t, const std::vector<const char *> &cols, F f) // th
 
 //-------------------------------------------------------------------------------
 //  3. The runs of one isotope, reduced to what a reweighting needs:
-struct Hit // one detector's energy in one decay; ev: the decay's slot; lar: the decay passes the LAr veto, larMap: the same with the map alone
+struct Hit // one detector's energy in one decay; ev: the decay's slot; lar: the decay passes the LAr veto
 {
   Long64_t ev;
   float e;
-  bool m1, lar, larMap, psd;
+  bool m1, lar, psd;
   bool pass(int c) const { return c == 0 || (m1 && (c == 1 || (lar && (c == 2 || psd)))); }
-  bool passMap(int k) const { return m1 && larMap && (k == 0 || psd); } // M1 + LAr (k 0), + A/E (k 1), the LAr veto off the map alone
 };
 
 struct Run
@@ -107,7 +106,6 @@ struct Run
   std::vector<float> depth;                                           // per decay WITH a Ge hit: mm below the top of the tube
   std::vector<signed char> pv;                                        // its section
   std::vector<short> win[cfg::NC];                                    // its hits in the analysis window, per cut level
-  std::vector<short> winMap[2];                                       // ...and with the LAr veto read off the map alone: M1 + LAr, + A/E
   std::vector<size_t> roi;                                            // the decays with a count after M1: the only ones a design changes
   std::vector<Hit> hits;
 };
@@ -128,7 +126,7 @@ static void readFile(const std::string &file, Run &r, const Tube &t) // one hit 
   }
   r.nsim += vtx->GetEntries();
   const Long64_t n = (Long64_t)vtx->GetMaximum("evtid") + 1; // the event numbers, up to it: some may have no vertex, no decay
-  std::vector<float> depth(n, -1), pe(n, 0), peMap(n, 0), aoe;
+  std::vector<float> depth(n, -1), pe(n, 0), aoe;
   std::vector<signed char> pv(n, -1);
   std::vector<short> nFired(n, 0);
   std::vector<Hit> hits;
@@ -136,27 +134,24 @@ static void readFile(const std::string &file, Run &r, const Tube &t) // one hit 
     if (v[0] < 0 || v[0] >= n || v[1] <= cfg::m1_keV)
       return;
     nFired[(int)v[0]]++;
-    hits.push_back({(Long64_t)v[0], (float)v[1], false, false, false, false});
+    hits.push_back({(Long64_t)v[0], (float)v[1], false, false, false});
     aoe.push_back(v[2]);
   });
-  scanTree(tl, {"evtid", "pe", "pe_map"}, [&](const double *v)
-           { if (v[0] >= 0 && v[0] < n) { pe[(int)v[0]] += v[1]; peMap[(int)v[0]] += v[2]; } });
+  scanTree(tl, {"evtid", "pe"}, [&](const double *v)
+           { if (v[0] >= 0 && v[0] < n) pe[(int)v[0]] += v[1]; });
   scanTree(vtx, {"evtid", "zloc"}, [&](const double *v) { // [m]; rows are not in event order with -t: index by evtid
     if (v[0] >= 0 && v[0] < n)
       depth[(int)v[0]] = t.zTop - 1000 * v[1], pv[(int)v[0]] = t.sectionAt(1000 * v[1]);
   });
-  std::vector<std::vector<short>> win(cfg::NC, std::vector<short>(n, 0)), winMap(2, std::vector<short>(n, 0));
+  std::vector<std::vector<short>> win(cfg::NC, std::vector<short>(n, 0));
   for (size_t i = 0; i < hits.size(); i++)
   {
     Hit &h = hits[i];
     h.m1 = nFired[h.ev] == 1;
-    h.lar = pe[h.ev] < cfg::lar_pe;
-    h.larMap = peMap[h.ev] < cfg::lar_pe;
+    h.lar = pe[h.ev] <= cfg::lar_pe;
     h.psd = aoe[i] > cfg::psd_low; // an undefined A/E (NaN) fails
     for (int c = 0; c < cfg::NC; c++)
       win[c][h.ev] += h.pass(c) && cfg::inWindow(h.e);
-    for (int k = 0; k < 2; k++)
-      winMap[k][h.ev] += h.passMap(k) && cfg::inWindow(h.e);
   }
   const double tot = t.zTop - t.zBottom;
   for (Long64_t i = 0; i < n; i++) // every decay
@@ -175,8 +170,6 @@ static void readFile(const std::string &file, Run &r, const Tube &t) // one hit 
       r.pv.push_back(pv[h.ev]);
       for (int c = 0; c < cfg::NC; c++)
         r.win[c].push_back(win[c][h.ev]);
-      for (int k = 0; k < 2; k++)
-        r.winMap[k].push_back(winMap[k][h.ev]);
     }
     h.ev = slot[h.ev];
     r.hits.push_back(h);
@@ -285,15 +278,15 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
   { return p < 0 || r.mcDensity[p] <= 0 ? 0.0 : rt.density[m] * cfg::activity(r.iso, m) * cfg::secPerYear / (r.mcDensity[p] * rt.geMass); };
   auto massOf = [&](double d0, double d1, int m)
   { return d1 > d0 ? rt.density[m] * rt.volume(d0, d1) : 0.0; };
-  printf("INPUTS  analysis window %.0f-%.0f keV (%.0f keV); cuts: M1 (one detector above %.0f keV), LAr veto (< %.0f PE), A/E > %.2f; germanium %.1f kg\n\n",
-         cfg::winLo, cfg::winHi, cfg::winWidth, cfg::m1_keV, cfg::lar_pe, cfg::psd_low, rt.geMass);
+  printf("INPUTS  analysis window %.0f-%.0f keV (%.0f keV); cuts: M1 (one detector above %.0f keV), LAr veto (no photoelectron), A/E > %.2f; germanium %.1f kg\n\n",
+         cfg::winLo, cfg::winHi, cfg::winWidth, cfg::m1_keV, cfg::psd_low, rt.geMass);
 
   //-------------------------------------------------------------------------------
   //  5. The background index as proposed, per chain and section: the README's as-proposed table
   printf("BI AS PROPOSED  [counts/(keV kg yr)], +- simulation statistics\n");
   printf("    %-6s %-5s %8s %10s %10s %9s  %-30s %10s  %s\n", "chain", "sect", "mass", "real/yr", "simulated", "w", "window hits/counts: none/M1/+LAr/+A/E",
          "counts/yr", "BI, all cuts");
-  double gB[NC] = {0}, gV[NC] = {0}, mB[2] = {0}, mV[2] = {0}; // all chains, per cut level; and with the LAr veto off the map alone
+  double gB[NC] = {0}, gV[NC] = {0}; // all chains, per cut level
   for (auto &[key, r] : R)
     for (int s = 0; s < 3; s++)
     {
@@ -301,12 +294,8 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
       long n[NC] = {0};
       for (size_t i = 0; i < r.depth.size(); i++)
         if (r.pv[i] == s)
-        {
           for (int c = 0; c < NC; c++)
             n[c] += r.win[c][i];
-          for (int k = 0; k < 2; k++)
-            mB[k] += r.winMap[k][i] * wt, mV[k] += r.winMap[k][i] * wt * wt;
-        }
       for (int c = 0; c < NC; c++)
         gB[c] += n[c] * wt, gV[c] += n[c] * wt * wt;
       printf("    %-6s %-5s %6.1f kg %10.4g %10ld %9.2g  %-30s %10.2g  %.2e +- %.1e\n", r.iso.c_str(), cfg::mat[s], physV[s] * rt.density[s], real,
@@ -316,7 +305,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
   printf("    all chains:");
   for (int c = 0; c < NC; c++)
     printf("  %s %.2e +- %.1e;", cfg::cutName[c], gB[c], sqrt(gV[c]));
-  printf("\n    with the LAr veto off the optical map alone (no light from the argon beyond its edge): M1 + LAr %.2e, all cuts %.2e\n\n", mB[0], mB[1]);
+  printf("\n\n");
 
   //-------------------------------------------------------------------------------
   //  6. Where the counts come from, by depth: the README's depth table
@@ -454,7 +443,7 @@ void ana(const char *runs = "output/output_root/tl208*_hit.root=Tl208,output/out
     b->SetFillColorAlpha(roiCol, 0.2);
     b->SetLineWidth(0);
     b->Draw();
-    auto r = new TBox(cfg::Qbb - cfg::roiSig2, y0, cfg::Qbb + cfg::roiSig2, y1); // the ROI: 2.7 keV, a line at this scale
+    auto r = new TBox(cfg::Qbb - cfg::roiSig2, y0, cfg::Qbb + cfg::roiSig2, y1); // the ROI: 4.2 keV, a line at this scale
     r->SetFillColor(roiCol);
     r->SetLineColor(roiCol);
     r->SetLineWidth(2);
@@ -655,7 +644,7 @@ void holders()
   w->SetFillColorAlpha(roiCol, 0.2);
   w->SetLineWidth(0);
   w->Draw();
-  auto b = new TBox(cfg::Qbb - band, yMin, cfg::Qbb + band, yMax); // the ROI: 2.7 keV, a line at this scale
+  auto b = new TBox(cfg::Qbb - band, yMin, cfg::Qbb + band, yMax); // the ROI: 4.2 keV, a line at this scale
   b->SetFillColor(roiCol);
   b->SetLineColor(roiCol);
   b->SetLineWidth(2);

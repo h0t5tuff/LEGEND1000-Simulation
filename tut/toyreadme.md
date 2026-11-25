@@ -1,24 +1,35 @@
-# The tube study in miniature
+# A tube study in miniature
 
-**Question:** steel is cheaper than clean copper (EFCu), but far more radioactive. How much of a tube's copper can become
-steel before the detector sees more than 10% more counts a year?
+An exercise: build from nothing a small simulation that answers one question with the main study's method ([README](../README.md)).
 
-## The setup
+**The question:** a tube around a germanium crystal is clean copper (EFCu) below and steel above. Steel is cheaper but
+far more radioactive. How far down can the steel come before the background at `Qββ` rises by more than 10%?
 
-- A 4 m tube with a 1 cm wall: steel on top (2–4 m), EFCu below (0–2 m).
-- A 1 kg germanium crystal (Ge-76) on the floor, in the middle. No argon.
-- The radioactivity: only the 2614 keV gamma of Tl-208, starting anywhere in the wall and going in any direction.
-- Steel has 2700× more of it per kg than EFCu.
+## 1. Build it
 
-## The code
+| Step | File | What you write |
+|---|---|---|
+| The world | `toygeom.gdml` | a 4 m tube, 1 cm wall, in two pieces (EFCu 0–2 m, steel 2–4 m), a 1 kg Ge-76 crystal at the bottom, vacuum around |
+| The source | `toysim.mac` | the 2614 keV gamma of Tl-208 (the strongest gamma above `Qββ` = 2039 keV), started uniformly in one piece, random direction; one run per piece, each with its own number of gammas |
+| What to keep | `toysim.mac` | for each gamma: where it started (z) and the energy it left in the crystal |
+| The analysis | `toyana.C` | weight, reweight and scan (step 2) |
 
-| File | What it does |
-|---|---|
-| `toygeom.gdml` | builds the tube and the crystal, with real materials |
-| `toysim.mac` | tells remage (Geant4) to shoot the gammas from one part of the wall and record what the crystal sees |
-| `toyana.C` | turns simulated gammas into real counts a year, tries every seam, and draws the plots |
+## 2. The method
 
-## Run it (about 2.5 min)
+1. **Count where it matters.** 0νββ would show as a line at `Qββ` = 2039 keV, inside the **ROI** (2.5 keV wide).
+   Too few hits fall in 2.5 keV, so the background is counted in the **analysis window**, `Qββ` ± 50 keV, where it is
+   flat: B = counts a year in the window ÷ (100 keV × crystal mass). The background in the ROI is then B × 2.5 keV.
+2. **Weight.** One simulated gamma stands for `w` real gammas a year:
+   `w` = piece mass × Th-232 chain activity × share of decays that give this gamma × 1 yr ÷ gammas simulated in that piece.
+3. **Reweight.** A gamma's path barely depends on whether the wall is copper or steel. So moving the seam keeps every hit
+   and only changes `w`: one simulation tests every seam.
+4. **Scan.** Move the seam down from 2 m (the tube as proposed), 1 cm at a time. For each seam:
+   - the **rise** is how much the window's counts a year go up compared with the tube as proposed, with its error;
+   - it **passes** if rise + error ≤ 10%, **fails** if rise − error > 10%, and otherwise the statistics **can't tell**.
+
+The 10% (`tol`) is a design choice, as in the main study. Never derive it from the statistics: fewer gammas would loosen it.
+
+## 3. Run it (a first batch, about 3 min)
 
 ```bash
 cd ~/Documents/LEGEND1000-Simulation
@@ -36,41 +47,34 @@ remage -q --ignore-warnings -t 10 -w -o tut/toyoutput/toy_ss.root -g tut/toygeom
 root -l -b -q tut/toyana.C
 ```
 
-## How it works
+## 4. How many gammas? Let the answer decide
 
-1. **Simulate once.** We send 8 M gammas from the copper and 14 M from the steel. For each gamma that reaches the crystal,
-   we keep its energy and the height it started from.
-2. **Weight.** One simulated gamma stands for `w` real gammas a year, where `w` = (how radioactive the material is) ×
-   (how much of it there is) ÷ (how many gammas we simulated).
-3. **Reweight.** Moving the seam only changes which material sits at each height, and so only changes `w`. The hits stay the
-   same, so every new design is just a new sum, not a new simulation.
-4. **Scan.** We move the seam down 1 cm at a time and keep the lowest one that adds at most 10%.
+- The answer lies in a band: between the lowest seam that passes and the highest that fails.
+- If the band is wider than you need (`dRes`, 2 cm), raise `NEV` and run again. `toyana.C` ends by saying which.
+- Grow the run the printout names: it splits the error between the copper run and the steel run.
 
-## Results
+| Gammas (copper / steel) | Hits in the window | Passes down to | Fails from | Band | Verdict |
+|---|---|---|---|---|---|
+| 72 M / 14 M | 1466 / 7 | 1.97 m (+5.5 ± 4.4%) | 1.89 m | 8 cm | not resolved: 71% of the error from copper |
 
-| Seam | Copper | Counts a year | Change |
-|---|---|---|---|
-| 2.00 m (as proposed) | 287 kg | 61 ± 3.5 | 0% |
-| **1.97 m (new design)** | 283 kg | 64 | +5% |
-| 1.96 m | 281 kg | 67 | +10.1%: too much |
+Counting only in the window keeps 2% of the copper hits and 7 of the 289 steel hits, so it needs far more gammas
+than counting at all energies. **So far:** the steel can come down to between 1.97 and 1.89 m. Narrowing the band
+4× needs about 16× more gammas, since the error falls as 1 ÷ √gammas.
 
-**Answer:** only the top 3 cm of copper can become steel. Even 2 m away, the steel gives almost all the counts.
-
-**Energy spectrum.** B is counts per keV, per kg of germanium, per year. The tall line at 2614 keV is the gamma's full energy;
-everything below it is gammas that scattered and left only part of their energy. The brown line is the copper alone, about
-100× below the total.
+## 5. Read the plots (72 M / 14 M run)
 
 ![B(E)](toyoutput/toy_background.png)
 
-**Every seam at once.** Each row is one seam height L, and the colour is B. Lower seams mean more steel near the crystal, so
-the colours get brighter.
+B is counts per keV, per kg of Ge, per year: blue is the tube as proposed, red the new design. The green band is
+the analysis window, the black line in it B as proposed (1.5 × 10⁻²), the dark-green line the ROI at `Qββ`. In the
+ROI that is 1.5 × 10⁻² × 2.5 keV × 1 kg ≈ 0.04 counts a year.
+
+- **2614 keV:** the gamma left all its energy.
+- **2382 keV:** the Compton edge, the most one scatter can leave.
+- **2104 and 1592 keV:** the gamma made an electron–positron pair, and one or both 511 keV photons escaped.
+- **The rest, `Qββ` included:** gammas that scattered and left only part of their energy: the background that matters.
 
 ![B(E) for every seam](toyoutput/toy_heatmap.png)
 
-## Outputs in `toyoutput/`
-
-| File | What it is |
-|---|---|
-| `toy_efcu.root`, `toy_ss.root` | remage's raw hits (164 MB and 279 MB) |
-| `toy_background.png` | the energy spectrum |
-| `toy_heatmap.png` | the heat map |
+Each row is one seam height L, the green lines the analysis window. Lower seams put more steel closer to the crystal,
+so the rows get brighter.

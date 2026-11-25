@@ -26,7 +26,7 @@ p.add_argument("stp", nargs="+", help="remage LH5 outputs (-m: one file per run)
 p.add_argument("--outdir", default="output/output_root", help="where each <run>_hit.root goes (a link to ~/Downloads/output_root, out of iCloud)")
 p.add_argument("--gdml", default="geom/l1000geom/l1000.gdml")
 p.add_argument("--metadata", default=os.environ.get("LEGEND1000_METADATA", os.path.expanduser("~/Documents/legend-exp/legend1000-metadata")))
-p.add_argument("--optmap", default="output/merged_optmap_20260225_063750.lh5", help="UGLAr optical map; its group /all, every SiPM summed, is used")
+p.add_argument("--optmap", default="output/l1000dsg01-ular-optmap.lh5", help="the production's UGLAr optical map; its group /all, every SiPM summed")
 p.add_argument("--dtmap", default="output/dtmap_V00000A.lh5", help="drift-time maps of the detector template")
 p.add_argument("--seed", type=int, default=1)
 p.add_argument("--force", action="store_true", help="rebuild hit files that are already newer than their inputs")
@@ -56,12 +56,7 @@ dtmaps = reboost.hpge.load_hpge_drift_time_maps(args.dtmap, lh5.ls(args.dtmap)[0
 optmap = reboost.spms.load_optmap(args.optmap, "all")
 SCINT = convolve._get_scint_params("lar")  # what reboost.spms's processors use; called below with our own generator
 u = pint.UnitRegistry()
-# the map was made in the pygeom-l1000 v0.4.0 argon, 68 mm narrower than this tube's: a step beyond its last radius with
-# statistics, at its height, is read there (the detection probability is flat in r up to that edge)
 ex, ey, ez = optmap.edges
-has = optmap.weights[0] >= 0  # -1: no statistics
-R = np.hypot(*np.meshgrid((ex[1:] + ex[:-1]) / 2, (ey[1:] + ey[:-1]) / 2, indexing="ij"))
-r_cov = np.array([R[has[:, :, k]].max() if has[:, :, k].any() else 0.0 for k in range(has.shape[2])]) - 0.005  # m
 print(f"inputs: {len(geds)} detectors, drift-time maps {sorted(dtmaps)} deg, optical map {optmap.weights.shape[1:]} bins "
       f"x [{ex[0]}, {ex[-1]}] y [{ey[0]}, {ey[-1]}] z [{ez[0]}, {ez[-1]}] m, read in {time.time() - t_start:.0f} s")
 print(f"response: FCCD from the metadata, dead-layer fraction {dlf}, resolution and A/E from simprod {EXP}; "
@@ -92,10 +87,10 @@ def germanium(stp, on_disk, rng):
         a_max = smear(np.asarray(reboost.hpge.maximum_current(edep_active, dt, template=tmpl, times=times), dtype=float),
                       cm["current_reso"] / cm["mean_aoe"], rng)
         q = per_det(aoeres, det)["parameters"]  # SigmaFit: sqrt(a + (b / E)^c)
-        with np.errstate(over="ignore", divide="ignore", invalid="ignore"):  # hits all in the dead layer: no A/E
+        with np.errstate(over="ignore", divide="ignore", invalid="ignore"):  # below 1 keV (e.g. all in the dead layer): no A/E
             # the A/E mean model is a*E + b with a = 0, b = 1: A/E needs no correction
-            aoe_class = np.where(e_true > 0, (a_max / energy - 1) / np.sqrt(q["a"] + (q["b"] / (e_true + 1e-99)) ** q["c"]), np.nan)
-        n_nan += int(np.isnan(aoe_class[e_true > 0]).sum())
+            aoe_class = np.where(energy > 1, (a_max / energy - 1) / np.sqrt(q["a"] + (q["b"] / (e_true + 1e-99)) ** q["c"]), np.nan)
+        n_nan += int(np.isnan(aoe_class[energy > 1]).sum())
         cols.append({"evtid": h.evtid, "det": np.full(len(h), meta.uid), "edep": ak.sum(h.edep, axis=-1), "energy": energy,
                      "aoe_class": aoe_class})
     G = {k: np.concatenate([np.asarray(c[k]) for c in cols]) if cols else np.zeros(0) for k in ("evtid", "det", "edep", "energy", "aoe_class")}
@@ -103,32 +98,22 @@ def germanium(stp, on_disk, rng):
 
 
 # -------------------------------------------------------------------------------
-#  4. The argon: each step's scintillation photons, then the photoelectrons the SiPMs see through the optical map, twice:
-#     pe, with the argon beyond the map's edge read at the edge; pe_map, off the map alone
+#  4. The argon: each step's scintillation photons, then the photoelectrons the SiPMs see through the optical map, summed
 def argon(stp, on_disk, rng):
     if "stp/liquid_argon_underground" not in on_disk:
-        return {k: np.zeros(0) for k in ("evtid", "edep", "pe", "pe_map")}, "no UGLAr steps"
+        return {k: np.zeros(0) for k in ("evtid", "edep", "pe")}, "no UGLAr steps"
     a = lh5.read("stp/liquid_argon_underground", stp).view_as("ak")
-    x, y, z = a.xloc, a.yloc, a.zloc
-    k = np.clip(np.digitize(ak.to_numpy(ak.flatten(z)), ez) - 1, 0, len(r_cov) - 1)
-    r = np.hypot(ak.to_numpy(ak.flatten(x)), ak.to_numpy(ak.flatten(y)))
-    f = np.where(r > r_cov[k], r_cov[k] / np.maximum(r, 1e-9), 1.0)  # pulls a step beyond the edge back onto it
-    xc, yc = ak.unflatten(ak.flatten(x) * f, ak.num(x)), ak.unflatten(ak.flatten(y) * f, ak.num(y))
     ph = convolve.iterate_stepwise_depositions_scintillate(ak.Array({"edep": a.edep, "particle": a.particle}), SCINT, rng=rng)
-    L = {"evtid": ak.to_numpy(a.evtid), "edep": ak.to_numpy(ak.sum(a.edep, axis=-1))}
-    for key, (px, py) in (("pe", (xc, yc)), ("pe_map", (x, y))):
-        n_pe, _, stats = convolve.iterate_stepwise_depositions_numdet(
-            ak.Array({"xloc": px, "yloc": py, "zloc": z, "num_scint_ph": ph}), optmap, "all", map_scaling=optset["optmap_scaling_factor"],
-            max_pes_per_hit=optset["max_pes_per_hit_combined"], rng=rng, return_stats=True)
-        tpe = ak.sort(convolve.iterate_stepwise_depositions_times(ak.Array({"num_det_ph": n_pe, "particle": a.particle, "time": a.time}),
-                                                                    SCINT, rng=rng), axis=-1)
-        amp = reboost.spms.smear_photoelectrons(tpe, optset["photoelectron_resolution_sigma"], rng=rng)
-        L[key] = ak.to_numpy(ak.sum(reboost.spms.cluster_photoelectrons(tpe, amp, optset["time_resolution_in_ns"])[1], axis=-1))
-        if key == "pe":
-            lost = 100 * (stats.energy_oob + stats.energy_no_stats) / max(stats.energy_looped, 1e-12)
-    moved = ak.unflatten(f < 1, ak.num(x))
-    return L, (f"UGLAr energy read at the map's edge {100 * ak.sum(a.edep[moved]) / ak.sum(a.edep):.1f}%, "
-               f"outside the map even so {lost:.1f}% (above z {ez[-1]} m: no light)")
+    n_pe, _, stats = convolve.iterate_stepwise_depositions_numdet(
+        ak.Array({"xloc": a.xloc, "yloc": a.yloc, "zloc": a.zloc, "num_scint_ph": ph}), optmap, "all",
+        map_scaling=optset["optmap_scaling_factor"], max_pes_per_hit=optset["max_pes_per_hit_combined"], rng=rng, return_stats=True)
+    tpe = ak.sort(convolve.iterate_stepwise_depositions_times(ak.Array({"num_det_ph": n_pe, "particle": a.particle, "time": a.time}),
+                                                                SCINT, rng=rng), axis=-1)
+    amp = reboost.spms.smear_photoelectrons(tpe, optset["photoelectron_resolution_sigma"], rng=rng)
+    L = {"evtid": ak.to_numpy(a.evtid), "edep": ak.to_numpy(ak.sum(a.edep, axis=-1)),
+         "pe": ak.to_numpy(ak.sum(reboost.spms.cluster_photoelectrons(tpe, amp, optset["time_resolution_in_ns"])[1], axis=-1))}
+    lost = 100 * (stats.energy_oob + stats.energy_no_stats) / max(stats.energy_looped, 1e-12)
+    return L, f"UGLAr energy outside the map (no light) {lost:.1f}%"
 
 
 # -------------------------------------------------------------------------------
