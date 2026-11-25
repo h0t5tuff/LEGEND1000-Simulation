@@ -25,10 +25,9 @@ PDF's page) or this repository's own output, with the command that makes it.
    `Qββ`. LEGEND-1000's goal is below 10⁻⁵ counts/(keV·kg·yr) (pCDR, p. 8).
    - For LEGEND-1000, M·t ≈ 10⁴ kg·yr and ΔE ≈ 2.7 keV, which gives BI < about 4 × 10⁻⁵ counts/(keV·kg·yr).
    - The pCDR rounds this down to 10⁻⁵ for margin. That leaves about 0.3 background counts in the ROI over ten years.
-6. **What was missing.** Ralph Massarczyk's tube study asked where EFCu is needed and how far from the array the SS
-   must end. Its one simulation over the whole tube left 1 simulated count from the Cu and none from the SS after
-   all cuts; it concluded that optimising "needs full remage simulations" (`ralph_GeneralCall_10_12_2026.pdf`,
-   13 Oct 2026, p. 2, 16, 29).
+6. **What was missing.** Where the tube needs EFCu, and how far down the SS can come, was not known: decays in the
+   Cu and SS so rarely reach the array that one simulation over the whole tube leaves almost no counts from them
+   after all cuts.
 7. **This study** simulates each section on its own, computes the BI as proposed, then the BI of every other design.
 
 **The question:** how much of the EFCu can be cut, and how much SS added, without changing the tube's BI? "Without
@@ -281,20 +280,23 @@ p. 71):
 ### 6. BI as proposed
 
 **From decays to counts.** Each simulated decay stands for w real decays a year, its weight
-(`ralph_GeneralCall_10_12_2026.pdf`, p. 3):
+(`An assay-based background projection, Majorana Demonstrator.pdf`, p. 5, Eq. 4-6):
 
 - w = real decays / simulated decays = mass (kg) × activity (µBq/kg) × 0.36 (Tl-208) or 1 (Bi-214) × 1 yr /
   simulated decays, knowing Bq = decays/s;
 - 0.36: Tl-208 is 35.94% of the ²³²Th chain (`Nuclear Data Sheets for A = 208, Martin.pdf`, p. 1); Bi-214 is all of
-  the ²³⁸U chain (Ralph's talk, p. 6);
+  the ²³⁸U chain: Pb-214 decays 100% to it, and the 0.02% side branch of Po-218 through At-218 also ends in it
+  ([Pb-214](https://www.nndc.bnl.gov/nudat3/decaysearchdirect.jsp?nuc=214PB&unc=nds),
+  [Po-218](https://www.nndc.bnl.gov/nudat3/decaysearchdirect.jsp?nuc=218PO&unc=nds),
+  [At-218](https://www.nndc.bnl.gov/nudat3/decaysearchdirect.jsp?nuc=218AT&unc=nds), NuDat 3);
 - Σw over the simulated counts = the counts a year;
 - BI = counts a year / (1023.4 kg × 110 keV).
 
-The mass of each section is the GDML's. The activities (`cfg::chain`; bulk only, as in Ralph's talk, p. 22):
+The mass of each section is the GDML's. The activities (`cfg::chain`; bulk only):
 
 | µBq/kg | ²³²Th chain | ²³⁸U chain | source                                                                  |
 | ------ | ----------- | ---------- | ----------------------------------------------------------------------- |
-| SS     | 1000        | 2500       | `RT MaterialMix, ralph.pdf`, p. 5                                       |
+| SS     | 1000        | 2500       | screening of the cryostat steel, Table 2 (`L1000_L.CS_rev2.pdf`, p. 7)  |
 | Cu     | 1.10        | 1.37       | `An assay-based background projection, Majorana Demonstrator.pdf`, p. 6 |
 | EFCu   | 0.37        | 0.19       | CDR Table XVII (`CDRBackgroundModel, Green.pdf`, p. 7)                  |
 
@@ -332,7 +334,7 @@ root -l -b -q ana/ana.C
 
 1. "No change" is drawn at 10% (`cfg::simTol`): this study's line, not a LEGEND requirement. It only means something
    if the BI itself is known to better than 10%.
-2. Simulated counts scatter by √n (Poisson; Ralph's talk, p. 20). A nuclide and section that make a share f of the
+2. Simulated counts scatter by √n (Poisson, variance = mean; `PDG2024Booklet.pdf`, p. 255). A nuclide and section that make a share f of the
    BI with n counts add f²/n to the square of the BI's relative uncertainty, so ±10% needs Σ f²/n ≤ 0.01.
 3. The first 408 runs gave 0.042, ±21%, nearly all from the EFCu: 91% of the BI on 21 counts.
 4. So 19 more EFCu runs (10 Tl-208, 9 Bi-214; 2.7 node-hours) brought the EFCu to 132 counts and the BI to ±9%.
@@ -351,7 +353,9 @@ root -l -b -q ana/ana.C
 **Reweighting, not resimulating:**
 
 1. What a decay does in the detectors depends on where it happens, and little on the wall's material there: 5 mm of
-   wall absorbs 14% of 2.6 MeV gammas in steel and 16% in Cu (Ralph's talk, p. 5).
+   wall absorbs 14% of 2.6 MeV gammas in steel and 16% in Cu (NIST mass attenuation coefficients,
+   [Fe](https://physics.nist.gov/PhysRefData/XrayMassCoef/ElemTab/z26.html),
+   [Cu](https://physics.nist.gov/PhysRefData/XrayMassCoef/ElemTab/z29.html)).
 2. So a simulated decay can stand for any material a design puts at its depth; only its weight w changes: the new
    w = that material's real decays a year per m³ ÷ the simulated decays per m³ of the decay's run (measured from
    its vertices).
